@@ -2,6 +2,7 @@ import pygame
 import sys
 from PantallaPrincipal import background_screen
 from PantallaMapas import pantalla_mapas
+from PantallaAudio import pantalla_audio
 
 def pantalla2(screen, bg_anim):
     clock = pygame.time.Clock()
@@ -20,6 +21,10 @@ def pantalla2(screen, bg_anim):
     siguiente_rect = siguiente.get_rect(bottomright = (screen.get_width()-30,screen.get_height()-30))
 
     # BOTON SETTINGS
+    audio = pygame.image.load("imagenes/settings.png").convert_alpha()
+    audio = pygame.transform.scale(audio, (50, 40))
+    # Posicion boton siguiente
+    audio_rect = audio.get_rect(bottomright=(70, screen.get_height() - 30))
 
     # Cargar imágenes individuales para cada tira
     tiras = {
@@ -167,6 +172,8 @@ def pantalla2(screen, bg_anim):
                     background_screen(screen)
                 if siguiente_rect.collidepoint(mouse_pos):
                     pantalla_mapas(screen, bg_anim)
+                if audio_rect.collidepoint(mouse_pos):
+                    pantalla_audio(screen, bg_anim)
 
                 # Actualización del numero de jugadores (primera tira naranja)
                 if primera_tira_key in botones:
@@ -513,6 +520,16 @@ def pantalla2(screen, bg_anim):
         else:
            # Dibujar el botón normal si no hay hover
            screen.blit(siguiente, siguiente_rect)
+
+        # Efecto hover para el botón "siguiente"
+        if audio_rect.collidepoint(mouse_pos):
+            # Aumentar el tamaño del botón cuando el ratón esté encima
+            audio_hover = pygame.transform.scale(audio, (65, 55))
+            audio_rect_hover = audio_hover.get_rect(center=audio_rect.center)
+            screen.blit(audio_hover, audio_rect_hover)
+        else:
+            # Dibujar el botón normal si no hay hover
+            screen.blit(audio, audio_rect)
 
         pygame.display.flip()
         clock.tick(60)
