@@ -2,8 +2,9 @@ import pygame
 import sys
 from PantallaPrincipal import background_screen
 from PantallaPrincipal import BackgroundAnimation
-from PantallaConfigPartida import pantalla2
+from PantallaConfigPartida import pantalla2_main
 from PantallaMapas import pantalla_mapas
+from PantallaAudio import pantalla_audio
 
 
 def main():
@@ -26,8 +27,9 @@ def main():
 
     # Mostrar la pantalla principal y luego la pantalla 2
     background_screen(screen)
-    pantalla2(screen, bg_anim)
+    pantalla2_main(screen, bg_anim)
     pantalla_mapas(screen, bg_anim)
+    pantalla_audio(screen, bg_anim)
 
     pygame.quit()
     sys.exit()

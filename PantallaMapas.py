@@ -22,9 +22,9 @@ def pantalla_mapas(screen, bg_anim):
             # Al pulsar boton atras se sale de pantalla2
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if atras_rect.collidepoint(mouse_pos):
-                    from PantallaConfigPartida import pantalla2 #Se importa aqui para evitar importacion circular
+                    from PantallaConfigPartida import pantalla2_main #Se importa aqui para evitar importacion circular
 
-                    pantalla2(screen, bg_anim)
+                    pantalla2_main(screen, bg_anim)
 
 
         bg_anim.update()

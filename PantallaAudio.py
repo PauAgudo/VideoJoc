@@ -1,6 +1,8 @@
 import pygame
 import sys
 
+
+
 def pantalla_audio(screen, bg_anim):
     clock = pygame.time.Clock()
     pygame.display.set_caption("Pantalla 3")
@@ -10,6 +12,12 @@ def pantalla_audio(screen, bg_anim):
     atras = pygame.transform.scale(atras, (40, 40))
     # Posicion boton atras
     atras_rect = atras.get_rect(topleft=(30, 30))
+
+    # RECTANGULO GRIS AJUSTE DE AUDIO
+    gris = pygame.image.load("imagenes/gris.png").convert_alpha()
+    gris = pygame.transform.scale(gris, (600, 400))
+    # Posicion rectangulo gris
+    gris_rect = gris.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
 
     running = True
     while running:
@@ -22,9 +30,9 @@ def pantalla_audio(screen, bg_anim):
             # Al pulsar boton atras se sale de pantalla2
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if atras_rect.collidepoint(mouse_pos):
-                    from PantallaConfigPartida import pantalla2 #Se importa aqui para evitar importacion circular
+                    from PantallaConfigPartida import pantalla2_main #Se importa aqui para evitar importacion circular
 
-                    pantalla2(screen, bg_anim)
+                    pantalla2_main(screen, bg_anim)
 
 
         bg_anim.update()
@@ -39,6 +47,8 @@ def pantalla_audio(screen, bg_anim):
         else:
             # Dibujar el botón normal si no hay hover
             screen.blit(atras, atras_rect)
+
+        screen.blit(gris, gris_rect)
 
         pygame.display.flip()
         clock.tick(60)
