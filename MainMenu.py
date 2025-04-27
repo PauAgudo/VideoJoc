@@ -5,7 +5,6 @@ from PantallaPrincipal import BackgroundAnimation
 from PantallaConfigPartida import pantalla2
 from PantallaMapas import pantalla_mapas
 
-
 def main():
     pygame.init()
 
@@ -13,7 +12,7 @@ def main():
     if not pygame.mixer.get_init():
         pygame.mixer.init()
     pygame.mixer.music.load("media/retrogame.mp3")  # Asegúrate de que la ruta y el nombre sean correctos
-    pygame.mixer.music.set_volume(0.6)  # volumen al 60%
+    pygame.mixer.music.set_volume(1.0)  # volumen al 50%
     pygame.mixer.music.play(-1)  # -1 para reproducir en bucle indefinido
 
 
