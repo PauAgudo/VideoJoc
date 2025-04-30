@@ -91,7 +91,7 @@ def background_screen(screen):
     clock = pygame.time.Clock()
 
     # Configurar la fuente y parámetros del texto
-    font = pygame.font.SysFont("Arial", 26)
+    font = pygame.font.SysFont(None, 30)
     message = "Pulsa cualquier tecla para continuar"
     text_center = (screen_width // 2, screen_height - 100)
 

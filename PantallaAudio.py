@@ -33,11 +33,11 @@ def pantalla_audio(screen, bg_anim):
 
     # Botón ATRÁS
     atras = pygame.transform.scale(pygame.image.load("imagenes/atras.png"), (40, 40))
-    atras_rect = atras.get_rect(topleft=(30, 30))
+    atras_rect = atras.get_rect(topleft=(25, 25))
 
     # Fondo gris
-    gris = pygame.transform.scale(pygame.image.load("imagenes/gris.png"), (600, 400))
-    gris_rect = gris.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
+    gris = pygame.transform.scale(pygame.image.load("imagenes/gris.png"), (750, 480))
+    gris_rect = gris.get_rect(midright=(screen.get_width(), screen.get_height() // 2))
 
     # Configuración global de sliders
     base_x, base_y = audio.slider_pos
@@ -80,15 +80,28 @@ def pantalla_audio(screen, bg_anim):
         # Dibujar fondo y controles
         bg_anim.update()
         bg_anim.draw(screen)
+
         screen.blit(gris, gris_rect)
+
+
+
         if atras_rect.collidepoint(mouse_pos):
-            screen.blit(pygame.transform.scale(atras, (55, 55)), atras_rect)
+            screen.blit(pygame.transform.scale(atras, (int(atras_rect.width*1.1),int(atras_rect.height*1.1))), atras_rect)
         else:
             screen.blit(atras, atras_rect)
 
-        # Dibujar sliders
-        for s in sliders:
+        # Dibujar sliders y sus valores a la derecha
+        for idx, s in enumerate(sliders):
             s.draw(screen)
+            # calcular valor entero 0–100
+            percent = round(s.value * 100)
+            # renderizar texto
+            font = pygame.font.SysFont("Arial", 16)
+            txt_surf = font.render(str(percent), True, (255, 255, 255)) # texto blanco
+            # posición junto al extremo derecho de la tira
+            x = s.rect.right + 10
+            y = s.rect.centery - txt_surf.get_height()//2
+            screen.blit(txt_surf, (x, y))
 
         pygame.display.flip()
         clock.tick(60)
