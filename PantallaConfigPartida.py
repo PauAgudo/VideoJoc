@@ -20,9 +20,9 @@ class ConfiguracionPartida:
 
         # Cargar botones fijos
         atras = pygame.transform.scale(pygame.image.load("imagenes/atras.png"), (40,40))
-        atras_rect = atras.get_rect(topleft=(30,30))
+        atras_rect = atras.get_rect(topleft=(25,25))
         siguiente = pygame.transform.scale(pygame.image.load("imagenes/siguiente.png"), (40,40))
-        siguiente_rect = siguiente.get_rect(bottomright=(screen.get_width()-30, screen.get_height()-30))
+        siguiente_rect = siguiente.get_rect(bottomright=(screen.get_width()-25, screen.get_height()-25))
         audio = pygame.transform.scale(pygame.image.load("imagenes/settings.png"), (50,40))
         audio_rect = audio.get_rect(bottomright=(70, screen.get_height()-30))
 
@@ -44,7 +44,7 @@ class ConfiguracionPartida:
         pos_num_jugadores = {n:(600,150) for n in [1,2,3,4]}
         pos_sets = {s:(600,190) for s in config.set_options}
         pos_minuts = {m:(600,230) for m in range(1,10)}
-        font = pygame.font.SysFont("Arial",18)
+        font = pygame.font.SysFont(None,21)
         shift_amount = 10
 
         running = True
@@ -132,22 +132,26 @@ class ConfiguracionPartida:
                     right_rect = derecha.get_rect(topleft=right_pos)
                     # Si ratón sobre flecha izquierda, escalarla
                     if left_rect.collidepoint(mouse_pos):
-                        iz_hover = pygame.transform.scale(izquierda, (int(left_rect.width * 1.3), int(left_rect.height * 1.3)))
+                        iz_hover = pygame.transform.scale(izquierda, (int(left_rect.width * 1.1), int(left_rect.height * 1.1)))
                         iz_rect_h = iz_hover.get_rect(center=left_rect.center)
                         screen.blit(iz_hover, iz_rect_h)
                     else:
                         screen.blit(izquierda, left_rect)
                     # Si ratón sobre flecha derecha, escalarla
                     if right_rect.collidepoint(mouse_pos):
-                        dr_hover = pygame.transform.scale(derecha, (int(right_rect.width * 1.3), int(right_rect.height * 1.3)))
+                        dr_hover = pygame.transform.scale(derecha, (int(right_rect.width * 1.1), int(right_rect.height * 1.1)))
                         dr_rect_h = dr_hover.get_rect(center=right_rect.center)
                         screen.blit(dr_hover, dr_rect_h)
                     else:
                         screen.blit(derecha, right_rect)
+
+
+
             # Botones fijos
             for img,rc in [(atras,atras_rect),(siguiente,siguiente_rect),(audio,audio_rect)]:
-                if rc.collidepoint(mouse_pos): screen.blit(pygame.transform.scale(img,(int(rc.width*1.3),int(rc.height*1.3))),rc)
+                if rc.collidepoint(mouse_pos): screen.blit(pygame.transform.scale(img,(int(rc.width*1.1),int(rc.height*1.1))),rc)
                 else: screen.blit(img,rc)
+
 
             pygame.display.flip(); clock.tick(60)
 
