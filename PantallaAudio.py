@@ -36,7 +36,7 @@ def pantalla_audio(screen, bg_anim):
     atras_rect = atras.get_rect(topleft=(25, 25))
 
     # Fondo gris
-    gris = pygame.transform.scale(pygame.image.load("imagenes/gris.png"), (750, 480))
+    gris = pygame.transform.scale(pygame.image.load("imagenes/gris.png"), (750, 450))
     gris_rect = gris.get_rect(midright=(screen.get_width(), screen.get_height() // 2))
 
     # Configuración global de sliders

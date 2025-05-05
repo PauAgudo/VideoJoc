@@ -19,6 +19,9 @@ class Config:
         self.position_options = ["Fija", "Aleatoria"]
         self.ultimas_opciones = ["Sí", "No"]
 
+        # configuracion mapa
+        self.selected_map = 1
+
 config = Config()
 
 class Audio:
@@ -29,4 +32,7 @@ class Audio:
         self.slider_values = [1.0, 1.0, 1.0]
 
 audio = Audio()
+
+
+
 
