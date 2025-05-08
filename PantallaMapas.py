@@ -18,8 +18,7 @@ def pantalla_mapas(screen, bg_anim):
     siguiente_rect = siguiente.get_rect(bottomright=(screen.get_width() - 25, screen.get_height() - 25))
 
     # MARCO CENTRAL
-    marco = pygame.image.load("imagenes/mapselect.png").convert_alpha()
-    marco = pygame.transform.scale(marco, (750, 450))
+    marco = pygame.transform.scale(pygame.image.load("imagenes/mapselect.png"), (750, 450))
     marco_rect = marco.get_rect(midright=(screen.get_width(), screen.get_height() // 2))
 
     # Nombres de los mapas
@@ -72,8 +71,8 @@ def pantalla_mapas(screen, bg_anim):
                         break
                 # Pulsar siguiente
                 if siguiente_rect.collidepoint(mouse_pos) and selected_index >= 0:
-                    # Aquí podrías pasar config a la siguiente pantalla
-                    # e.g. pantalla_siguiente(screen, bg_anim, config)
+                    from PantallaPersonajes import pantalla_personajes
+                    pantalla_personajes(screen, bg_anim)
                     return
 
         # Dibujar fondo y marco
@@ -118,6 +117,12 @@ def pantalla_mapas(screen, bg_anim):
         font = pygame.font.Font(None, 21)
         title_surf = font.render("SELECCIONA UNA FASE", True, (255,255,255))
         title_rect = title_surf.get_rect(center=(185, 130))
+        screen.blit(title_surf, title_rect)
+
+        # Mostrar título principal
+        font2 = pygame.font.Font(None, 36)
+        title_surf = font2.render("CAMPOS DE BATALLA", True, (255, 255, 255))
+        title_rect = title_surf.get_rect(center=(537, 98))
         screen.blit(title_surf, title_rect)
 
         pygame.display.flip()
