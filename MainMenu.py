@@ -7,14 +7,16 @@ from PantallaMapas import pantalla_mapas
 from PantallaAudio import pantalla_audio
 
 
-
 def main():
     pygame.init()
 
     # Inicializar el mixer y reproducir la banda sonora de fondo
     if not pygame.mixer.get_init():
         pygame.mixer.init()
-    pygame.mixer.music.load("media/retrogame.mp3")  # Asegúrate de que la ruta y el nombre sean correctos
+
+    # CARGAR EFECTOS DE SONIDO
+    # musica de fondo
+    pygame.mixer.music.load("media/retrogame.mp3")  #
     pygame.mixer.music.set_volume(1.0)  # volumen al 100%
     pygame.mixer.music.play(-1)  # -1 para reproducir en bucle indefinido
 

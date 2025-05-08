@@ -18,6 +18,10 @@ class ConfiguracionPartida:
         current_position_index = config.current_position_index
         current_ultimas_index = config.current_ultimas_index.copy()
 
+        # Fondo
+        fondo = pygame.transform.scale(pygame.image.load("imagenes/fondobasico.png"), (750, 450))
+        fondo_rect = fondo.get_rect(midright=(screen.get_width(), screen.get_height() // 2))
+
         # Cargar botones fijos
         atras = pygame.transform.scale(pygame.image.load("imagenes/atras.png"), (40,40))
         atras_rect = atras.get_rect(topleft=(25,25))
@@ -44,7 +48,7 @@ class ConfiguracionPartida:
         pos_num_jugadores = {n:(600,150) for n in [1,2,3,4]}
         pos_sets = {s:(600,190) for s in config.set_options}
         pos_minuts = {m:(600,230) for m in range(1,10)}
-        font = pygame.font.SysFont(None,21)
+        font = pygame.font.SysFont(None,23)
         shift_amount = 10
 
         running = True
@@ -95,6 +99,8 @@ class ConfiguracionPartida:
 
             # Dibujar fondo y tiras
             bg_anim.update(); bg_anim.draw(screen)
+            screen.blit(fondo, fondo_rect)
+
             for key,btn in botones.items():
                 rect=btn["rect"]; hov=rect.collidepoint(mouse_pos)
                 img=btn["imagen"]
@@ -145,15 +151,19 @@ class ConfiguracionPartida:
                     else:
                         screen.blit(derecha, right_rect)
 
-
-
             # Botones fijos
             for img,rc in [(atras,atras_rect),(siguiente,siguiente_rect),(audio,audio_rect)]:
                 if rc.collidepoint(mouse_pos): screen.blit(pygame.transform.scale(img,(int(rc.width*1.1),int(rc.height*1.1))),rc)
                 else: screen.blit(img,rc)
 
+            # Mostrar título
+            font2 = pygame.font.Font(None, 36)
+            title_surf = font2.render("CONFIGURACIÓN DE PARTIDA", True, (255, 255, 255))
+            title_rect = title_surf.get_rect(center=(537, 105))
+            screen.blit(title_surf, title_rect)
 
-            pygame.display.flip(); clock.tick(60)
+            pygame.display.flip();
+            clock.tick(60)
 
 # Entrada desde el menú principal
 def pantalla2_main(screen,bg_anim):

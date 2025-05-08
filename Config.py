@@ -26,10 +26,16 @@ config = Config()
 
 class Audio:
     def __init__(self):
+        # volumen musica de fondo
         self.volume = 1.0
+        # volumen botones menu
+        self.volume_buttons = 1.0
+
+        # parametros de los sliders
         self.slider_pos = (300, 120)
         self.slider_size = (300, 10)
         self.slider_values = [1.0, 1.0, 1.0]
+
 
 audio = Audio()
 

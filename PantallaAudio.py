@@ -2,6 +2,7 @@ import pygame
 import sys
 from Config import audio
 
+
 class SliderRect:
     def __init__(self, x, y, width, height, initial=1.0):
         self.rect = pygame.Rect(x, y, width, height)
@@ -74,7 +75,8 @@ def pantalla_audio(screen, bg_anim):
         for s in sliders:
             s.update(mouse_pos, mouse_click)
 
-        # Aplicar volumen en tiempo real
+        # APLICAR VOLUMEN EN TIEMPO REAL
+        # Volumen musica de fondo
         pygame.mixer.music.set_volume(sliders[0].value)
 
         # Dibujar fondo y controles
