@@ -1,5 +1,6 @@
 import pygame
 
+
 class Config:
     def __init__(self):
         # Valores por defecto
@@ -19,26 +20,37 @@ class Config:
         self.position_options = ["Fija", "Aleatoria"]
         self.ultimas_opciones = ["Sí", "No"]
 
-        # configuracion mapa
+        # Configuración mapa
         self.selected_map = 1
+
 
 config = Config()
 
+
 class Audio:
     def __init__(self):
-        # volumen musica de fondo
+        # Volumen música de fondo
         self.volume = 1.0
-        # volumen botones menu
+        # Volumen botones menú
         self.volume_buttons = 1.0
+        # Volumen efectos de sonido
+        self.volume_effects = 1.0
 
-        # parametros de los sliders
+        # Parámetros de los sliders
         self.slider_pos = (300, 120)
         self.slider_size = (300, 10)
         self.slider_values = [1.0, 1.0, 1.0]
 
+    def save(self):
+        """Guarda los valores directamente en la clase."""
+        self.slider_values = [self.volume, self.volume_buttons, self.volume_effects]
+
+    def load(self):
+        """Carga los valores directamente desde la clase."""
+        self.volume = self.slider_values[0]
+        self.volume_buttons = self.slider_values[1]
+        self.volume_effects = self.slider_values[2]
+
 
 audio = Audio()
-
-
-
-
+audio.load()  # Cargar valores iniciales
