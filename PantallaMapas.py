@@ -18,7 +18,7 @@ def pantalla_mapas(screen, bg_anim):
     siguiente_rect = siguiente.get_rect(bottomright=(screen.get_width() - 25, screen.get_height() - 25))
 
     # MARCO CENTRAL
-    marco = pygame.transform.scale(pygame.image.load("imagenes/mapselect.png"), (750, 450))
+    marco = pygame.transform.scale(pygame.image.load("imagenes/Mapselect.png"), (750, 450))
     marco_rect = marco.get_rect(midright=(screen.get_width(), screen.get_height() // 2))
 
     # Nombres de los mapas
