@@ -26,7 +26,7 @@ def pantalla_mapas(screen, bg_anim):
     font = pygame.font.Font(None, 26)
     name_surfs = [font.render(name, True, (255,255,255)) for name in map_names]
 
-    # MAPAS: miniaturas, versiones grandes, rect y nombre
+    # MAPAS
     mapas = []  # lista de tuplas (mini, big, rect, name_surf)
     x = 185
     start_y = 220
