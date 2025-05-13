@@ -9,12 +9,12 @@ ROJO = (255, 0, 0)
 NEGRO = (0, 0, 0)
 
 # Tipos de volumen para los sliders (en español)
-TIPOS_DE_VOLUMEN = ["Música", "Botones", "Efectos"]
+TIPOS_DE_VOLUMEN = ["MÚSICA", "BOTONES", "EFECTOS"]
 
 
 class SliderRect:
     """Clase que representa un slider para ajustar valores."""
-    def __init__(self, x, y, width, height, initial=1.0, tipo_volumen="Música"):
+    def __init__(self, x, y, width, height, initial=1.0, tipo_volumen="MÚSICA"):
         self.rect = pygame.Rect(x, y, width, height)
         self.value = initial
         self.handle_size = 15
@@ -73,11 +73,11 @@ def crear_sliders(rect_fondo_gris):
 
     for i, tipo_volumen in enumerate(TIPOS_DE_VOLUMEN):
         # Obtiene los valores iniciales para cada tipo de volumen desde Config
-        if tipo_volumen == "Música":
+        if tipo_volumen == "MÚSICA":
             valor_inicial = audio.volume
-        elif tipo_volumen == "Botones":
+        elif tipo_volumen == "BOTONES":
             valor_inicial = audio.volume_buttons
-        elif tipo_volumen == "Efectos":
+        elif tipo_volumen == "EFECTOS":
             valor_inicial = audio.volume_effects
         else:
             valor_inicial = 1.0  # Por defecto, volumen máximo
@@ -105,7 +105,7 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_a
         screen.blit(boton_atras, rect_atras)
 
     # Dibuja los sliders, sus etiquetas y valores
-    font = pygame.font.SysFont("Arial", 16)
+    font = pygame.font.SysFont(None, 16)
     for slider in sliders:
         # Dibuja el slider
         slider.draw(screen)
@@ -138,11 +138,11 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim):
         if event.type == pygame.MOUSEBUTTONDOWN and rect_atras.collidepoint(mouse_pos):
             # Guarda los valores de volumen en Config
             for slider in sliders:
-                if slider.tipo_volumen == "Música":
+                if slider.tipo_volumen == "MÚSICA":
                     audio.volume = slider.value
-                elif slider.tipo_volumen == "Botones":
+                elif slider.tipo_volumen == "BOTONES":
                     audio.volume_buttons = slider.value
-                elif slider.tipo_volumen == "Efectos":
+                elif slider.tipo_volumen == "EFECTOS":
                     audio.volume_effects = slider.value
 
             # Guarda los valores actualizados
@@ -157,11 +157,11 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim):
 
     # Aplica los ajustes de volumen en tiempo real
     for slider in sliders:
-        if slider.tipo_volumen == "Música":
+        if slider.tipo_volumen == "MÚSICA":
             pygame.mixer.music.set_volume(slider.value)
-        elif slider.tipo_volumen == "Botones":
+        elif slider.tipo_volumen == "BOTONES":
             audio.volume_buttons = slider.value  # Actualiza el volumen de los botones en tiempo real
-        elif slider.tipo_volumen == "Efectos":
+        elif slider.tipo_volumen == "EFECTOS":
             audio.volume_effects = slider.value  # Actualiza el volumen de los efectos en tiempo real
 
 
