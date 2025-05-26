@@ -11,44 +11,50 @@ class ConfiguracionPartida:
         pygame.display.set_caption("Configuración de Partida")
 
         # Valores iniciales desde config
-        current_number = config.current_number
         current_set_index = config.current_set_index
         current_minute = config.current_minute
         current_level_index = config.current_level_index
         current_position_index = config.current_position_index
-        current_ultimas_index = config.current_ultimas_index.copy()
+        current_ultimas_index = current_ultimas_index = config.current_ultimas_index.copy()
 
         # Fondo
         fondo = pygame.transform.scale(pygame.image.load("imagenes/fondobasico.png"), (750, 450))
         fondo_rect = fondo.get_rect(midright=(screen.get_width(), screen.get_height() // 2))
 
-        # Cargar botones fijos
-        atras = pygame.transform.scale(pygame.image.load("imagenes/atras.png"), (40,40))
-        atras_rect = atras.get_rect(topleft=(25,25))
-        siguiente = pygame.transform.scale(pygame.image.load("imagenes/siguiente.png"), (40,40))
-        siguiente_rect = siguiente.get_rect(bottomright=(screen.get_width()-25, screen.get_height()-25))
-        audio = pygame.transform.scale(pygame.image.load("imagenes/settings.png"), (50,40))
-        audio_rect = audio.get_rect(bottomright=(70, screen.get_height()-30))
+        # Botones fijos
+        atras = pygame.transform.scale(pygame.image.load("imagenes/atras.png"), (40, 40))
+        atras_rect = atras.get_rect(topleft=(25, 25))
+        siguiente = pygame.transform.scale(pygame.image.load("imagenes/siguiente.png"), (40, 40))
+        siguiente_rect = siguiente.get_rect(bottomright=(screen.get_width() - 25, screen.get_height() - 25))
+        audio = pygame.transform.scale(pygame.image.load("imagenes/settings.png"), (50, 40))
+        audio_rect = audio.get_rect(bottomright=(70, screen.get_height() - 30))
 
         # Tiras
-        keys = ["num_jugadores","sets","minutos","nivel_COM","pos_inicial","aviones","Maldiciones","Bloques_final"]
-        tiras = {k: pygame.transform.scale(pygame.image.load(f"imagenes/tira naranja{'' if i==0 else i+1}.png"),(550,30))
-                 for i,k in enumerate(keys)}
-        posiciones = {"num_jugadores":(280,150),"sets":(280,190),"minutos":(280,230),"nivel_COM":(280,270),
-                     "pos_inicial":(280,310),"aviones":(280,350),"Maldiciones":(280,390),"Bloques_final":(280,430)}
-        botones = {k:{"imagen":tiras[k],"rect":tiras[k].get_rect(topleft=posiciones[k])} for k in keys}
+        keys = ["sets", "minutos", "nivel_COM", "pos_inicial", "aviones", "Maldiciones", "Bloques_final"]
+        tiras = {
+            k: pygame.transform.scale(pygame.image.load(f"imagenes/tira naranja{'' if i == 0 else i + 1}.png"), (550, 30))
+            for i, k in enumerate(keys)
+        }
+
+        # Desplazamiento vertical
+        vertical_shift = 50
+        posiciones = {
+            "sets": (280, 120 + vertical_shift),
+            "minutos": (280, 160 + vertical_shift),
+            "nivel_COM": (280, 200 + vertical_shift),
+            "pos_inicial": (280, 240 + vertical_shift),
+            "aviones": (280, 280 + vertical_shift),
+            "Maldiciones": (280, 320 + vertical_shift),
+            "Bloques_final": (280, 360 + vertical_shift)
+        }
+        botones = {k: {"imagen": tiras[k], "rect": tiras[k].get_rect(topleft=posiciones[k])} for k in keys}
 
         # Flechas
-        izquierda = pygame.transform.scale(pygame.image.load("imagenes/izquierda.png"),(30,30))
-        derecha = pygame.transform.scale(pygame.image.load("imagenes/derecha.png"),(30,30))
-        flechas_pos = {k:{"izquierda":(520,posiciones[k][1]),"derecha":(680,posiciones[k][1])} for k in keys}
+        izquierda = pygame.transform.scale(pygame.image.load("imagenes/izquierda.png"), (30, 30))
+        derecha = pygame.transform.scale(pygame.image.load("imagenes/derecha.png"), (30, 30))
+        flechas_pos = {k: {"izquierda": (520, posiciones[k][1]), "derecha": (680, posiciones[k][1])} for k in keys}
 
-        # Números y texto
-        numeros = {i:pygame.transform.scale(pygame.image.load(f"imagenes/{i}.png"),(30,30)) for i in range(1,10)}
-        pos_num_jugadores = {n:(600,150) for n in [1,2,3,4]}
-        pos_sets = {s:(600,190) for s in config.set_options}
-        pos_minuts = {m:(600,230) for m in range(1,10)}
-        font = pygame.font.SysFont(None,23)
+        font = pygame.font.SysFont(None, 23)
         shift_amount = 10
 
         running = True
@@ -57,7 +63,8 @@ class ConfiguracionPartida:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    pygame.quit(); sys.exit()
+                    pygame.quit()
+                    sys.exit()
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if atras_rect.collidepoint(mouse_pos):
@@ -65,7 +72,6 @@ class ConfiguracionPartida:
                         background_screen(screen)
 
                     if siguiente_rect.collidepoint(mouse_pos):
-                        config.current_number = current_number
                         config.current_set_index = current_set_index
                         config.current_minute = current_minute
                         config.current_level_index = current_level_index
@@ -73,77 +79,99 @@ class ConfiguracionPartida:
                         config.current_ultimas_index = current_ultimas_index.copy()
                         pantalla_mapas(screen, bg_anim)
 
-
                     if audio_rect.collidepoint(mouse_pos):
                         pantalla_audio(screen, bg_anim)
 
-                    # Flechas de tiras, un paso por clic
-                    for key,btn in botones.items():
+                    for key, btn in botones.items():
                         if btn["rect"].collidepoint(mouse_pos):
                             la = izquierda.get_rect(topleft=flechas_pos[key]["izquierda"])
                             ra = derecha.get_rect(topleft=flechas_pos[key]["derecha"])
                             if la.collidepoint(mouse_pos):
-                                if key=="num_jugadores" and current_number>1: current_number-=1
-                                elif key=="sets" and current_set_index>0: current_set_index-=1
-                                elif key=="minutos" and current_minute>1: current_minute-=1
-                                elif key=="nivel_COM" and current_level_index>0: current_level_index-=1
-                                elif key=="pos_inicial" and current_position_index>0: current_position_index-=1
-                                elif key in current_ultimas_index and current_ultimas_index[key]>0: current_ultimas_index[key]-=1
+                                if key == "sets" and current_set_index > 0:
+                                    current_set_index -= 1
+                                elif key == "minutos" and current_minute > 1:
+                                    current_minute -= 1
+                                elif key == "nivel_COM" and current_level_index > 0:
+                                    current_level_index -= 1
+                                elif key == "pos_inicial" and current_position_index > 0:
+                                    current_position_index -= 1
+                                elif key in current_ultimas_index and current_ultimas_index[key] > 0:
+                                    current_ultimas_index[key] -= 1
                             elif ra.collidepoint(mouse_pos):
-                                if key=="num_jugadores" and current_number<4: current_number+=1
-                                elif key=="sets" and current_set_index<len(config.set_options)-1: current_set_index+=1
-                                elif key=="minutos" and current_minute<9: current_minute+=1
-                                elif key=="nivel_COM" and current_level_index<len(config.level_options)-1: current_level_index+=1
-                                elif key=="pos_inicial" and current_position_index<len(config.position_options)-1: current_position_index+=1
-                                elif key in current_ultimas_index and current_ultimas_index[key]<len(config.ultimas_opciones)-1: current_ultimas_index[key]+=1
+                                if key == "sets" and current_set_index < len(config.set_options) - 1:
+                                    current_set_index += 1
+                                elif key == "minutos" and current_minute < 9:
+                                    current_minute += 1
+                                elif key == "nivel_COM" and current_level_index < len(config.level_options) - 1:
+                                    current_level_index += 1
+                                elif key == "pos_inicial" and current_position_index < len(config.position_options) - 1:
+                                    current_position_index += 1
+                                elif key in current_ultimas_index and current_ultimas_index[key] < len(config.ultimas_opciones) - 1:
+                                    current_ultimas_index[key] += 1
 
-            # Dibujar fondo y tiras
-            bg_anim.update(); bg_anim.draw(screen)
+            # Dibujar
+            bg_anim.update()
+            bg_anim.draw(screen)
             screen.blit(fondo, fondo_rect)
 
-            for key,btn in botones.items():
-                rect=btn["rect"]; hov=rect.collidepoint(mouse_pos)
-                img=btn["imagen"]
+            for key, btn in botones.items():
+                rect = btn["rect"]
+                hov = rect.collidepoint(mouse_pos)
+                img = btn["imagen"]
                 if hov:
-                    hi=pygame.transform.scale(img,(int(rect.width*1.1),rect.height)); hr=hi.get_rect(center=rect.center); hr.x-=shift_amount; screen.blit(hi,hr); cur_rect=hr
-                else: screen.blit(img,rect); cur_rect=rect
+                    hi = pygame.transform.scale(img, (int(rect.width * 1.1), rect.height))
+                    hr = hi.get_rect(center=rect.center)
+                    hr.x -= shift_amount
+                    screen.blit(hi, hr)
+                    cur_rect = hr
+                else:
+                    screen.blit(img, rect)
+                    cur_rect = rect
 
-                # Dibujar valores
-                if key=="num_jugadores":
-                    pos=(pos_num_jugadores[current_number][0]-(shift_amount if hov else 0),pos_num_jugadores[current_number][1])
-                    screen.blit(numeros[current_number],pos)
-                if key=="sets":
-                    v=config.set_options[current_set_index]; screen.blit(numeros[v],(pos_sets[v][0]-(shift_amount if hov else 0),pos_sets[v][1]))
-                if key=="minutos": screen.blit(numeros[current_minute],((600-(shift_amount if hov else 0)),230))
-                if key=="nivel_COM":
-                    txt=config.level_options[current_level_index]; surf=font.render(txt,True,(0,0,0))
-                    lx,rx=flechas_pos[key]["izquierda"][0]-(shift_amount if hov else 0),flechas_pos[key]["derecha"][0]-(shift_amount if hov else 0)
-                    cx=(lx+30+rx)//2; cy=cur_rect.centery; screen.blit(surf,(cx-surf.get_width()//2,cy-surf.get_height()//2))
-                if key=="pos_inicial":
-                    txt=config.position_options[current_position_index]; surf=font.render(txt,True,(0,0,0))
-                    lx,rx=flechas_pos[key]["izquierda"][0]-(shift_amount if hov else 0),flechas_pos[key]["derecha"][0]-(shift_amount if hov else 0)
-                    cx=(lx+30+rx)//2; cy=cur_rect.centery; screen.blit(surf,(cx-surf.get_width()//2,cy-surf.get_height()//2))
-                if key in ["aviones","Maldiciones","Bloques_final"]:
-                    txt=config.ultimas_opciones[current_ultimas_index[key]]; surf=font.render(txt,True,(0,0,0))
-                    lx,rx=flechas_pos[key]["izquierda"][0]-(shift_amount if hov else 0),flechas_pos[key]["derecha"][0]-(shift_amount if hov else 0)
-                    cx=(lx+30+rx)//2; cy=cur_rect.centery; screen.blit(surf,(cx-surf.get_width()//2,cy-surf.get_height()//2))
+                # Mostrar valor actual
+                if key == "sets":
+                    v = config.set_options[current_set_index]
+                    screen.blit(pygame.transform.scale(pygame.image.load(f"imagenes/{v}.png"), (30, 30)),
+                                (600 - (shift_amount if hov else 0), posiciones[key][1]))
+                if key == "minutos":
+                    screen.blit(pygame.transform.scale(pygame.image.load(f"imagenes/{current_minute}.png"), (30, 30)),
+                                (600 - (shift_amount if hov else 0), posiciones[key][1]))
+                if key == "nivel_COM":
+                    txt = config.level_options[current_level_index]
+                    surf = font.render(txt, True, (0, 0, 0))
+                    lx = flechas_pos[key]["izquierda"][0] - (shift_amount if hov else 0)
+                    rx = flechas_pos[key]["derecha"][0] - (shift_amount if hov else 0)
+                    cx = (lx + 30 + rx) // 2
+                    cy = cur_rect.centery
+                    screen.blit(surf, (cx - surf.get_width() // 2, cy - surf.get_height() // 2))
+                if key == "pos_inicial":
+                    txt = config.position_options[current_position_index]
+                    surf = font.render(txt, True, (0, 0, 0))
+                    lx = flechas_pos[key]["izquierda"][0] - (shift_amount if hov else 0)
+                    rx = flechas_pos[key]["derecha"][0] - (shift_amount if hov else 0)
+                    cx = (lx + 30 + rx) // 2
+                    cy = cur_rect.centery
+                    screen.blit(surf, (cx - surf.get_width() // 2, cy - surf.get_height() // 2))
+                if key in ["aviones", "Maldiciones", "Bloques_final"]:
+                    txt = config.ultimas_opciones[current_ultimas_index[key]]
+                    surf = font.render(txt, True, (0, 0, 0))
+                    lx = flechas_pos[key]["izquierda"][0] - (shift_amount if hov else 0)
+                    rx = flechas_pos[key]["derecha"][0] - (shift_amount if hov else 0)
+                    cx = (lx + 30 + rx) // 2
+                    cy = cur_rect.centery
+                    screen.blit(surf, (cx - surf.get_width() // 2, cy - surf.get_height() // 2))
 
-                                # Dibujar flechas solo si el ratón está sobre la tira
                 if hov:
-                    # Obtener posiciones de flechas con shift
                     left_pos = (flechas_pos[key]["izquierda"][0] - shift_amount, flechas_pos[key]["izquierda"][1])
                     right_pos = (flechas_pos[key]["derecha"][0] - shift_amount, flechas_pos[key]["derecha"][1])
-                    # Crear rects de flecha
                     left_rect = izquierda.get_rect(topleft=left_pos)
                     right_rect = derecha.get_rect(topleft=right_pos)
-                    # Si ratón sobre flecha izquierda, escalarla
                     if left_rect.collidepoint(mouse_pos):
                         iz_hover = pygame.transform.scale(izquierda, (int(left_rect.width * 1.1), int(left_rect.height * 1.1)))
                         iz_rect_h = iz_hover.get_rect(center=left_rect.center)
                         screen.blit(iz_hover, iz_rect_h)
                     else:
                         screen.blit(izquierda, left_rect)
-                    # Si ratón sobre flecha derecha, escalarla
                     if right_rect.collidepoint(mouse_pos):
                         dr_hover = pygame.transform.scale(derecha, (int(right_rect.width * 1.1), int(right_rect.height * 1.1)))
                         dr_rect_h = dr_hover.get_rect(center=right_rect.center)
@@ -152,19 +180,20 @@ class ConfiguracionPartida:
                         screen.blit(derecha, right_rect)
 
             # Botones fijos
-            for img,rc in [(atras,atras_rect),(siguiente,siguiente_rect),(audio,audio_rect)]:
-                if rc.collidepoint(mouse_pos): screen.blit(pygame.transform.scale(img,(int(rc.width*1.1),int(rc.height*1.1))),rc)
-                else: screen.blit(img,rc)
+            for img, rc in [(atras, atras_rect), (siguiente, siguiente_rect), (audio, audio_rect)]:
+                if rc.collidepoint(mouse_pos):
+                    screen.blit(pygame.transform.scale(img, (int(rc.width * 1.1), int(rc.height * 1.1))), rc)
+                else:
+                    screen.blit(img, rc)
 
-            # Mostrar título
+            # Título
             font2 = pygame.font.Font(None, 36)
             title_surf = font2.render("CONFIGURACIÓN DE PARTIDA", True, (255, 255, 255))
             title_rect = title_surf.get_rect(center=(537, 105))
             screen.blit(title_surf, title_rect)
 
-            pygame.display.flip();
+            pygame.display.flip()
             clock.tick(60)
 
-# Entrada desde el menú principal
-def pantalla2_main(screen,bg_anim):
-    ConfiguracionPartida().run(screen,bg_anim)
+def pantalla2_main(screen, bg_anim):
+    ConfiguracionPartida().run(screen, bg_anim)
