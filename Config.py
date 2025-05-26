@@ -4,7 +4,6 @@ import pygame
 class Config:
     def __init__(self):
         # Valores por defecto
-        self.current_number = 4  # Número de jugadores
         self.current_set_index = 2  # Índice para set_options (1,3,5) → inicialmente 3 sets
         self.current_minute = 3  # Número de minutos
         self.current_level_index = 1  # Nivel COM: 0:"Fácil", 1:"Intermedio", 2:"Avanzado"
@@ -54,3 +53,29 @@ class Audio:
 
 audio = Audio()
 audio.load()  # Cargar valores iniciales
+
+# clase para guardar seleccion de personajes para cada uno de los jugadores
+# personajes.py
+
+class Personajes:
+    def __init__(self):
+        self.seleccion = {
+            "jugador_1": {"personaje": None},
+            "jugador_2": {"personaje": None},
+            "jugador_3": {"personaje": None},
+            "jugador_4": {"personaje": None},
+        }
+
+    def set_personaje(self, jugador_id, personaje_nombre):
+        if jugador_id in self.seleccion:
+            self.seleccion[jugador_id]["personaje"] = personaje_nombre
+
+    def get_personaje(self, jugador_id):
+        return self.seleccion.get(jugador_id, {}).get("personaje")
+
+    def reset(self):
+        for jugador in self.seleccion:
+            self.seleccion[jugador]["personaje"] = None
+
+# Instancia global que puedes importar en cualquier parte del juego
+personajes = Personajes()
