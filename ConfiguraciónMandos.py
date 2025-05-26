@@ -26,7 +26,6 @@ def procesar_union_mando(event):
             mandos_activos.append(joy_id)
             print(f"✅ Mando {joy_id} se ha unido al juego")
 
-# Bucle de prueba (simula tu pantalla de selección de personajes)
 pantalla = pygame.display.set_mode((800, 600))
 pygame.display.set_caption("Pantalla de unión de mandos")
 clock = pygame.time.Clock()
