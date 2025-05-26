@@ -6,7 +6,6 @@ from PantallaConfigPartida import pantalla2_main, ConfiguracionPartida
 from PantallaMapas import pantalla_mapas
 from PantallaAudio import pantalla_audio
 
-
 def main():
     pygame.init()
 

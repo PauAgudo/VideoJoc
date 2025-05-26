@@ -2,10 +2,11 @@ import pygame
 import sys
 import math
 from Config import personajes
+from Config import gestor_jugadores
 
 def draw_personaje_con_bombeo(screen, imagen, texto, center, bombeo=True):
     tiempo = pygame.time.get_ticks() / 300.0
-    factor = 1 + 0.05 * math.sin(tiempo) if bombeo else 1.0
+    factor = 1 + 0.02 * math.sin(tiempo) if bombeo else 1.0
 
     ancho_original, alto_original = imagen.get_size()
     ancho_bombeo = int(ancho_original * factor)
@@ -22,16 +23,14 @@ def draw_personaje_con_bombeo(screen, imagen, texto, center, bombeo=True):
     return imagen_rect
 
 def pantalla_personajes(screen, bg_anim):
+    pygame.joystick.init()
     clock = pygame.time.Clock()
     pygame.display.set_caption("Pantalla 3")
 
     # BOTONES
-    atras = pygame.image.load("imagenes/atras.png").convert_alpha()
-    atras = pygame.transform.scale(atras, (40, 40))
+    atras = pygame.transform.scale(pygame.image.load("imagenes/atras.png").convert_alpha(), (40, 40))
     atras_rect = atras.get_rect(topleft=(25, 25))
-
-    siguiente = pygame.image.load("imagenes/siguiente.png").convert_alpha()
-    siguiente = pygame.transform.scale(siguiente, (40, 40))
+    siguiente = pygame.transform.scale(pygame.image.load("imagenes/siguiente.png").convert_alpha(), (40, 40))
     siguiente_rect = siguiente.get_rect(bottomright=(screen.get_width() - 25, screen.get_height() - 25))
 
     # FONDO
@@ -39,16 +38,16 @@ def pantalla_personajes(screen, bg_anim):
     fondo_rect = fondo.get_rect(midright=(screen.get_width(), screen.get_height() // 2))
 
     # IMÁGENES
-    img_default = pygame.image.load("imagenes/selec_pers.png").convert_alpha()
-    img_default = pygame.transform.scale(img_default, (110, 110))
-
+    img_default = pygame.transform.scale(pygame.image.load("imagenes/selec_pers.png").convert_alpha(), (110, 110))
     personajes_disponibles = [
         pygame.transform.scale(pygame.image.load("Personajes/orco1.png").convert_alpha(), (110, 110)),
         pygame.transform.scale(pygame.image.load("Personajes/rojo.png").convert_alpha(), (110, 110)),
         pygame.transform.scale(pygame.image.load("Personajes/vampiro1.png").convert_alpha(), (110, 110)),
-    ]
+        pygame.transform.scale(pygame.image.load("Personajes/orco2.png").convert_alpha(), (110, 110)),
+        pygame.transform.scale(pygame.image.load("Personajes/orco3.png").convert_alpha(), (110, 110)),
 
-    nombre_personajes = ["orco1", "rojo", "vampiro1"]
+    ]
+    nombre_personajes = ["orco1", "rojo", "vampiro1","orco2", "orco3"]
 
     # POSICIONES
     personajes_centros = []
@@ -59,8 +58,12 @@ def pantalla_personajes(screen, bg_anim):
         x = x_start + i * (110 + gap)
         personajes_centros.append((x, y_pos))
 
-    jugador_1_unido = False
-    indice_personaje_j1 = 0  # orco1 por defecto
+    # INICIALIZAR MANDOS DETECTADOS
+    mandos_detectados = {}
+    for i in range(pygame.joystick.get_count()):
+        joy = pygame.joystick.Joystick(i)
+        joy.init()
+        mandos_detectados[i] = joy
 
     running = True
     while running:
@@ -79,36 +82,50 @@ def pantalla_personajes(screen, bg_anim):
                     return
 
             if event.type == pygame.KEYDOWN:
-                if not jugador_1_unido:
-                    jugador_1_unido = True
-                    indice_personaje_j1 = 0
-                    personajes.set_personaje("jugador_1", "orco1")
+                if gestor_jugadores.get_teclado() is None:
+                    num = gestor_jugadores.unir_teclado()
+                    if num is not None:
+                        personajes.set_personaje(f"jugador_{num}", nombre_personajes[0])
                 else:
-                    if event.key == pygame.K_RIGHT:
-                        indice_personaje_j1 = (indice_personaje_j1 + 1) % len(personajes_disponibles)
-                    elif event.key == pygame.K_LEFT:
-                        indice_personaje_j1 = (indice_personaje_j1 - 1) % len(personajes_disponibles)
+                    jugador = gestor_jugadores.get_teclado()
+                    if event.key == pygame.K_LEFT:
+                        jugador["indice"] = (jugador["indice"] - 1) % len(personajes_disponibles)
+                    elif event.key == pygame.K_RIGHT:
+                        jugador["indice"] = (jugador["indice"] + 1) % len(personajes_disponibles)
+                    idx = gestor_jugadores.todos().index(jugador)
+                    personajes.set_personaje(f"jugador_{idx+1}", nombre_personajes[jugador["indice"]])
 
-                    personaje_nombre = nombre_personajes[indice_personaje_j1]
-                    personajes.set_personaje("jugador_1", personaje_nombre)
+            if event.type == pygame.JOYBUTTONDOWN:
+                joy_id = event.joy
+                if gestor_jugadores.get_jugador_por_joy(joy_id) is None:
+                    num = gestor_jugadores.unir_mando(joy_id)
+                    if num is not None:
+                        personajes.set_personaje(f"jugador_{num}", nombre_personajes[0])
 
+            if event.type == pygame.JOYHATMOTION:
+                joy_id = event.joy
+                jugador = gestor_jugadores.get_jugador_por_joy(joy_id)
+                if jugador:
+                    x, _ = event.value
+                    if x != 0:
+                        jugador["indice"] = (jugador["indice"] + x) % len(personajes_disponibles)
+                        idx = gestor_jugadores.todos().index(jugador)
+                        personajes.set_personaje(f"jugador_{idx+1}", nombre_personajes[jugador["indice"]])
+
+        # DIBUJAR
         bg_anim.update()
         bg_anim.draw(screen)
         screen.blit(fondo, fondo_rect)
 
-        # JUGADOR 1
-        if jugador_1_unido:
-            img_j1 = personajes_disponibles[indice_personaje_j1]
-            texto_j1 = "¡JUGADOR 1!"
-            draw_personaje_con_bombeo(screen, img_j1, texto_j1, personajes_centros[0], bombeo=False)
-        else:
-            draw_personaje_con_bombeo(screen, img_default, "Pulsa para unirte", personajes_centros[0], bombeo=True)
+        for i in range(4):
+            jugador = gestor_jugadores.get(i)
+            if jugador:
+                personaje_img = personajes_disponibles[jugador["indice"]]
+                texto = f"JUGADOR {i+1}"
+                draw_personaje_con_bombeo(screen, personaje_img, texto, personajes_centros[i], bombeo=False)
+            else:
+                draw_personaje_con_bombeo(screen, img_default, "Pulsa para unirte", personajes_centros[i], bombeo=True)
 
-        # JUGADORES 2 A 4
-        for i in range(1, 4):
-            draw_personaje_con_bombeo(screen, img_default, "Pulsa para unirte", personajes_centros[i], bombeo=True)
-
-        # BOTONES
         for img, rect in [(atras, atras_rect), (siguiente, siguiente_rect)]:
             if rect.collidepoint(mouse_pos):
                 hover = pygame.transform.scale(img, (int(rect.width * 1.1), int(rect.height * 1.1)))
