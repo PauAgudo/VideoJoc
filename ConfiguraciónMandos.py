@@ -1,55 +1,60 @@
-import pygame
+# CLASE PARA GESTIONAR JUGADORES Y MANDOS
 
-pygame.init()
-pygame.joystick.init()
+class GestorJugadores:
+    def __init__(self):
+        self.jugadores = []  # Lista de dicts: tipo ("teclado"/"mando"), id, indice personaje
+        self.max_jugadores = 4
 
-# Lista para guardar mandos que se han unido
-mandos_activos = []
+    def reset(self):
+        self.jugadores.clear()
 
-# Diccionario para asociar ID de mando con su joystick
-mandos_detectados = {}
+    def unir_teclado(self):
+        if not any(j["tipo"] == "teclado" for j in self.jugadores) and len(self.jugadores) < self.max_jugadores:
+            self.jugadores.append({"tipo": "teclado", "id": None, "indice": 0})
+            return len(self.jugadores)
+        return None
 
-# Función para escanear y registrar nuevos mandos
-def detectar_nuevos_mandos():
-    for i in range(pygame.joystick.get_count()):
-        if i not in mandos_detectados:
-            joystick = pygame.joystick.Joystick(i)
-            joystick.init()
-            mandos_detectados[i] = joystick
-            print(f"🎮 Mando {i} detectado: {joystick.get_name()}")
+    def unir_mando(self, joy_id):
+        if not any(j["tipo"] == "mando" and j["id"] == joy_id for j in self.jugadores) and len(self.jugadores) < self.max_jugadores:
+            self.jugadores.append({"tipo": "mando", "id": joy_id, "indice": 0})
+            return len(self.jugadores)
+        return None
 
-# Función para procesar si un mando quiere unirse
-def procesar_union_mando(event):
-    if event.type == pygame.JOYBUTTONDOWN:
-        joy_id = event.joy
-        if joy_id in mandos_detectados and joy_id not in mandos_activos:
-            mandos_activos.append(joy_id)
-            print(f"✅ Mando {joy_id} se ha unido al juego")
+    def actualizar_indice(self, jugador_index, nuevo_indice):
+        if 0 <= jugador_index < len(self.jugadores):
+            self.jugadores[jugador_index]["indice"] = nuevo_indice
 
-pantalla = pygame.display.set_mode((800, 600))
-pygame.display.set_caption("Pantalla de unión de mandos")
-clock = pygame.time.Clock()
+    def get_jugador_por_joy(self, joy_id):
+        for j in self.jugadores:
+            if j["tipo"] == "mando" and j["id"] == joy_id:
+                return j
+        return None
 
-detectados_previamente = pygame.joystick.get_count()
-detectar_nuevos_mandos()
+    def get_teclado(self):
+        for j in self.jugadores:
+            if j["tipo"] == "teclado":
+                return j
+        return None
 
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+    def get(self, index):
+        if index < len(self.jugadores):
+            return self.jugadores[index]
+        return None
 
-        procesar_union_mando(event)
+    def todos(self):
+        return self.jugadores
 
-    # Revisar si se ha conectado un nuevo mando (hotplug)
-    nuevos_detectados = pygame.joystick.get_count()
-    if nuevos_detectados > detectados_previamente:
-        detectar_nuevos_mandos()
-        detectados_previamente = nuevos_detectados
+    def eliminar_jugador_por_joy(self, joy_id):
+        self.jugadores = [j for j in self.jugadores if not (j["tipo"] == "mando" and j["id"] == joy_id)]
+        self.reordenar_jugadores()
 
-    pantalla.fill((20, 20, 40))
-    pygame.display.flip()
-    clock.tick(60)
+    def eliminar_teclado(self):
+        self.jugadores = [j for j in self.jugadores if j["tipo"] != "teclado"]
+        self.reordenar_jugadores()
 
-pygame.quit()
+    def reordenar_jugadores(self):
+        # Simplemente reordena la lista sin huecos y mantiene hasta 4 jugadores
+        self.jugadores = self.jugadores[:self.max_jugadores]
 
+
+gestor_jugadores = GestorJugadores()
