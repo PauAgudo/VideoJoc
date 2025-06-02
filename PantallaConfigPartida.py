@@ -30,10 +30,24 @@ class ConfiguracionPartida:
         audio_rect = audio.get_rect(bottomright=(70, screen.get_height() - 30))
 
         # Tiras
+
+        # Definición de las claves y sus respectivas imágenes
         keys = ["sets", "minutos", "nivel_COM", "pos_inicial", "aviones", "Maldiciones", "Bloques_final"]
+
+        tira_files = {
+            "sets": "imagenes/tira_sets.png",
+            "minutos": "imagenes/tiempo.png",
+            "nivel_COM": "imagenes/tira_COM.png",
+            "pos_inicial": "imagenes/tira_posicion.png",
+            "aviones": "imagenes/tira_aviones.png",
+            "Maldiciones": "imagenes/tira_maldiciones.png",
+            "Bloques_final": "imagenes/tira_bloques.png"
+        }
+
+        # Carga cada imagen individual y la guarda en el diccionario tiras
         tiras = {
-            k: pygame.transform.scale(pygame.image.load(f"imagenes/tira naranja{'' if i == 0 else i + 1}.png"), (550, 30))
-            for i, k in enumerate(keys)
+            k: pygame.transform.scale(pygame.image.load(tira_files[k]), (550, 30))
+            for k in keys
         }
 
         # Desplazamiento vertical
@@ -138,7 +152,7 @@ class ConfiguracionPartida:
                                 (600 - (shift_amount if hov else 0), posiciones[key][1]))
                 if key == "nivel_COM":
                     txt = config.level_options[current_level_index]
-                    surf = font.render(txt, True, (0, 0, 0))
+                    surf = font.render(txt, True, (255, 255, 255))
                     lx = flechas_pos[key]["izquierda"][0] - (shift_amount if hov else 0)
                     rx = flechas_pos[key]["derecha"][0] - (shift_amount if hov else 0)
                     cx = (lx + 30 + rx) // 2
@@ -146,7 +160,7 @@ class ConfiguracionPartida:
                     screen.blit(surf, (cx - surf.get_width() // 2, cy - surf.get_height() // 2))
                 if key == "pos_inicial":
                     txt = config.position_options[current_position_index]
-                    surf = font.render(txt, True, (0, 0, 0))
+                    surf = font.render(txt, True, (255, 255, 255))
                     lx = flechas_pos[key]["izquierda"][0] - (shift_amount if hov else 0)
                     rx = flechas_pos[key]["derecha"][0] - (shift_amount if hov else 0)
                     cx = (lx + 30 + rx) // 2
@@ -154,7 +168,7 @@ class ConfiguracionPartida:
                     screen.blit(surf, (cx - surf.get_width() // 2, cy - surf.get_height() // 2))
                 if key in ["aviones", "Maldiciones", "Bloques_final"]:
                     txt = config.ultimas_opciones[current_ultimas_index[key]]
-                    surf = font.render(txt, True, (0, 0, 0))
+                    surf = font.render(txt, True, (255, 255, 255))
                     lx = flechas_pos[key]["izquierda"][0] - (shift_amount if hov else 0)
                     rx = flechas_pos[key]["derecha"][0] - (shift_amount if hov else 0)
                     cx = (lx + 30 + rx) // 2

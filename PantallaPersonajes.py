@@ -3,7 +3,12 @@ import sys
 import math
 from ConfiguraciónMandos import gestor_jugadores  # INSTANCIA DETECCION TECLADO Y MANDO
 
-def draw_personaje_con_bombeo(screen, imagen, texto, center, flecha_izq, flecha_der, mostrar_flechas, bombeo=True): # CASILLAS INCIALES JUGADORES
+# Diccionario temporal para guardar estado de mandos desconectados
+temporizador_listos = {} # Diccionario para guardar si un jugador está listo
+estado_mandos_desconectados = {}
+
+
+def draw_personaje_con_bombeo(screen, imagen, texto, center, flecha_izq, flecha_der, mostrar_flechas, bombeo=True):
     tiempo = pygame.time.get_ticks() / 300.0
     factor = 1 + 0.02 * math.sin(tiempo) if bombeo else 1.0
 
@@ -28,20 +33,28 @@ def draw_personaje_con_bombeo(screen, imagen, texto, center, flecha_izq, flecha_
 
     return imagen_rect
 
-def draw_mensaje_inicio(screen, imagen_rect, tipo_jugador):
+
+def draw_mensaje_inicio(screen, imagen_rect, tipo_jugador, listo):
     fuente = pygame.font.Font(None, size=22)
-    if tipo_jugador == "teclado":
-        texto = "ENTER para empezar"
-    elif tipo_jugador == "mando":
-        texto = "OPTIONS para empezar"
+    if listo:
+        pygame.draw.rect(screen, (255, 255, 0), (imagen_rect.centerx - 60, imagen_rect.bottom + 35, 120, 30))
+        texto = "LISTO"
+        texto_render = fuente.render(texto, True, (0, 0, 0))
+        texto_rect = texto_render.get_rect(center=(imagen_rect.centerx, imagen_rect.bottom + 50))
+        screen.blit(texto_render, texto_rect)
     else:
-        return
+        if tipo_jugador == "teclado":
+            texto = "ENTER para empezar"
+        elif tipo_jugador == "mando":
+            texto = "OPTIONS para empezar"
+        else:
+            return
+        texto_render = fuente.render(texto, True, (0, 0, 0))
+        texto_rect = texto_render.get_rect(center=(imagen_rect.centerx, imagen_rect.bottom + 50))
+        screen.blit(texto_render, texto_rect)
 
-    texto_render = fuente.render(texto, True, (0, 0, 0))
-    texto_rect = texto_render.get_rect(center=(imagen_rect.centerx, imagen_rect.bottom + 50))
-    screen.blit(texto_render, texto_rect)
 
-def draw_texto_inferior_bombeo(screen, texto, pos_centro): # TEXTO "PULSA PARA UNIRTE"
+def draw_texto_inferior_bombeo(screen, texto, pos_centro):
     tiempo = pygame.time.get_ticks() / 300.0
     factor = 1 + 0.02 * math.sin(tiempo)
     fuente = pygame.font.Font(None, size=26)
@@ -52,7 +65,8 @@ def draw_texto_inferior_bombeo(screen, texto, pos_centro): # TEXTO "PULSA PARA U
     rect = texto_escalado.get_rect(center=pos_centro)
     screen.blit(texto_escalado, rect)
 
-def draw_etiqueta_jugador(screen, texto, posicion): # NUMERO JUGADOR: J1, J2, J3, J4
+
+def draw_etiqueta_jugador(screen, texto, posicion):
     fuente = pygame.font.Font(None, size=24)
     texto_render = fuente.render(texto, True, (0, 0, 0))
     texto_rect = texto_render.get_rect()
@@ -124,28 +138,50 @@ def pantalla_personajes(screen, bg_anim):
                     gestor_jugadores.unir_teclado()
                 else:
                     jugador = gestor_jugadores.get_teclado()
-                    if event.key == pygame.K_LEFT:
-                        jugador["indice"] = (jugador.get("indice", 0) - 1) % len(personajes_disponibles)
-                    elif event.key == pygame.K_RIGHT:
-                        jugador["indice"] = (jugador.get("indice", 0) + 1) % len(personajes_disponibles)
+                    if event.key == pygame.K_RETURN:
+                        temporizador_listos["teclado"] = True
+                    elif event.key == pygame.K_b:
+                        temporizador_listos["teclado"] = False
+                    elif not temporizador_listos.get("teclado"):
+                        if event.key == pygame.K_LEFT:
+                            jugador["indice"] = (jugador.get("indice", 0) - 1) % len(personajes_disponibles)
+                        elif event.key == pygame.K_RIGHT:
+                            jugador["indice"] = (jugador.get("indice", 0) + 1) % len(personajes_disponibles)
 
             if event.type == pygame.JOYBUTTONDOWN:
                 joy_id = getattr(event, "instance_id", event.joy)
                 if gestor_jugadores.get_jugador_por_joy(joy_id) is None:
-                    gestor_jugadores.unir_mando(joy_id)
-            if event.type == pygame.JOYHATMOTION:  # CAMBIAR PERSONAJES CON FLECHAS MANDO
+                    if joy_id in estado_mandos_desconectados:
+                        info = estado_mandos_desconectados.pop(joy_id)
+                        gestor_jugadores.unir_mando(joy_id)
+                        jugador = gestor_jugadores.get_jugador_por_joy(joy_id)
+                        if jugador:
+                            jugador["indice"] = info.get("indice", 0)
+                    else:
+                        gestor_jugadores.unir_mando(joy_id)
+                else:
+                    if event.button == 7:
+                        temporizador_listos[joy_id] = True
+                    elif event.button == 1:
+                        temporizador_listos[joy_id] = False
+
+            if event.type == pygame.JOYHATMOTION:
                 joy_id = getattr(event, "instance_id", event.joy)
                 jugador = gestor_jugadores.get_jugador_por_joy(joy_id)
                 if jugador:
+                    if temporizador_listos.get(joy_id):
+                        continue
                     x, _ = event.value
                     if x == -1:
                         jugador["indice"] = (jugador.get("indice", 0) - 1) % len(personajes_disponibles)
                     elif x == 1:
                         jugador["indice"] = (jugador.get("indice", 0) + 1) % len(personajes_disponibles)
+
             if event.type == pygame.JOYDEVICEREMOVED:
                 joy_id = event.instance_id
                 jugador = gestor_jugadores.get_jugador_por_joy(joy_id)
                 if jugador:
+                    estado_mandos_desconectados[joy_id] = jugador.copy()
                     gestor_jugadores.eliminar_jugador_por_joy(joy_id)
 
             if event.type == pygame.JOYDEVICEADDED:
@@ -157,23 +193,26 @@ def pantalla_personajes(screen, bg_anim):
         screen.blit(fondo, fondo_rect)
 
         for i in range(4):
-             pos = personajes_centros[i]
-             jugador = gestor_jugadores.get(i)
-             if jugador and "indice" in jugador:
-                 if jugador["tipo"] == "teclado":
-                     base_rect = img_teclado.get_rect(center=pos)
-                     screen.blit(img_teclado, base_rect)
-                 elif jugador["tipo"] == "mando":
-                     base_rect = img_mando.get_rect(center=pos)
-                     screen.blit(img_mando, base_rect)
-                 draw_etiqueta_jugador(screen, f"J{i+1}", pos)
-                 personaje_img = personajes_disponibles[jugador["indice"]]
-                 nombre_personaje = nombres_personajes[jugador["indice"]]
-                 rect_img = draw_personaje_con_bombeo(screen, personaje_img, nombre_personaje, pos, flecha_izq, flecha_der, True, bombeo=False)
-                 tipo_jugador = jugador["tipo"]
-                 draw_mensaje_inicio(screen, rect_img, tipo_jugador)
-             else:
-                 draw_personaje_con_bombeo(screen, img_default, "NINGUNO", pos, flecha_izq, flecha_der, False, bombeo=True)
+            pos = personajes_centros[i]
+            jugador = gestor_jugadores.get(i)
+            if jugador and "indice" in jugador:
+                if jugador["tipo"] == "teclado":
+                    base_rect = img_teclado.get_rect(center=pos)
+                    screen.blit(img_teclado, base_rect)
+                elif jugador["tipo"] == "mando":
+                    base_rect = img_mando.get_rect(center=pos)
+                    screen.blit(img_mando, base_rect)
+                draw_etiqueta_jugador(screen, f"J{i+1}", pos)
+                personaje_img = personajes_disponibles[jugador["indice"]]
+                nombre_personaje = nombres_personajes[jugador["indice"]]
+                tipo_jugador = jugador["tipo"]
+                id_jugador = "teclado" if tipo_jugador == "teclado" else jugador.get("id")
+                listo = temporizador_listos.get(id_jugador, False)
+                rect_img = draw_personaje_con_bombeo(screen, personaje_img, nombre_personaje, pos, flecha_izq, flecha_der, not listo, bombeo=False)
+                draw_mensaje_inicio(screen, rect_img, tipo_jugador, listo)
+            else:
+                draw_personaje_con_bombeo(screen, img_default, "NINGUNO", pos, flecha_izq, flecha_der, False, bombeo=True)
+
         draw_texto_inferior_bombeo(screen, "Pulsa para unirte", (screen.get_width() // 2, screen.get_height() - 30))
 
         for img, rect in [(atras, atras_rect), (siguiente, siguiente_rect)]:
@@ -183,6 +222,12 @@ def pantalla_personajes(screen, bg_anim):
                 screen.blit(hover, rect_hover)
             else:
                 screen.blit(img, rect)
+
+        # Título
+        font2 = pygame.font.Font(None, 36)
+        title_surf = font2.render("PERSONAJES Y JUGADORES", True, (255, 255, 255))
+        title_rect = title_surf.get_rect(center=(537, 105))
+        screen.blit(title_surf, title_rect)
 
         pygame.display.flip()
         clock.tick(60)

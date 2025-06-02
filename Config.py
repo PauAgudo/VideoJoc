@@ -22,7 +22,6 @@ class Config:
         # Configuración mapa
         self.selected_map = 1
 
-
 config = Config()
 
 
@@ -30,29 +29,34 @@ class Audio:
     def __init__(self):
         # Volumen música de fondo
         self.volume = 1.0
-        # Volumen botones menú
-        self.volume_buttons = 1.0
         # Volumen efectos de sonido
         self.volume_effects = 1.0
 
-        # Parámetros de los sliders
+        # Parámetros de los sliders (posición y tamaño, igual que antes)
         self.slider_pos = (300, 120)
         self.slider_size = (300, 10)
-        self.slider_values = [1.0, 1.0, 1.0]
+        # Ahora sólo hay dos valores: [volume (música), volume_effects]
+        self.slider_values = [1.0, 1.0]
 
     def save(self):
-        """Guarda los valores directamente en la clase."""
-        self.slider_values = [self.volume, self.volume_buttons, self.volume_effects]
+        self.slider_values = [
+            self.volume,
+            self.volume_effects
+        ]
 
     def load(self):
-        """Carga los valores directamente desde la clase."""
-        self.volume = self.slider_values[0]
-        self.volume_buttons = self.slider_values[1]
-        self.volume_effects = self.slider_values[2]
-
+        if len(self.slider_values) >= 2:
+            self.volume = self.slider_values[0]
+            self.volume_effects = self.slider_values[1]
+        else:
+            # Si por alguna razón slider_values no está inicializada correctamente,
+            # reasignamos valores por defecto.
+            self.volume = 1.0
+            self.volume_effects = 1.0
 
 audio = Audio()
 audio.load()  # Cargar valores iniciales
+
 
 # clase para guardar seleccion de personajes para cada uno de los jugadores
 
@@ -76,7 +80,7 @@ class Personajes:
         for jugador in self.seleccion:
             self.seleccion[jugador]["personaje"] = None
 
-# Instancia global que puedes importar en cualquier parte del juego
+# Instancia global de los personajes
 personajes = Personajes()
 
 
