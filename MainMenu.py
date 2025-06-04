@@ -5,6 +5,8 @@ from PantallaPrincipal import BackgroundAnimation
 from PantallaConfigPartida import pantalla2_main, ConfiguracionPartida
 from PantallaMapas import pantalla_mapas
 from PantallaAudio import pantalla_audio
+from PantallaPersonajes import pantalla_personajes
+
 
 def main():
     pygame.init()
@@ -31,6 +33,11 @@ def main():
     pantalla2_main(screen, bg_anim)
     pantalla_mapas(screen, bg_anim)
     pantalla_audio(screen, bg_anim)
+    pantalla_personajes(screen, bg_anim)
+
+    from MainJoc import pantalla_partida
+    pantalla_partida(screen, bg_anim)
+
 
     pygame.quit()
     sys.exit()
