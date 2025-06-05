@@ -6,7 +6,7 @@ from PantallaConfigPartida import pantalla2_main, ConfiguracionPartida
 from PantallaMapas import pantalla_mapas
 from PantallaAudio import pantalla_audio
 from PantallaPersonajes import pantalla_personajes
-
+from Partida import iniciar_partida
 
 def main():
     pygame.init()
@@ -28,13 +28,13 @@ def main():
     # Cargar o crear elementos compartidos
     bg_anim = BackgroundAnimation(screen_width, screen_height)  # Asumiendo que está en un módulo común
 
-    # Mostrar la pantalla principal y luego la pantalla 2
+    # Mostrar la pantalla principal y luego la pahntalla 2
     background_screen(screen)
     pantalla2_main(screen, bg_anim)
     pantalla_mapas(screen, bg_anim)
     pantalla_audio(screen, bg_anim)
     pantalla_personajes(screen, bg_anim)
-
+    iniciar_partida(screen)
 
 
 
