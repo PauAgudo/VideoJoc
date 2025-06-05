@@ -35,8 +35,7 @@ def main():
     pantalla_audio(screen, bg_anim)
     pantalla_personajes(screen, bg_anim)
 
-    from MainJoc import pantalla_partida
-    pantalla_partida(screen, bg_anim)
+
 
 
     pygame.quit()
