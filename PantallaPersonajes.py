@@ -130,8 +130,7 @@ def pantalla_personajes(screen, bg_anim):
                     pantalla_mapas(screen, bg_anim)
                     return
                 if siguiente_rect.collidepoint(mouse_pos):
-                    from MainJoc import pantalla_partida
-                    pantalla_partida(screen, bg_anim)
+
                     return
 
             if event.type == pygame.KEYDOWN:
