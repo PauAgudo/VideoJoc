@@ -59,12 +59,11 @@ def iniciar_partida(_):
             dx = dy = 0
 
             if pj.tipus == "teclado":
-                if i == 0:
-                    for tecla, (dx_val, dy_val) in teclat_controls.items():
-                        if keys[tecla]:
-                            dx, dy = dx_val, dy_val
-                            break
-                    pj.moure(dx, dy)
+                for tecla, (dx_val, dy_val) in teclat_controls.items():
+                    if keys[tecla]:
+                        dx, dy = dx_val, dy_val
+                        break
+                pj.moure(dx, dy)
 
             elif pj.tipus == "mando":
                 jugador_info = gestor_jugadores.get_jugador_por_joy(pj.id_mando)
