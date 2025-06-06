@@ -2,6 +2,7 @@ import pygame
 import os
 import random
 
+
 class Mapa:
     def __init__(self, mapa_id):
         # Dimensions del mapa en cel·les
@@ -13,6 +14,7 @@ class Mapa:
         self.offset_top = 80
         self.offset_left = 250
         self.offset_right = 250
+        self.matriu = [[0 for _ in range(self.columnes)] for _ in range(self.files)]
 
         # Ruta base del mapa seleccionat
         base_path = os.path.join("Assets", "Mapas", f"Mapa{mapa_id}")
@@ -45,6 +47,11 @@ class Mapa:
             (fila >= self.files - 3 and col <= 2) or
             (fila >= self.files - 3 and col >= self.columnes - 3)
         )
+
+    def fora_limits(self, fila, col):
+        files = len(self.matriu)
+        columnes = len(self.matriu[0]) if files > 0 else 0
+        return fila < 0 or fila >= files or col < 0 or col >= columnes
 
     def generar_blocs_destruibles(self):
         for fila in range(self.files):

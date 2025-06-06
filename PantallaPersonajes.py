@@ -74,7 +74,6 @@ def draw_etiqueta_jugador(screen, texto, posicion):
 
 
 def pantalla_personajes(screen, bg_anim):
-    pygame.joystick.quit()
     pygame.joystick.init()
     mandos = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
     for mando in mandos:
