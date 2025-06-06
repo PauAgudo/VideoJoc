@@ -75,6 +75,8 @@ class Personaje:
         self.dest_x = self.x
         self.dest_y = self.y
 
+        self.bombes_actives = []
+
         self.frame_index = 0
         self.frame_timer = 0
         self.frame_delay = 150
@@ -215,11 +217,24 @@ class Personaje:
 
         self.sprite_actual = self.animacions[self.direccio][self.frame_index]
 
+        self.bombes_actives = [b for b in self.bombes_actives if not b.finalitzada]
+        self.mapa.bombes_colocades = [b for b in self.mapa.bombes_colocades if not b.finalitzada]
+
     def colocar_bomba(self, llista_bombes):
+        # Només permet col·locar si no ha arribat al límit
+        MAX_BOMBES = 1  # pots augmentar aquest valor si tens power-ups
+        self.bombes_actives = [b for b in self.bombes_actives if not b.finalitzada]
+        if len(self.bombes_actives) >= MAX_BOMBES:
+            return
+
         tile_x = (self.x - self.mapa.offset_left + TILE_SIZE // 2) // TILE_SIZE
         tile_y = (self.y - self.mapa.offset_top + TILE_SIZE // 2) // TILE_SIZE
+
         nova_bomba = Bomba(tile_x, tile_y, self.mapa)
+        self.bombes_actives.append(nova_bomba)
         llista_bombes.append(nova_bomba)
+        self.mapa.bombes_colocades.append(nova_bomba)
+
         if self.sound_timer >= self.sound_interval:
             self.sound_timer = 0
             self.bomb_sound.play()

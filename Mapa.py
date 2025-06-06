@@ -14,7 +14,6 @@ class Mapa:
         self.offset_top = 80
         self.offset_left = 250
         self.offset_right = 250
-        self.matriu = [[0 for _ in range(self.columnes)] for _ in range(self.files)]
 
         # Ruta base del mapa seleccionat
         base_path = os.path.join("Assets", "Mapas", f"Mapa{mapa_id}")
@@ -25,6 +24,9 @@ class Mapa:
         self.mur = pygame.image.load(os.path.join(base_path, "muro.png")).convert()
         self.obstaculo = pygame.image.load(os.path.join(base_path, "obstacle.png")).convert()
         self.bloc_destruible = pygame.image.load(os.path.join(base_path, "destructible.png")).convert()
+
+        # Bombas
+        self.bombes_colocades = []
 
         # Escalat a mida de casella
         self.terra1 = pygame.transform.scale(self.terra1, (self.mida_casella, self.mida_casella))
@@ -49,8 +51,8 @@ class Mapa:
         )
 
     def fora_limits(self, fila, col):
-        files = len(self.matriu)
-        columnes = len(self.matriu[0]) if files > 0 else 0
+        files = len(self.grid)
+        columnes = len(self.grid[0]) if files > 0 else 0
         return fila < 0 or fila >= files or col < 0 or col >= columnes
 
     def generar_blocs_destruibles(self):
@@ -68,7 +70,12 @@ class Mapa:
                     self.grid[fila][col] = 2
 
     def es_bloquejada(self, fila, col):
-        return self.grid[fila][col] in (1, 2)
+        if self.grid[fila][col] in (1, 2):
+            return True
+        for bomba in self.bombes_colocades:
+            if not bomba.explotada and bomba.tile_x == col and bomba.tile_y == fila:
+                return True
+        return False
 
     def destrueix_bloc(self, fila, col):
         if (fila, col) in self.blocs_destruibles:

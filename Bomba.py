@@ -58,9 +58,9 @@ class Bomba:
             self.blocs_en_animacio = [(bx, by, idx + 1) for (bx, by, idx) in self.blocs_en_animacio]
 
             for bx, by in blocs_per_eliminar:
-                self.mapa.matriu[by][bx] = 0
-                if (bx, by) in self.mapa.blocs_destructibles:
-                    self.mapa.blocs_destructibles.remove((bx, by))
+                self.mapa.grid[by][bx] = 0
+                if (bx, by) in self.mapa.blocs_destruibles:
+                    self.mapa.blocs_destruibles.remove((bx, by))
 
             if self.frame_index >= len(self.frames_centre):
                 self.finalitzada = True
@@ -90,6 +90,11 @@ class Bomba:
             (-1, 0): 90
         }
 
+
+        if (self.tile_y, self.tile_x) in self.mapa.blocs_destruibles:
+            if (self.tile_x, self.tile_y) not in [(b[0], b[1]) for b in self.blocs_en_animacio]:
+                self.blocs_en_animacio.append((self.tile_x, self.tile_y, 0))
+
         for (dx, dy), angle in direccions.items():
             for i in range(1, self.rang + 1):
                 tx = self.tile_x + dx * i
@@ -98,8 +103,9 @@ class Bomba:
                 if self.mapa.fora_limits(ty, tx):
                     break
 
-                if self.mapa.matriu[ty][tx] == 1:
-                    self.blocs_en_animacio.append((tx, ty, 0))  # index inicial a 0
+                if (ty, tx) in self.mapa.blocs_destruibles:
+                    if (tx, ty) not in [(b[0], b[1]) for b in self.blocs_en_animacio]:
+                        self.blocs_en_animacio.append((tx, ty, 0))  # index inicial a 0
                     break
 
                 if self.mapa.es_bloquejada(ty, tx):
