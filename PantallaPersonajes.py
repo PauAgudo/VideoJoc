@@ -82,27 +82,27 @@ def pantalla_personajes(screen, bg_anim):
     clock = pygame.time.Clock()
     pygame.display.set_caption("Pantalla Personajes")
 
-    atras = pygame.transform.scale(pygame.image.load("imagenes/atras.png").convert_alpha(), (40, 40))
+    atras = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/atras.png").convert_alpha(), (40, 40))
     atras_rect = atras.get_rect(topleft=(25, 25))
-    siguiente = pygame.transform.scale(pygame.image.load("imagenes/siguiente.png").convert_alpha(), (40, 40))
+    siguiente = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/siguiente.png").convert_alpha(), (40, 40))
     siguiente_rect = siguiente.get_rect(bottomright=(screen.get_width() - 25, screen.get_height() - 25))
 
-    fondo = pygame.transform.scale(pygame.image.load("imagenes/fondobasico.png").convert_alpha(), (750, 450))
+    fondo = pygame.transform.scale(pygame.image.load("Media/Menu/fondobasico.png").convert_alpha(), (750, 450))
     fondo_rect = fondo.get_rect(midright=(screen.get_width(), screen.get_height() // 2))
 
-    img_default = pygame.transform.scale(pygame.image.load("imagenes/selec_pers.png").convert_alpha(), (130, 130))
-    img_teclado = pygame.transform.scale(pygame.image.load("imagenes/teclado.png").convert_alpha(), (160, 160))
-    img_mando = pygame.transform.scale(pygame.image.load("imagenes/mando.png").convert_alpha(), (160, 160))
+    img_default = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_personajes/selec_pers.png").convert_alpha(), (130, 130))
+    img_teclado = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_personajes/teclado.png").convert_alpha(), (160, 160))
+    img_mando = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_personajes/mando.png").convert_alpha(), (160, 160))
 
-    flecha_izq = pygame.transform.scale(pygame.image.load("imagenes/flecha_izquierda.png").convert_alpha(), (20, 20))
-    flecha_der = pygame.transform.scale(pygame.image.load("imagenes/flecha_derecha.png").convert_alpha(), (20, 20))
+    flecha_izq = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_personajes/flecha_izquierda.png").convert_alpha(), (20, 20))
+    flecha_der = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_personajes/flecha_derecha.png").convert_alpha(), (20, 20))
 
     personajes_disponibles = [
-        pygame.transform.scale(pygame.image.load("Personajes/orco1.png").convert_alpha(), (90, 90)),
-        pygame.transform.scale(pygame.image.load("Personajes/rojo.png").convert_alpha(), (90, 90)),
-        pygame.transform.scale(pygame.image.load("Personajes/vampiro1.png").convert_alpha(), (90, 90)),
-        pygame.transform.scale(pygame.image.load("Personajes/orco2.png").convert_alpha(), (90, 90)),
-        pygame.transform.scale(pygame.image.load("Personajes/orco3.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/orco1.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/rojo.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/vampiro1.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/orco2.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/orco3.png").convert_alpha(), (90, 90)),
     ]
 
     nombres_personajes = ["Orco Verde", "Guerrero Rojo", "Vampiro", "Orco Azul", "Orco Marrón"]
@@ -129,7 +129,7 @@ def pantalla_personajes(screen, bg_anim):
                     pantalla_mapas(screen, bg_anim)
                     return
                 if siguiente_rect.collidepoint(mouse_pos):
-                    from Partida import iniciar_partida
+                    from partida2 import iniciar_partida
                     iniciar_partida(screen)
                     return
 

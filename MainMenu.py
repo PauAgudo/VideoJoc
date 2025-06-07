@@ -1,12 +1,14 @@
 import pygame
 import sys
+
+from Config import get_configuracion_completa
 from PantallaPrincipal import background_screen
 from PantallaPrincipal import BackgroundAnimation
-from PantallaConfigPartida import pantalla2_main, ConfiguracionPartida
+from PantallaConfigPartida import pantalla2_main
 from PantallaMapas import pantalla_mapas
 from PantallaAudio import pantalla_audio
 from PantallaPersonajes import pantalla_personajes
-from Partida import iniciar_partida
+from partida2 import iniciar_partida
 
 def main():
     pygame.init()
@@ -17,7 +19,7 @@ def main():
 
     # CARGAR EFECTOS DE SONIDO
     # musica de fondo
-    pygame.mixer.music.load("media/retrogame.mp3")  #
+    pygame.mixer.music.load("Media/Sonidos_juego/musica_fondo/menu.mp3")  #
     pygame.mixer.music.set_volume(1.0)  # volumen al 100%
     pygame.mixer.music.play(-1)  # -1 para reproducir en bucle indefinido
 
@@ -28,14 +30,21 @@ def main():
     # Cargar o crear elementos compartidos
     bg_anim = BackgroundAnimation(screen_width, screen_height)  # Asumiendo que está en un módulo común
 
-    # Mostrar la pantalla principal y luego la pahntalla 2
-    background_screen(screen)
-    pantalla2_main(screen, bg_anim)
-    pantalla_mapas(screen, bg_anim)
-    pantalla_audio(screen, bg_anim)
-    pantalla_personajes(screen, bg_anim)
-    iniciar_partida(screen)
+    # Mostrar pantalles només si l’usuari les va confirmant
+    if not background_screen(screen):
+        return
+    if not pantalla2_main(screen, bg_anim):
+        return
+    if not pantalla_mapas(screen, bg_anim):
+        return
+    if not pantalla_audio(screen, bg_anim):
+        return
+    if not pantalla_personajes(screen, bg_anim):
+        return
 
+    # Iniciar la partida
+    from partida2 import iniciar_partida
+    iniciar_partida(screen)
 
 
     pygame.quit()

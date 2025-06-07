@@ -49,7 +49,7 @@ def inicializar_componentes_ui(screen):
     # Configuración del botón "Atrás"
     try:
         boton_atras = pygame.transform.scale(
-            pygame.image.load("imagenes/atras.png"),
+            pygame.image.load("Media/Menu/Botones/atras.png"),
             (40, 40)
         )
     except pygame.error:
@@ -60,7 +60,7 @@ def inicializar_componentes_ui(screen):
     # Fondo gris
     try:
         fondo_gris = pygame.transform.scale(
-            pygame.image.load("imagenes/gris.png"),
+            pygame.image.load("Media/Menu/gris.png"),
             (750, 450)
         )
     except pygame.error:

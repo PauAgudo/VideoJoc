@@ -9,16 +9,16 @@ def pantalla_mapas(screen, bg_anim):
     pygame.display.set_caption("Pantalla 3")
 
     # BOTON ATRAS
-    atras = pygame.image.load("imagenes/atras.png").convert_alpha()
+    atras = pygame.image.load("Media/Menu/Botones/atras.png").convert_alpha()
     atras = pygame.transform.scale(atras, (40, 40))
     atras_rect = atras.get_rect(topleft=(25, 25))
 
     # BOTON SIGUIENTE
-    siguiente = pygame.transform.scale(pygame.image.load("imagenes/siguiente.png"), (40, 40))
+    siguiente = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/siguiente.png"), (40, 40))
     siguiente_rect = siguiente.get_rect(bottomright=(screen.get_width() - 25, screen.get_height() - 25))
 
     # MARCO CENTRAL
-    marco = pygame.transform.scale(pygame.image.load("imagenes/Mapselect.png"), (750, 450))
+    marco = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_mapas/Mapselect.png"), (750, 450))
     marco_rect = marco.get_rect(midright=(screen.get_width(), screen.get_height() // 2))
 
     # Nombres de los mapas
@@ -32,9 +32,9 @@ def pantalla_mapas(screen, bg_anim):
     start_y = 220
     gap = 15
     for i in range(3):
-        mini = pygame.image.load(f"imagenes/mapa{i+1}.png").convert_alpha()
+        mini = pygame.image.load(f"Media/Menu/Pantalla_mapas/mapa{i+1}.png").convert_alpha()
         mini = pygame.transform.scale(mini, (120, 105))
-        big = pygame.image.load(f"imagenes/mapa{i+1}big.png").convert_alpha()
+        big = pygame.image.load(f"Media/Menu/Pantalla_mapas/mapa{i+1}big.png").convert_alpha()
         y = start_y + i * (100 + gap)
         rect = mini.get_rect(center=(x, y))
         mapas.append((mini, big, rect, name_surfs[i]))
