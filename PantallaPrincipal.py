@@ -9,15 +9,15 @@ class BackgroundAnimation:
         self.screen_height = screen_height
 
         # Cargar y escalar imágenes de fondo
-        self.sky = pygame.image.load("imagenes/cielo.png").convert()
+        self.sky = pygame.image.load("Media/Menu/Pantalla_principal/cielo.png").convert()
         self.sky = pygame.transform.scale(self.sky, (screen_width, screen_height))
 
-        self.ground = pygame.image.load("imagenes/ground2.png").convert_alpha()
+        self.ground = pygame.image.load("Media/Menu/Pantalla_principal/ground2.png").convert_alpha()
         self.ground_width, self.ground_height = self.ground.get_size()
         self.ground = pygame.transform.scale(self.ground, (screen_width, self.ground_height))
 
-        self.cloud1 = pygame.image.load("imagenes/nube2.png").convert_alpha()
-        self.cloud2 = pygame.image.load("imagenes/nube3.png").convert_alpha()
+        self.cloud1 = pygame.image.load("Media/Menu/Pantalla_principal/nube2.png").convert_alpha()
+        self.cloud2 = pygame.image.load("Media/Menu/Pantalla_principal/nube3.png").convert_alpha()
         self.cloud1 = pygame.transform.scale(self.cloud1, (120, 60))
         self.cloud2 = pygame.transform.scale(self.cloud2, (200, 100))
         self.cloud1_width = self.cloud1.get_width()
@@ -29,7 +29,7 @@ class BackgroundAnimation:
         self.cloud2_x = -self.cloud2_width
         self.cloud2_y = 80
 
-        self.zeppelin = pygame.image.load("imagenes/zeppelin.png").convert_alpha()
+        self.zeppelin = pygame.image.load("Media/Menu/Pantalla_principal/zeppelin.png").convert_alpha()
         self.zeppelin = pygame.transform.scale(self.zeppelin, (300, 150))
         self.zeppelin_width = self.zeppelin.get_width()
         self.zeppelin_x = screen_width
@@ -96,7 +96,7 @@ def background_screen(screen):
     text_center = (screen_width // 2, screen_height - 100)
 
     # Cargar efecto sonido
-    key_sound = pygame.mixer.Sound("media/interface.mp3")
+    key_sound = pygame.mixer.Sound("Media/Sonidos_juego/Botones/boton_inicio.mp3")
     key_sound.set_volume(1)  # volumen al 100%
 
     # Crear la instancia del fondo animado

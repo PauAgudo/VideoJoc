@@ -18,15 +18,15 @@ class ConfiguracionPartida:
         current_ultimas_index = current_ultimas_index = config.current_ultimas_index.copy()
 
         # Fondo
-        fondo = pygame.transform.scale(pygame.image.load("imagenes/fondobasico.png"), (750, 450))
+        fondo = pygame.transform.scale(pygame.image.load("Media/Menu/fondobasico.png"), (750, 450))
         fondo_rect = fondo.get_rect(midright=(screen.get_width(), screen.get_height() // 2))
 
         # Botones fijos
-        atras = pygame.transform.scale(pygame.image.load("imagenes/atras.png"), (40, 40))
+        atras = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/atras.png"), (40, 40))
         atras_rect = atras.get_rect(topleft=(25, 25))
-        siguiente = pygame.transform.scale(pygame.image.load("imagenes/siguiente.png"), (40, 40))
+        siguiente = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/siguiente.png"), (40, 40))
         siguiente_rect = siguiente.get_rect(bottomright=(screen.get_width() - 25, screen.get_height() - 25))
-        audio = pygame.transform.scale(pygame.image.load("imagenes/settings.png"), (50, 40))
+        audio = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/settings.png"), (50, 40))
         audio_rect = audio.get_rect(bottomright=(70, screen.get_height() - 30))
 
         # Tiras
@@ -35,13 +35,13 @@ class ConfiguracionPartida:
         keys = ["sets", "minutos", "nivel_COM", "pos_inicial", "aviones", "Maldiciones", "Bloques_final"]
 
         tira_files = {
-            "sets": "imagenes/tira_sets.png",
-            "minutos": "imagenes/tiempo.png",
-            "nivel_COM": "imagenes/tira_COM.png",
-            "pos_inicial": "imagenes/tira_posicion.png",
-            "aviones": "imagenes/tira_aviones.png",
-            "Maldiciones": "imagenes/tira_maldiciones.png",
-            "Bloques_final": "imagenes/tira_bloques.png"
+            "sets": "Media/Menu/Pantalla_configuracion_partida/tira_sets.png",
+            "minutos": "Media/Menu/Pantalla_configuracion_partida/tiempo.png",
+            "nivel_COM": "Media/Menu/Pantalla_configuracion_partida/tira_COM.png",
+            "pos_inicial": "Media/Menu/Pantalla_configuracion_partida/tira_posicion.png",
+            "aviones": "Media/Menu/Pantalla_configuracion_partida/tira_aviones.png",
+            "Maldiciones": "Media/Menu/Pantalla_configuracion_partida/tira_maldiciones.png",
+            "Bloques_final": "Media/Menu/Pantalla_configuracion_partida/tira_bloques.png"
         }
 
         # Carga cada imagen individual y la guarda en el diccionario tiras
@@ -64,8 +64,8 @@ class ConfiguracionPartida:
         botones = {k: {"imagen": tiras[k], "rect": tiras[k].get_rect(topleft=posiciones[k])} for k in keys}
 
         # Flechas
-        izquierda = pygame.transform.scale(pygame.image.load("imagenes/izquierda.png"), (30, 30))
-        derecha = pygame.transform.scale(pygame.image.load("imagenes/derecha.png"), (30, 30))
+        izquierda = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_configuracion_partida/izquierda.png"), (30, 30))
+        derecha = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_configuracion_partida/derecha.png"), (30, 30))
         flechas_pos = {k: {"izquierda": (520, posiciones[k][1]), "derecha": (680, posiciones[k][1])} for k in keys}
 
         font = pygame.font.SysFont(None, 23)
@@ -145,10 +145,10 @@ class ConfiguracionPartida:
                 # Mostrar valor actual
                 if key == "sets":
                     v = config.set_options[current_set_index]
-                    screen.blit(pygame.transform.scale(pygame.image.load(f"imagenes/{v}.png"), (30, 30)),
+                    screen.blit(pygame.transform.scale(pygame.image.load(f"Media/Menu/Pantalla_configuracion_partida/{v}.png"), (30, 30)),
                                 (600 - (shift_amount if hov else 0), posiciones[key][1]))
                 if key == "minutos":
-                    screen.blit(pygame.transform.scale(pygame.image.load(f"imagenes/{current_minute}.png"), (30, 30)),
+                    screen.blit(pygame.transform.scale(pygame.image.load(f"Media/Menu/Pantalla_configuracion_partida/{current_minute}.png"), (30, 30)),
                                 (600 - (shift_amount if hov else 0), posiciones[key][1]))
                 if key == "nivel_COM":
                     txt = config.level_options[current_level_index]
