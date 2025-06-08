@@ -15,19 +15,23 @@ class ConfiguracionPartida:
         current_minute = config.current_minute
         current_level_index = config.current_level_index
         current_position_index = config.current_position_index
-        current_ultimas_index = current_ultimas_index = config.current_ultimas_index.copy()
+        current_ultimas_index = config.current_ultimas_index.copy()
+
+        # primera tira por defecto activada
+        tira_activa = 0
 
         # Fondo
         fondo = pygame.transform.scale(pygame.image.load("Media/Menu/fondobasico.png"), (750, 450))
         fondo_rect = fondo.get_rect(midright=(screen.get_width(), screen.get_height() // 2))
 
         # Botones fijos
-        atras = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/atras.png"), (40, 40))
-        atras_rect = atras.get_rect(topleft=(25, 25))
+        atras = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/siguiente.png"), (40, 40))
+        atras_rotated = pygame.transform.flip(atras, True, False)  # flip horizontal
+        atras_rect = atras_rotated.get_rect(bottomleft=(25, screen.get_height() - 25))
         siguiente = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/siguiente.png"), (40, 40))
         siguiente_rect = siguiente.get_rect(bottomright=(screen.get_width() - 25, screen.get_height() - 25))
         audio = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/settings.png"), (50, 40))
-        audio_rect = audio.get_rect(bottomright=(70, screen.get_height() - 30))
+        audio_rect = audio.get_rect(topleft=(25, 25))
 
         # Tiras
 
@@ -71,6 +75,14 @@ class ConfiguracionPartida:
         font = pygame.font.SysFont(None, 23)
         shift_amount = 10
 
+        def ir_a_pantalla_mapas():
+            config.current_set_index = current_set_index
+            config.current_minute = current_minute
+            config.current_level_index = current_level_index
+            config.current_position_index = current_position_index
+            config.current_ultimas_index = current_ultimas_index.copy()
+            pantalla_mapas(screen, bg_anim)
+
         running = True
         while running:
             mouse_pos = pygame.mouse.get_pos()
@@ -84,14 +96,16 @@ class ConfiguracionPartida:
                     if atras_rect.collidepoint(mouse_pos):
                         config.__init__()
                         background_screen(screen)
-
                     if siguiente_rect.collidepoint(mouse_pos):
-                        config.current_set_index = current_set_index
-                        config.current_minute = current_minute
-                        config.current_level_index = current_level_index
-                        config.current_position_index = current_position_index
-                        config.current_ultimas_index = current_ultimas_index.copy()
-                        pantalla_mapas(screen, bg_anim)
+                        ir_a_pantalla_mapas()
+
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        config.__init__()
+                        background_screen(screen)
+                    elif event.key == pygame.K_RETURN:
+                        ir_a_pantalla_mapas()
+
 
                     if audio_rect.collidepoint(mouse_pos):
                         pantalla_audio(screen, bg_anim)
@@ -123,14 +137,55 @@ class ConfiguracionPartida:
                                 elif key in current_ultimas_index and current_ultimas_index[key] < len(config.ultimas_opciones) - 1:
                                     current_ultimas_index[key] += 1
 
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_UP:
+                        tira_activa = (tira_activa - 1) % len(keys)
+                    elif event.key == pygame.K_DOWN:
+                        tira_activa = (tira_activa + 1) % len(keys)
+
+                    elif event.key == pygame.K_LEFT:
+                        key = keys[tira_activa]
+                        if key == "sets" and current_set_index > 0:
+                            current_set_index -= 1
+                        elif key == "minutos" and current_minute > 1:
+                            current_minute -= 1
+                        elif key == "nivel_COM" and current_level_index > 0:
+                            current_level_index -= 1
+                        elif key == "pos_inicial" and current_position_index > 0:
+                            current_position_index -= 1
+                        elif key in current_ultimas_index and current_ultimas_index[key] > 0:
+                            current_ultimas_index[key] -= 1
+
+                    elif event.key == pygame.K_RIGHT:
+                        key = keys[tira_activa]
+                        if key == "sets" and current_set_index < len(config.set_options) - 1:
+                            current_set_index += 1
+                        elif key == "minutos" and current_minute < 9:
+                            current_minute += 1
+                        elif key == "nivel_COM" and current_level_index < len(config.level_options) - 1:
+                            current_level_index += 1
+                        elif key == "pos_inicial" and current_position_index < len(config.position_options) - 1:
+                            current_position_index += 1
+                        elif key in current_ultimas_index and current_ultimas_index[key] < len(
+                                config.ultimas_opciones) - 1:
+                            current_ultimas_index[key] += 1
+
             # Dibujar
             bg_anim.update()
             bg_anim.draw(screen)
             screen.blit(fondo, fondo_rect)
 
+            # Detectar si el ratón está sobre alguna tira: actualizar tira_activa_idx
+            for idx, key in enumerate(keys):
+                rect = botones[key]["rect"]
+                if rect.collidepoint(mouse_pos):
+                    tira_activa = idx
+                    break
+
             for key, btn in botones.items():
                 rect = btn["rect"]
-                hov = rect.collidepoint(mouse_pos)
+                es_activa = (keys.index(key) == tira_activa)
+                hov = rect.collidepoint(mouse_pos) or es_activa
                 img = btn["imagen"]
                 if hov:
                     hi = pygame.transform.scale(img, (int(rect.width * 1.1), rect.height))
@@ -194,7 +249,7 @@ class ConfiguracionPartida:
                         screen.blit(derecha, right_rect)
 
             # Botones fijos
-            for img, rc in [(atras, atras_rect), (siguiente, siguiente_rect), (audio, audio_rect)]:
+            for img, rc in [(atras_rotated, atras_rect), (siguiente, siguiente_rect), (audio, audio_rect)]:
                 if rc.collidepoint(mouse_pos):
                     screen.blit(pygame.transform.scale(img, (int(rc.width * 1.1), int(rc.height * 1.1))), rc)
                 else:

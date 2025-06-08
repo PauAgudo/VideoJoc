@@ -3,7 +3,7 @@ from Config import get_configuracion_completa
 from Bomberman import *  # reutilitzem totes les classes i funcions ja definides
 
 
-def iniciar_partida(screen):
+def iniciar_partida():
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     config = get_configuracion_completa()
     pygame.init()

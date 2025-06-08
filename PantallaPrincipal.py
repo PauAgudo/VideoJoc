@@ -109,7 +109,7 @@ def background_screen(screen):
                 pygame.quit();
                 sys.exit()
             # Al pulsar cualquier tecla se cambia a la siguiente pantalla
-            if event.type == pygame.KEYDOWN:
+            if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
                 key_sound.play()
                 running = False
 
