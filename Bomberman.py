@@ -6,7 +6,7 @@ import random
 import math
 import random
 import time
-
+from Config import config
 # ------------------------------------------------------------------------------------
 # Inicialización y configuración de pantalla
 # ------------------------------------------------------------------------------------
@@ -1831,7 +1831,7 @@ def draw_curse_info(screen, player, color, pos):
 # ------------------------------------------------------------------------------------
 # Bucle principal
 # ------------------------------------------------------------------------------------
-TOTAL_TIME = 180
+TOTAL_TIME = config.current_minute * 60
 start_time = time.time()
 grid, powerups = generate_grid_and_powerups()
 game_grid = grid

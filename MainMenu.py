@@ -1,7 +1,6 @@
 import pygame
 import sys
 
-from Config import get_configuracion_completa
 from PantallaPrincipal import background_screen
 from PantallaPrincipal import BackgroundAnimation
 from PantallaConfigPartida import pantalla2_main

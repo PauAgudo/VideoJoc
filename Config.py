@@ -87,19 +87,7 @@ personajes = Personajes()
 # CONFIGURACIÓN COMPLETA
 from ConfiguraciónMandos import gestor_jugadores
 
-def get_configuracion_completa():
-    return {
-        "sets": config.set_options[config.current_set_index],
-        "tiempo": config.current_minute * 60,  # en segons
-        "nivel": config.level_options[config.current_level_index],
-        "posicion_inicial": config.position_options[config.current_position_index],
-        "ultimas_opciones": config.current_ultimas_index,
-        "mapa": config.selected_map,
-        "jugadores": gestor_jugadores.todos(),
-        "personajes": personajes.seleccion,
-        "volumen_musica": audio.volume,
-        "volumen_efectos": audio.volume_effects
-    }
+
 
 
 
