@@ -2,9 +2,19 @@ import pygame
 import sys
 import math
 from ConfiguraciónMandos import gestor_jugadores  # INSTANCIA DETECCION TECLADO Y MANDO
+from partida2 import iniciar_partida
+
 # Diccionario temporal para guardar estado de mandos desconectados
 temporizador_listos = {} # Diccionario para guardar si un jugador está listo
 estado_mandos_desconectados = {}
+
+def intentar_pasar_de_pantalla():
+    if not temporizador_listos:  # Diccionari buit → ningú listo
+        print("NO HAY NINGÚN JUGADOR CONECTADO Y LISTO")
+        return
+    iniciar_partida()
+    return True
+
 
 
 def draw_personaje_con_bombeo(screen, imagen, texto, center, flecha_izq, flecha_der, mostrar_flechas, bombeo=True):
@@ -82,8 +92,12 @@ def pantalla_personajes(screen, bg_anim):
     clock = pygame.time.Clock()
     pygame.display.set_caption("Pantalla Personajes")
 
-    atras = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/atras.png").convert_alpha(), (40, 40))
-    atras_rect = atras.get_rect(topleft=(25, 25))
+    # botón atrás
+    atras = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/siguiente.png"), (40, 40))
+    atras_rotated = pygame.transform.flip(atras, True, False)  # flip horizontal
+    atras_rect = atras_rotated.get_rect(bottomleft=(25, screen.get_height() - 25))
+
+    # Botón siguiente
     siguiente = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/siguiente.png").convert_alpha(), (40, 40))
     siguiente_rect = siguiente.get_rect(bottomright=(screen.get_width() - 25, screen.get_height() - 25))
 
@@ -129,13 +143,21 @@ def pantalla_personajes(screen, bg_anim):
                     pantalla_mapas(screen, bg_anim)
                     return
                 if siguiente_rect.collidepoint(mouse_pos):
-                    from partida2 import iniciar_partida
-                    iniciar_partida(screen)
+                    if intentar_pasar_de_pantalla():
+                        return
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    from PantallaMapas import pantalla_mapas
+                    pantalla_mapas(screen, bg_anim)
                     return
+                if event.key == pygame.K_RETURN:
+                    if intentar_pasar_de_pantalla():
+                        return
 
             if event.type == pygame.KEYDOWN:
                 if gestor_jugadores.get_teclado() is None:
-                    gestor_jugadores.unir_teclado()
+                    if event.key not in [pygame.K_RETURN, pygame.K_ESCAPE]:
+                        gestor_jugadores.unir_teclado()
                 else:
                     jugador = gestor_jugadores.get_teclado()
                     if event.key == pygame.K_RETURN:
@@ -147,6 +169,8 @@ def pantalla_personajes(screen, bg_anim):
                             jugador["indice"] = (jugador.get("indice", 0) - 1) % len(personajes_disponibles)
                         elif event.key == pygame.K_RIGHT:
                             jugador["indice"] = (jugador.get("indice", 0) + 1) % len(personajes_disponibles)
+
+
 
             if event.type == pygame.JOYBUTTONDOWN:
                 joy_id = getattr(event, "instance_id", event.joy)
@@ -215,7 +239,7 @@ def pantalla_personajes(screen, bg_anim):
 
         draw_texto_inferior_bombeo(screen, "Pulsa para unirte", (screen.get_width() // 2, screen.get_height() - 30))
 
-        for img, rect in [(atras, atras_rect), (siguiente, siguiente_rect)]:
+        for img, rect in [(atras_rotated, atras_rect), (siguiente, siguiente_rect)]:
             if rect.collidepoint(mouse_pos):
                 hover = pygame.transform.scale(img, (int(rect.width * 1.1), int(rect.height * 1.1)))
                 rect_hover = hover.get_rect(center=rect.center)

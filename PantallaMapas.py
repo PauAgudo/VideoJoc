@@ -9,9 +9,9 @@ def pantalla_mapas(screen, bg_anim):
     pygame.display.set_caption("Pantalla 3")
 
     # BOTON ATRAS
-    atras = pygame.image.load("Media/Menu/Botones/atras.png").convert_alpha()
-    atras = pygame.transform.scale(atras, (40, 40))
-    atras_rect = atras.get_rect(topleft=(25, 25))
+    atras = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/siguiente.png"), (40, 40))
+    atras_rotated = pygame.transform.flip(atras, True, False)  # flip horizontal
+    atras_rect = atras_rotated.get_rect(bottomleft=(25, screen.get_height() - 25))
 
     # BOTON SIGUIENTE
     siguiente = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/siguiente.png"), (40, 40))
@@ -74,6 +74,24 @@ def pantalla_mapas(screen, bg_anim):
                     from PantallaPersonajes import pantalla_personajes
                     pantalla_personajes(screen, bg_anim)
                     return
+            if event.type == pygame.KEYDOWN:
+                # Volver atrás
+                if event.key == pygame.K_ESCAPE:
+                    from PantallaConfigPartida import pantalla2_main
+                    pantalla2_main(screen, bg_anim)
+                    return
+                # Seleccionar mapa al hacer click
+                for idx, (mini, big, rect, name_surf) in enumerate(mapas):
+                    if rect.collidepoint(mouse_pos):
+                        selected_index = idx
+                        # Guardar en config global
+                        config.selected_map = idx + 1
+                        break
+                # Pulsar siguiente
+                if event.key == pygame.K_RETURN and selected_index >= 0:
+                    from PantallaPersonajes import pantalla_personajes
+                    pantalla_personajes(screen, bg_anim)
+                    return
 
         # Dibujar fondo y marco
         bg_anim.update()
@@ -99,11 +117,11 @@ def pantalla_mapas(screen, bg_anim):
 
         # Hover botón ATRÁS
         if atras_rect.collidepoint(mouse_pos):
-            atras_hover = pygame.transform.scale(atras, (int(atras_rect.width * 1.1), int(atras_rect.height * 1.1)))
+            atras_hover = pygame.transform.scale(atras_rotated, (int(atras_rect.width * 1.1), int(atras_rect.height * 1.1)))
             atras_rect_hover = atras_hover.get_rect(center=atras_rect.center)
             screen.blit(atras_hover, atras_rect_hover)
         else:
-            screen.blit(atras, atras_rect)
+            screen.blit(atras_rotated, atras_rect)
 
         # Hover botón SIGUIENTE
         if siguiente_rect.collidepoint(mouse_pos):
