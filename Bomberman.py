@@ -1,8 +1,12 @@
 import pygame
 import os
+import sys
+import time
+import random
 import math
 import random
 import time
+
 # ------------------------------------------------------------------------------------
 # Inicialización y configuración de pantalla
 # ------------------------------------------------------------------------------------
@@ -50,12 +54,10 @@ CURSES = {
 
 
 def respawn_all_abilities_with_animation():
-    global powerups, grid  # o ajusta si usas otro nombre de lista o variable
-
     """
     Reparte de nuevo todas las habilidades (excepto calavera) con animación.
     """
-
+    global powerups, grid  # o ajusta si usas otro nombre de lista o variable
     # 1) Elimina las habilidades existentes (excepto calavera)
     for p in powerups[:]:
         if p.type != "calavera":
@@ -106,32 +108,35 @@ BRICK = load_image("muro_rompible.png", (TILE_SIZE, TILE_SIZE), folder=os.path.j
 LIMIT_IMG = load_image("limite_mapa.png", (TILE_SIZE, TILE_SIZE), folder=os.path.join(ASSETS_DIR, "Mapas", "Mapa1"))
 
 # Habilidades
-HABILIDADES_DIR = os.path.join(ASSETS_DIR, "Gadgets")
 SPEED_IMG = load_image("mas_velocidad.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Habilidades"))
 MORE_BOMB_IMG = load_image("mas_bombas.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Habilidades"))
 MAYOR_EXPLOSION_IMG = load_image("mayor_explosion.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Habilidades"))
-CALAVERA_IMG = load_image("calavera.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Maldiciones"))
+
+# Poderes
 PUSH_BOMB_IMG = load_image("patada.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Poderes"))
 PUÑO_IMG = load_image("puño.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Poderes"))
+
+# Maldiciones
+CALAVERA_IMG = load_image("calavera.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Maldiciones"))
 
 # Sonidos
 SOUND_BOMB_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "bomba", "explotar_bomba.wav")
 EXPLOSION_SOUND = pygame.mixer.Sound(SOUND_BOMB_PATH)
 EXPLOSION_SOUND.set_volume(0.35)
 
-FOOTSTEP_SOUND_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "movimiento", "pisadas_jugador.wav")
-FOOTSTEP_SOUND = pygame.mixer.Sound(FOOTSTEP_SOUND_PATH)
-FOOTSTEP_SOUND.set_volume(1)
-
 COLOCAR_BOMBA_SOUND_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "bomba", "colocar_bomba.wav")
 COLOCAR_BOMBA_SOUND = pygame.mixer.Sound(COLOCAR_BOMBA_SOUND_PATH)
 COLOCAR_BOMBA_SOUND.set_volume(0.35)
+
+FOOTSTEP_SOUND_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "movimiento", "pisadas_jugador.wav")
+FOOTSTEP_SOUND = pygame.mixer.Sound(FOOTSTEP_SOUND_PATH)
+FOOTSTEP_SOUND.set_volume(1)
 
 COGER_HABILIDAD_SOUND_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "habilidades", "coger_habilidad.wav")
 COGER_HABILIDAD_SOUND = pygame.mixer.Sound(COGER_HABILIDAD_SOUND_PATH)
 COGER_HABILIDAD_SOUND.set_volume(0.35)
 
-COGER_MALDICION_SOUND = pygame.mixer.Sound(os.path.join("Media", "Sonidos_juego", "habilidades", "coger_maldicion.mp3"))
+COGER_MALDICION_SOUND = pygame.mixer.Sound(os.path.join(ASSETS_DIR, "Sonidos_juego", "habilidades", "coger_maldicion.mp3"))
 COGER_MALDICION_SOUND.set_volume(0.35)
 
 # Animaciones de jugadores
@@ -291,7 +296,7 @@ def draw_HUD(screen, player, pos, color):
     elif player.curse == "hyper_speed":
         text = "Velocidad: fast"
     else:
-        text = f"Velocidad x{player.speed:.1f}"
+        text = f"Velocidad x{player.display_speed}"
     screen.blit(font.render(text, True, color), (x, y))
     y += line_height
     text = "Empujar bomba: Sí" if player.push_bomb_available else "Empujar bomba: No"
@@ -621,8 +626,9 @@ class Player:
         self.can_place_bombs = True
         self.auto_bombing = False
         self.invert_controls = False
-        self.speed = 1.0
-        self.base_speed = 1.0
+        self.speed = 2.0
+        self.base_speed = 2.0
+        self.display_speed = 1
         self.pending_speed_boosts = 0
         self.controls = controls
         self.original_controls = controls.copy()
@@ -732,7 +738,7 @@ class Player:
             return True
         return False
 
-    def move_in_small_steps(self, dx, dy, grid, bombs, players=None):
+    def move_in_small_steps(self, dx, dy, grid, bombs):
         steps_int = int(self.speed)
         frac = self.speed - steps_int
         for _ in range(steps_int):
@@ -894,9 +900,7 @@ class Player:
             if not hasattr(Player, 'aura_frames'):
                 import os
                 from PIL import Image
-                aura_path = os.path.join(os.path.dirname(__file__),
-                                         "Media", "Gadgets",
-                                         "Efectos_visuales", "maldicion.gif")
+                aura_path = os.path.join(os.path.dirname(__file__), ASSETS_DIR, "Gadgets", "Efectos_visuales", "maldicion.gif")
                 pil_image = Image.open(aura_path)
                 frames = []
                 try:
@@ -1181,7 +1185,7 @@ class Bomb:
             if self.sliding:
                 break
 
-    def draw(self, screen, bombs=None, players=None, powerups=None, grid=None):
+    def draw(self, screen):
         self.update_push_slide()  # ← IMPORTANTE: actualiza animación de empuje continuo
 
         self.update_hit_bounce(grid, players, bombs, powerups)
@@ -1618,7 +1622,7 @@ class DroppedAbility:
             self.current_pos = self.target_pos
             self.completed = True
             if not self.dropped:
-                available = get_available_free_cells(grid, powerups)
+                available = get_available_free_cells(game_grid, powerups)
                 if self.target_cell not in available:
                     if available:
                         self.target_cell = random.choice(available)
@@ -1821,109 +1825,309 @@ def draw_curse_info(screen, player, color, pos):
             text = "No curse"
     else:
         text = "No curse"
-    screen.blit(font.render(text, True, color))
+    screen.blit(font.render(text, True, color), (x, y))
 
-def check_pickup(players, powerups):
 
-    global dropped_abilities
-    to_remove = []
-    for p in powerups:
-        if p.visible and not p.disappearing and not p.vanished:
+# ------------------------------------------------------------------------------------
+# Bucle principal
+# ------------------------------------------------------------------------------------
+TOTAL_TIME = 180
+start_time = time.time()
+grid, powerups = generate_grid_and_powerups()
+game_grid = grid
+players = [
+    Player(1, 1, RED,
+           {'up': pygame.K_w, 'down': pygame.K_s, 'left': pygame.K_a, 'right': pygame.K_d, 'bomb': pygame.K_SPACE,
+            'hit': pygame.K_q}),
+    Player(19, 15, BLUE, {'up': pygame.K_UP, 'down': pygame.K_DOWN, 'left': pygame.K_LEFT, 'right': pygame.K_RIGHT,
+                          'bomb': pygame.K_RETURN, 'hit': pygame.K_p}),
+]
+bombs = []
+explosions = []
+dropped_abilities = []
+
+running = True
+clock = pygame.time.Clock()
+
+while running:
+    screen.fill(BLACK)
+    draw_grid(screen, grid)
+    draw_grid_lines(screen)
+    for player in players:
+        if player.auto_bombing:
+            player.place_bomb(bombs, powerups, forced=True)
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.KEYDOWN:
             for player in players:
-                if player.get_center_tile() == (p.x, p.y):
-                    if player.curse == "no_ability" and p.type != "calavera":
-                        continue
-                    if p.type == "calavera":
-                        # Elegir maldición y aplicarla
-                        curse_name = random.choice(list(CURSES.keys()))
-                        player.apply_curse(curse_name)
-                        # Reproducir sonido específico de maldición
-                        COGER_MALDICION_SOUND.play()  # asegúrate de cargar este Sound al inicio
-                        # Hacer desaparecer la calavera como powerup
-                        p.visible = False  # o p.vanished = True según tu implementación
-                        try:
-                            powerups.remove(p)
-                        except ValueError:
-                            pass
-                        dropped_abilities.append(p)
-                        to_remove.append(p)
-                        break
-                    elif p.type != "calavera" and not player.can_pick_abilities:
-                        continue
-                    elif p.type == "push_bomb":
-                        player.push_bomb_available = True
-                        COGER_HABILIDAD_SOUND.play()
-                        to_remove.append(p)
-                        break
-                    elif p.type == "golpear_bombas":
-                        player.hit_bomb_available = True
-                        COGER_HABILIDAD_SOUND.play()
-                        to_remove.append(p)
-                        break
-                    elif p.type == "reset":
-                        default_speed = 1.0
-                        default_bomb_range = 1
-                        default_bomb_limit = 1
-                        dropped = []
-                        if player.base_speed > default_speed:
-                            bonus_units = int(round((player.base_speed - default_speed) / 0.5))
-                            for _ in range(bonus_units):
-                                dropped.append(("speed", SPEED_IMG))
-                            player.base_speed = default_speed
-                        else:
-                            player.base_speed = default_speed
-                        if player.bomb_range > default_bomb_range:
-                            bonus_units = player.bomb_range - default_bomb_range
-                            for _ in range(bonus_units):
-                                dropped.append(("major_explosion", MAYOR_EXPLOSION_IMG))
-                            player.bomb_range = default_bomb_range
-                        if player.bomb_limit > default_bomb_limit:
-                            bonus_units = player.bomb_limit - default_bomb_limit
-                            for _ in range(bonus_units):
-                                dropped.append(("more_bomb", MORE_BOMB_IMG))
-                            player.bomb_limit = default_bomb_limit
-                        if player.push_bomb_available:
-                            dropped.append(("push_bomb", PUSH_BOMB_IMG))
-                            player.push_bomb_available = False
-                        free_cells = get_available_free_cells(grid, powerups)
-                        for ability_type, img in dropped:
-                            if free_cells:
-                                target = random.choice(free_cells)
-                                free_cells.remove(target)
-                            else:
-                                target = find_free_cell_far_from(player, grid)
-                            dropped_abilities.append(
-                                DroppedAbility(player.get_center_coords(), img, target, ability_type)
-                            )
-                        COGER_HABILIDAD_SOUND.play()
-                        to_remove.append(p)
-                        break
-                    else:
-                        if player.curse == "no_ability":
+                player.update_curse()
+                if event.key == player.controls['bomb']:
+                    player.place_bomb(bombs, powerups)
+                elif 'hit' in player.controls and event.key == player.controls['hit']:
+                    # Si el jugador tiene el poder de golpear bombas
+                    if player.hit_bomb_available:
+                        # Determinamos la dirección (dx, dy) según hacia dónde mira el jugador
+                        dx, dy = 0, 0
+                        if player.current_direction == "up":
+                            dy = -1
+                        elif player.current_direction == "down":
+                            dy = 1
+                        elif player.current_direction == "left":
+                            dx = -1
+                        elif player.current_direction == "right":
+                            dx = 1
+                        if player.invert_controls:
+                            dx, dy = -dx, -dy
+                        if dx > 0:
+                            player.move_right(grid, bombs)
+                        elif dx < 0:
+                            player.move_left(grid, bombs)
+                        if dy > 0:
+                            player.move_down(grid, bombs)
+                        elif dy < 0:
+                            player.move_up(grid, bombs)
+
+                        # Casilla que está frente al jugador
+                        front_tile_x = player.get_center_tile()[0] + dx
+                        front_tile_y = player.get_center_tile()[1] + dy
+
+                        # Buscamos si hay una bomba en esa casilla
+                        for b in bombs:
+                            if b.tile_x == front_tile_x and b.tile_y == front_tile_y:
+                                # Si no está ya rebotando ni deslizándose, la golpeamos
+                                if not b.hit_bouncing and not b.sliding:
+                                    b.hit_by_player(dx, dy, grid, bombs, powerups)
+                                break  # Salimos tras golpear la primera bomba encontrada
+
+    keys = pygame.key.get_pressed()
+    for player in players:
+        if player.curse == "inverted":
+            if keys[player.controls['up']]:
+                player.move_down(grid, bombs)
+            elif keys[player.controls['down']]:
+                player.move_up(grid, bombs)
+            elif keys[player.controls['left']]:
+                player.move_right(grid, bombs)
+            elif keys[player.controls['right']]:
+                player.move_left(grid, bombs)
+        else:
+            if keys[player.controls['up']]:
+                player.move_up(grid, bombs)
+            elif keys[player.controls['down']]:
+                player.move_down(grid, bombs)
+            elif keys[player.controls['left']]:
+                player.move_left(grid, bombs)
+            elif keys[player.controls['right']]:
+                player.move_right(grid, bombs)
+
+        player.update_animation()
+        player.update_passable(bombs)
+        player.check_static_push(grid, bombs, players, powerups)
+        player.update_curse()
+
+    for player in players:
+        if player.curse == "auto_bomb":
+            current_tile = player.get_center_tile()
+            current_bombs = [b for b in bombs if b.owner == player and not b.exploded]
+            if len(current_bombs) < player.bomb_limit:
+                bomb_exists = any(b for b in bombs if (b.tile_x, b.tile_y) == current_tile and not b.exploded)
+                if not bomb_exists:
+                    player.place_bomb(bombs, powerups, forced=True)
+            player.last_auto_bomb_tile = current_tile
+
+    current_time = time.time()
+    for i in range(len(players)):
+        for j in range(i + 1, len(players)):
+            p1 = players[i]
+            p2 = players[j]
+            cx1, cy1 = p1.get_center_coords()
+            cx2, cy2 = p2.get_center_coords()
+            dist = math.hypot(cx2 - cx1, cy2 - cy1)
+            if dist <= 10 and (current_time - p1.last_curse_exchange >= 3) and (
+                    current_time - p2.last_curse_exchange >= 3):
+                if p1.curse is not None and p2.curse is None:
+                    p2.curse = p1.curse
+                    p2.curse_start = p1.curse_start
+                    p1.curse = None
+                    p1.curse_start = None
+                elif p2.curse is not None and p1.curse is None:
+                    p1.curse = p2.curse
+                    p1.curse_start = p2.curse_start
+                    p2.curse = None
+                    p2.curse_start = None
+                else:
+                    p1.curse, p2.curse = p2.curse, p1.curse
+                    p1.curse_start, p2.curse_start = p2.curse_start, p1.curse_start
+                p1.last_curse_exchange = current_time
+                p2.last_curse_exchange = current_time
+
+    for bomb in bombs[:]:
+        if bomb.chain_triggered:
+            if time.time() - bomb.chain_trigger_time >= 0.75:
+                exp_positions = bomb.explode(grid, players, bombs, powerups)
+                for pos in exp_positions:
+                    tx, ty, expl_type, direction = pos
+                    explosions.append(Explosion(tx, ty, explosion_type=expl_type, direction=direction))
+        elif time.time() - bomb.plant_time >= bomb.timer:
+            exp_positions = bomb.explode(grid, players, bombs, powerups)
+            for pos in exp_positions:
+                tx, ty, expl_type, direction = pos
+                explosions.append(Explosion(tx, ty, explosion_type=expl_type, direction=direction))
+
+    for bomb in bombs:
+        bomb.draw(screen)
+
+    for explosion in explosions[:]:
+        explosion.update()
+        if explosion.finished:
+            explosions.remove(explosion)
+        else:
+            explosion.draw(screen)
+
+    dt = clock.tick(60) / 1000.0  # ← define dt (a 60 FPS, en segundos)
+    update_powerups(powerups, dt)  # Ahora dt ya está definidod
+    draw_powerups(screen, powerups)
+
+
+    def check_pickup(players, powerups):
+
+        global dropped_abilities
+        to_remove = []
+        for p in powerups:
+            if p.visible and not p.disappearing and not p.vanished:
+                for player in players:
+                    if player.get_center_tile() == (p.x, p.y):
+                        if player.curse == "no_ability" and p.type != "calavera":
                             continue
-                        if p.type == "major_explosion":
-                            player.bomb_range += 1
-                        if p.type == "speed":
-                            # Si hay maldición de velocidad activa, acumula; si no, aplícalo inmediatamente
-                            if player.active_curse in ("hyper_speed", "slow_speed"):
-                                player.pending_speed_boosts += 0.5
+                        if p.type == "calavera":
+                            # Elegir maldición y aplicarla
+                            curse_name = random.choice(list(CURSES.keys()))
+                            player.apply_curse(curse_name)
+                            # Reproducir sonido específico de maldición
+                            COGER_MALDICION_SOUND.play()  # asegúrate de cargar este Sound al inicio
+                            # Hacer desaparecer la calavera como powerup
+                            p.visible = False  # o p.vanished = True según tu implementación
+                            try:
+                                powerups.remove(p)
+                            except ValueError:
+                                pass
+                            dropped_abilities.append(p)
+                            to_remove.append(p)
+                            break
+                        elif p.type != "calavera" and not player.can_pick_abilities:
+                            continue
+                        elif p.type == "push_bomb":
+                            player.push_bomb_available = True
+                            COGER_HABILIDAD_SOUND.play()
+                            to_remove.append(p)
+                            break
+                        elif p.type == "golpear_bombas":
+                            player.hit_bomb_available = True
+                            COGER_HABILIDAD_SOUND.play()
+                            to_remove.append(p)
+                            break
+                        elif p.type == "reset":
+                            default_speed = 1.0
+                            default_bomb_range = 1
+                            default_bomb_limit = 1
+                            dropped = []
+                            if player.base_speed > default_speed:
+                                bonus_units = int(round((player.base_speed - default_speed) / 0.5))
+                                for _ in range(bonus_units):
+                                    dropped.append(("speed", SPEED_IMG))
+                                player.base_speed = default_speed
                             else:
-                                player.base_speed += 0.5
-                                player.speed = player.base_speed
-                            # Reproducir sonido y eliminar power-up
+                                player.base_speed = default_speed
+                            if player.bomb_range > default_bomb_range:
+                                bonus_units = player.bomb_range - default_bomb_range
+                                for _ in range(bonus_units):
+                                    dropped.append(("major_explosion", MAYOR_EXPLOSION_IMG))
+                                player.bomb_range = default_bomb_range
+                            if player.bomb_limit > default_bomb_limit:
+                                bonus_units = player.bomb_limit - default_bomb_limit
+                                for _ in range(bonus_units):
+                                    dropped.append(("more_bomb", MORE_BOMB_IMG))
+                                player.bomb_limit = default_bomb_limit
+                            if player.push_bomb_available:
+                                dropped.append(("push_bomb", PUSH_BOMB_IMG))
+                                player.push_bomb_available = False
+                            free_cells = get_available_free_cells(game_grid, powerups)
+                            for ability_type, img in dropped:
+                                if free_cells:
+                                    target = random.choice(free_cells)
+                                    free_cells.remove(target)
+                                else:
+                                    target = find_free_cell_far_from(player, game_grid)
+                                dropped_abilities.append(
+                                    DroppedAbility(player.get_center_coords(), img, target, ability_type)
+                                )
+                            COGER_HABILIDAD_SOUND.play()
+                            to_remove.append(p)
+                            break
+                        else:
+                            if player.curse == "no_ability":
+                                continue
+                            if p.type == "major_explosion":
+                                player.bomb_range += 1
+                            if p.type == "speed":
+                                # Si hay maldición de velocidad activa, acumula; si no, aplícalo inmediatamente
+                                if player.active_curse in ("hyper_speed", "slow_speed"):
+                                    player.pending_speed_boosts += 1.0
+                                else:
+                                    player.base_speed += 1.0
+                                    player.speed = player.base_speed
+                                player.display_speed += 1
+                                # Reproducir sonido y eliminar power-up
+                                COGER_HABILIDAD_SOUND.play()
+                                p.start_disappear()
+                                to_remove.append(p)
+                                break
+
+                            elif p.type == "more_bomb":
+                                player.bomb_limit += 1
                             COGER_HABILIDAD_SOUND.play()
                             p.start_disappear()
                             to_remove.append(p)
                             break
-
-                        elif p.type == "more_bomb":
-                            player.bomb_limit += 1
-                        COGER_HABILIDAD_SOUND.play()
-                        p.start_disappear()
-                        to_remove.append(p)
-                        break
-    for r in to_remove:
-        if r in powerups:
-            powerups.remove(r)
+        for r in to_remove:
+            if r in powerups:
+                powerups.remove(r)
 
 
+    check_pickup(players, powerups)
+
+    for player in players:
+        player.draw(screen)
+
+    dt = clock.get_time() / 1000.0
+    for da in dropped_abilities[:]:
+        da.update(dt)
+        da.draw(screen)
+        if da.completed:
+            dropped_abilities.remove(da)
+
+    now = time.time()
+    to_remove = []
+    for pos, start_time_expl in exploding_blocks.items():
+        if now - start_time_expl >= EXPLOSION_DURATION:
+            x, y = pos
+            grid[y][x] = 0
+            to_remove.append(pos)
+    for pos in to_remove:
+        del exploding_blocks[pos]
+
+    elapsed = time.time() - start_time
+    remaining_time = TOTAL_TIME - elapsed
+    if remaining_time < 0:
+        remaining_time = 0
+    draw_timer(screen, remaining_time)
+
+    draw_HUD(screen, players[0], (10, 5), RED)
+    draw_HUD(screen, players[1], (WIDTH - 210, 5), BLUE)
+
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()
+sys.exit()

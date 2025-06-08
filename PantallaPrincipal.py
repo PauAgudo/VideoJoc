@@ -108,10 +108,17 @@ def background_screen(screen):
             if event.type == pygame.QUIT:
                 pygame.quit();
                 sys.exit()
-            # Al pulsar cualquier tecla se cambia a la siguiente pantalla
+            # Al pulsar cualquier tecla/raton se cambia a la siguiente pantalla
             if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
                 key_sound.play()
                 running = False
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    print("JUEGO CERRADO")
+                    pygame.quit()
+                    sys.exit()
+
 
         bg_anim.update()
         bg_anim.draw(screen)
