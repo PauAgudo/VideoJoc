@@ -15,10 +15,7 @@ class ConfiguracionPartida:
         current_minute = config.current_minute
         current_level_index = config.current_level_index
         current_position_index = config.current_position_index
-        current_ultimas_index = config.current_ultimas_index.copy()
-
-        # primera tira por defecto activada
-        tira_activa = 0
+        current_ultimas_index = current_ultimas_index = config.current_ultimas_index.copy()
 
         # Fondo
         fondo = pygame.transform.scale(pygame.image.load("Media/Menu/fondobasico.png"), (750, 450))
@@ -26,14 +23,15 @@ class ConfiguracionPartida:
 
         # Botones fijos
         atras = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/siguiente.png"), (40, 40))
-        atras_rotated = pygame.transform.flip(atras, True, False)  # flip horizontal
-        atras_rect = atras_rotated.get_rect(bottomleft=(25, screen.get_height() - 25))
+        atras_rotate = pygame.transform.rotate(atras, 180)
+        atras_rect = atras_rotate.get_rect(bottomright=(70, screen.get_height() - 25))
         siguiente = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/siguiente.png"), (40, 40))
         siguiente_rect = siguiente.get_rect(bottomright=(screen.get_width() - 25, screen.get_height() - 25))
         audio = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/settings.png"), (50, 40))
         audio_rect = audio.get_rect(topleft=(25, 25))
 
         # Tiras
+        tira_activa_idx = 0  # Índice de la tira activa
 
         # Definición de las claves y sus respectivas imágenes
         keys = ["sets", "minutos", "nivel_COM", "pos_inicial", "aviones", "Maldiciones", "Bloques_final"]
@@ -92,18 +90,19 @@ class ConfiguracionPartida:
                     pygame.quit()
                     sys.exit()
 
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if atras_rect.collidepoint(mouse_pos):
-                        config.__init__()
-                        background_screen(screen)
-                    if siguiente_rect.collidepoint(mouse_pos):
-                        ir_a_pantalla_mapas()
-
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         config.__init__()
                         background_screen(screen)
-                    elif event.key == pygame.K_RETURN:
+                    if event.key == pygame.K_RETURN:
+                        ir_a_pantalla_mapas()
+
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if atras_rect.collidepoint(mouse_pos):
+                        config.__init__()
+                        background_screen(screen)
+
+                    if siguiente_rect.collidepoint(mouse_pos):
                         ir_a_pantalla_mapas()
 
 
@@ -139,12 +138,12 @@ class ConfiguracionPartida:
 
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_UP:
-                        tira_activa = (tira_activa - 1) % len(keys)
+                        tira_activa_idx = (tira_activa_idx - 1) % len(keys)
                     elif event.key == pygame.K_DOWN:
-                        tira_activa = (tira_activa + 1) % len(keys)
+                        tira_activa_idx = (tira_activa_idx + 1) % len(keys)
 
                     elif event.key == pygame.K_LEFT:
-                        key = keys[tira_activa]
+                        key = keys[tira_activa_idx]
                         if key == "sets" and current_set_index > 0:
                             current_set_index -= 1
                         elif key == "minutos" and current_minute > 1:
@@ -157,7 +156,7 @@ class ConfiguracionPartida:
                             current_ultimas_index[key] -= 1
 
                     elif event.key == pygame.K_RIGHT:
-                        key = keys[tira_activa]
+                        key = keys[tira_activa_idx]
                         if key == "sets" and current_set_index < len(config.set_options) - 1:
                             current_set_index += 1
                         elif key == "minutos" and current_minute < 9:
@@ -179,13 +178,14 @@ class ConfiguracionPartida:
             for idx, key in enumerate(keys):
                 rect = botones[key]["rect"]
                 if rect.collidepoint(mouse_pos):
-                    tira_activa = idx
+                    tira_activa_idx = idx
                     break
 
             for key, btn in botones.items():
                 rect = btn["rect"]
-                es_activa = (keys.index(key) == tira_activa)
+                es_activa = (keys.index(key) == tira_activa_idx)
                 hov = rect.collidepoint(mouse_pos) or es_activa
+
                 img = btn["imagen"]
                 if hov:
                     hi = pygame.transform.scale(img, (int(rect.width * 1.1), rect.height))
@@ -249,7 +249,7 @@ class ConfiguracionPartida:
                         screen.blit(derecha, right_rect)
 
             # Botones fijos
-            for img, rc in [(atras_rotated, atras_rect), (siguiente, siguiente_rect), (audio, audio_rect)]:
+            for img, rc in [(atras_rotate, atras_rect), (siguiente, siguiente_rect), (audio, audio_rect)]:
                 if rc.collidepoint(mouse_pos):
                     screen.blit(pygame.transform.scale(img, (int(rc.width * 1.1), int(rc.height * 1.1))), rc)
                 else:

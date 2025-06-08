@@ -8,8 +8,6 @@ from PantallaConfigPartida import pantalla2_main
 from PantallaMapas import pantalla_mapas
 from PantallaAudio import pantalla_audio
 from PantallaPersonajes import pantalla_personajes
-from partida2 import iniciar_partida
-
 def main():
     pygame.init()
 
@@ -41,12 +39,6 @@ def main():
         return
     if not pantalla_personajes(screen, bg_anim):
         return
-
-    # Iniciar la partida
-    from partida2 import iniciar_partida
-    iniciar_partida(screen)
-
-
     pygame.quit()
     sys.exit()
 
