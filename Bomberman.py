@@ -1,12 +1,11 @@
 import pygame
 import os
 import sys
-import time
-import random
 import math
 import random
 import time
 from Config import config
+
 # ------------------------------------------------------------------------------------
 # Inicialización y configuración de pantalla
 # ------------------------------------------------------------------------------------
@@ -100,17 +99,23 @@ def load_image(file, size, folder=ASSETS_DIR):
     )
 
 
-# Imágenes básicas
-SUELO1 = load_image("suelo1.png", (TILE_SIZE, TILE_SIZE), folder=os.path.join(ASSETS_DIR, "Mapas", "Mapa1"))
-SUELO2 = load_image("suelo2.png", (TILE_SIZE, TILE_SIZE), folder=os.path.join(ASSETS_DIR, "Mapas", "Mapa1"))
-STONE = load_image("muro_irrompible.png", (TILE_SIZE, TILE_SIZE), folder=os.path.join(ASSETS_DIR, "Mapas", "Mapa1"))
-BRICK = load_image("muro_rompible.png", (TILE_SIZE, TILE_SIZE), folder=os.path.join(ASSETS_DIR, "Mapas", "Mapa1"))
-LIMIT_IMG = load_image("limite_mapa.png", (TILE_SIZE, TILE_SIZE), folder=os.path.join(ASSETS_DIR, "Mapas", "Mapa1"))
+def cargar_mapa():  # FUNCION CARGAR MAPA SEGUN SELECCION
+    nombre_mapa = config.selected_map
+    mapa_path = os.path.join(ASSETS_DIR, "Mapas", "Mapa" + str(nombre_mapa))
+    SUELO1 = load_image("suelo1.png", (TILE_SIZE, TILE_SIZE), folder=mapa_path)
+    SUELO2 = load_image("suelo2.png", (TILE_SIZE, TILE_SIZE), folder=mapa_path)
+    STONE = load_image("muro_irrompible.png", (TILE_SIZE, TILE_SIZE), folder=mapa_path)
+    BRICK = load_image("muro_rompible.png", (TILE_SIZE, TILE_SIZE), folder=mapa_path)
+    LIMIT_IMG = load_image("limite_mapa.png", (TILE_SIZE, TILE_SIZE), folder=mapa_path)
+
+    return SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG
+
 
 # Habilidades
 SPEED_IMG = load_image("mas_velocidad.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Habilidades"))
 MORE_BOMB_IMG = load_image("mas_bombas.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Habilidades"))
-MAYOR_EXPLOSION_IMG = load_image("mayor_explosion.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Habilidades"))
+MAYOR_EXPLOSION_IMG = load_image("mayor_explosion.png", (40, 40),
+                                 folder=os.path.join(ASSETS_DIR, "Gadgets", "Habilidades"))
 
 # Poderes
 PUSH_BOMB_IMG = load_image("patada.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Poderes"))
@@ -136,7 +141,8 @@ COGER_HABILIDAD_SOUND_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "habilida
 COGER_HABILIDAD_SOUND = pygame.mixer.Sound(COGER_HABILIDAD_SOUND_PATH)
 COGER_HABILIDAD_SOUND.set_volume(0.35)
 
-COGER_MALDICION_SOUND = pygame.mixer.Sound(os.path.join(ASSETS_DIR, "Sonidos_juego", "habilidades", "coger_maldicion.mp3"))
+COGER_MALDICION_SOUND = pygame.mixer.Sound(
+    os.path.join(ASSETS_DIR, "Sonidos_juego", "habilidades", "coger_maldicion.mp3"))
 COGER_MALDICION_SOUND.set_volume(0.35)
 
 # Animaciones de jugadores
@@ -612,6 +618,7 @@ class PowerUp:
         self.bounce_index = 0
         self.bounce_timer = 0.0
 
+
 # ------------------------------------------------------------------------------------
 # Clase Player (sin cambios)
 # ------------------------------------------------------------------------------------
@@ -900,7 +907,8 @@ class Player:
             if not hasattr(Player, 'aura_frames'):
                 import os
                 from PIL import Image
-                aura_path = os.path.join(os.path.dirname(__file__), ASSETS_DIR, "Gadgets", "Efectos_visuales", "maldicion.gif")
+                aura_path = os.path.join(os.path.dirname(__file__), ASSETS_DIR, "Gadgets", "Efectos_visuales",
+                                         "maldicion.gif")
                 pil_image = Image.open(aura_path)
                 frames = []
                 try:
@@ -1406,6 +1414,38 @@ class Bomb:
                 self.plant_time += freeze_time
                 self.timer_frozen = False
 
+            # Verificamos si ha caído sobre una calavera o poder
+            for p in powerups:
+                if p.x == self.tile_x and p.y == self.tile_y and p.visible and not p.disappearing:
+                    if p.type == "calavera":
+                        # Rebotar solo una casilla más
+                        dx = self.tile_x - int(self.hit_bounce_pixel_path[-2][0] // TILE_SIZE)
+                        dy = self.tile_y - int(self.hit_bounce_pixel_path[-2][1] // TILE_SIZE)
+                        next_tile = ((self.tile_x + dx) % GRID_COLS, (self.tile_y + dy) % GRID_ROWS)
+
+                        # Comprobar si es válida
+                        if grid[next_tile[1]][next_tile[0]] not in (1, 2, 3):
+                            if not any(b.tile_x == next_tile[0] and b.tile_y == next_tile[1] and not b.exploded for b in
+                                       bombs):
+                                if not any(p2.x == next_tile[0] and p2.y == next_tile[
+                                    1] and p2.visible and p2.type in CURSES for p2 in powerups):
+                                    new_path = [
+                                        (self.tile_x * TILE_SIZE + TILE_SIZE / 2,
+                                         self.tile_y * TILE_SIZE + TILE_SIZE / 2),
+                                        (next_tile[0] * TILE_SIZE + TILE_SIZE / 2,
+                                         next_tile[1] * TILE_SIZE + TILE_SIZE / 2)
+                                    ]
+                                    self.hit_bouncing = True
+                                    self.hit_bounce_pixel_path = new_path
+                                    self.hit_bounce_durations = [150]
+                                    self.hit_bounce_total_time = 150
+                                    self.hit_bounce_start_time = pygame.time.get_ticks()
+                                    self.hit_bounce_height = 15
+                                    return
+                    else:
+                        # Si es una habilidad, desaparecer inmediatamente
+                        p.visible = False
+                        p.start_disappear()
             return
 
         # Determina en qué tramo de la ruta nos encontramos según el tiempo transcurrido
@@ -1426,34 +1466,22 @@ class Bomb:
         p_start = self.hit_bounce_pixel_path[segment_index]
         p_end = self.hit_bounce_pixel_path[segment_index + 1]
 
-        # Ajustes wrap-around en el cálculo de dx / dy (lo mismo que en hit_by_player)
         dx_px = p_end[0] - p_start[0]
         dy_px = p_end[1] - p_start[1]
         map_width_px = GRID_COLS * TILE_SIZE
         map_height_px = GRID_ROWS * TILE_SIZE
 
         if abs(dx_px) > map_width_px / 2:
-            if dx_px > 0:
-                dx_px -= map_width_px
-            else:
-                dx_px += map_width_px
-
+            dx_px += -map_width_px if dx_px > 0 else map_width_px
         if abs(dy_px) > map_height_px / 2:
-            if dy_px > 0:
-                dy_px -= map_height_px
-            else:
-                dy_px += map_height_px
+            dy_px += -map_height_px if dy_px > 0 else map_height_px
 
-        # Interpolación lineal
         interp_x = p_start[0] + dx_px * t_seg
         interp_y = p_start[1] + dy_px * t_seg
 
-        # Aplicamos el arco de salto (bote)
-        # Suponiendo una parábola simple: arc = -self.hit_bounce_height * sin(pi * t_seg)
         arc = -self.hit_bounce_height * math.sin(math.pi * t_seg)
         interp_y += arc
 
-        # Actualiza la posición en píxeles (sin cambiar tile_x/tile_y hasta el final)
         self.pos_x = interp_x - TILE_SIZE / 2
         self.pos_y = interp_y - TILE_SIZE / 2
 
@@ -1716,7 +1744,8 @@ def generate_grid_and_powerups():
                     elif r < 0.4:
                         powerups.append(PowerUp(x, y, "more_bomb"))
                     elif r < 0.45:
-                        powerups.append(PowerUp(x, y, "calavera"))
+                        if config.current_ultimas_index.get("Maldiciones", 0) == 0:
+                            powerups.append(PowerUp(x, y, "calavera"))
                     elif r < 0.45:
                         powerups.append(PowerUp(x, y, "reset"))
                     elif r < 0.5:
@@ -1766,7 +1795,7 @@ def generate_grid_and_powerups():
     return grid, powerups
 
 
-def draw_grid(screen, grid):
+def draw_grid(screen, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG):
     current_time = time.time()
     # Dibujar el suelo en todas las casillas de forma alternada
     for y in range(GRID_ROWS):
@@ -1846,12 +1875,14 @@ bombs = []
 explosions = []
 dropped_abilities = []
 
+SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG = cargar_mapa()
+
 running = True
 clock = pygame.time.Clock()
 
 while running:
     screen.fill(BLACK)
-    draw_grid(screen, grid)
+    draw_grid(screen, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG)
     draw_grid_lines(screen)
     for player in players:
         if player.auto_bombing:

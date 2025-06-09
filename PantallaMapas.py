@@ -4,6 +4,7 @@ import sys
 # Importar configuración global para guardar selección
 from Config import config
 
+
 def pantalla_mapas(screen, bg_anim):
     clock = pygame.time.Clock()
     pygame.display.set_caption("Pantalla 3")
@@ -46,6 +47,10 @@ def pantalla_mapas(screen, bg_anim):
     # Índice del mapa seleccionado (por defecto el primer mapa)
     selected_index = config.selected_map - 1
 
+    # indices para doble click de raton y seleccionar mapa
+    last_click_time = 0
+    double_click_delay = 300  # milisegundos
+
     running = True
     while running:
         mouse_pos = pygame.mouse.get_pos()
@@ -75,25 +80,36 @@ def pantalla_mapas(screen, bg_anim):
                     selected_index = (selected_index - 1) % len(mapas)
                     config.selected_map = selected_index + 1
 
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                # Volver atrás
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # Botón izquierdo del ratón
+                current_time = pygame.time.get_ticks()
+                mouse_pos = pygame.mouse.get_pos()
+
+                # Botón ATRÁS
                 if atras_rect.collidepoint(mouse_pos):
                     from PantallaConfigPartida import pantalla2_main
                     pantalla2_main(screen, bg_anim)
                     return
-                # Seleccionar mapa al hacer click
-                for idx, (mini, big, rect, name_surf) in enumerate(mapas):
-                    if rect.collidepoint(mouse_pos):
-                        selected_index = idx
-                        # Guardar en config global
-                        config.selected_map = idx + 1
-                        break
 
-                # Pulsar siguiente
+                # Botón SIGUIENTE
                 if siguiente_rect.collidepoint(mouse_pos) and selected_index >= 0:
                     from PantallaPersonajes import pantalla_personajes
                     pantalla_personajes(screen, bg_anim)
                     return
+
+                # CLIC SOBRE MAPA
+                for idx, (mini, big, rect, name_surf) in enumerate(mapas):
+                    if rect.collidepoint(mouse_pos):
+                        if idx == selected_index and current_time - last_click_time <= double_click_delay:
+                            # Doble clic sobre el mapa ya seleccionado → avanzar pantalla
+                            from PantallaPersonajes import pantalla_personajes
+                            pantalla_personajes(screen, bg_anim)
+                            return
+                        else:
+                            # Selección normal de mapa
+                            selected_index = idx
+                            config.selected_map = idx + 1
+                            last_click_time = current_time
+                        break  # Salimos del bucle después de encontrar un mapa
 
         # Dibujar fondo y marco
         bg_anim.update()
