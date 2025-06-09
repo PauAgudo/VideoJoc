@@ -43,7 +43,7 @@ def draw_mensaje_inicio(screen, imagen_rect, tipo_jugador, listo):
         screen.blit(texto_render, texto_rect)
     else:
         if tipo_jugador == "teclado":
-            texto = "ENTER para empezar"
+            texto = "P para empezar"
         elif tipo_jugador == "mando":
             texto = "OPTIONS para empezar"
         else:
@@ -116,6 +116,10 @@ def pantalla_personajes(screen, bg_anim):
         x = x_start + i * (110 + gap)
         personajes_centros.append((x, y_pos))
 
+    # Inicializar los jugadores
+    mensaje_error = ""
+    mensaje_timer = 0
+
     running = True
     while running:
         mouse_pos = pygame.mouse.get_pos()
@@ -123,6 +127,20 @@ def pantalla_personajes(screen, bg_anim):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit(); sys.exit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    from PantallaMapas import pantalla_mapas
+                    pantalla_mapas(screen, bg_anim)
+                if event.key == pygame.K_RETURN:
+                    num_listos = sum(1 for listo in temporizador_listos.values() if listo)
+                    if num_listos < 2:
+                        mensaje_error = "¡NECESITAS 2 JUGADORES LISTOS PARA INCIAR PARTIDA!"
+                        mensaje_timer = pygame.time.get_ticks()
+                    else:
+                        import Bomberman
+                        Bomberman.main()
+                        return
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if atras_rect.collidepoint(mouse_pos):
@@ -139,11 +157,12 @@ def pantalla_personajes(screen, bg_anim):
                     gestor_jugadores.unir_teclado()
 
             if event.type == pygame.KEYDOWN:
-                if gestor_jugadores.get_teclado() is None:
-                    gestor_jugadores.unir_teclado()
+                if event.key not in (pygame.K_ESCAPE, pygame.K_RETURN):
+                    if gestor_jugadores.get_teclado() is None:
+                        gestor_jugadores.unir_teclado()
                 else:
                     jugador = gestor_jugadores.get_teclado()
-                    if event.key == pygame.K_RETURN:
+                    if event.key == pygame.K_p:
                         temporizador_listos["teclado"] = True
                     elif event.key == pygame.K_b:
                         temporizador_listos["teclado"] = False
@@ -233,6 +252,13 @@ def pantalla_personajes(screen, bg_anim):
         title_surf = font2.render("PERSONAJES Y JUGADORES", True, (255, 255, 255))
         title_rect = title_surf.get_rect(center=(537, 105))
         screen.blit(title_surf, title_rect)
+
+        # Mostrar mensaje de error por falta de juagdores listos
+        if mensaje_error and pygame.time.get_ticks() - mensaje_timer < 3000:
+            font = pygame.font.Font(None, 30)
+            error_surf = font.render(mensaje_error, True, (255, 0, 0))
+            error_rect = error_surf.get_rect(center=(screen.get_width() // 2, screen.get_height() - 120))
+            screen.blit(error_surf, error_rect)
 
         pygame.display.flip()
         clock.tick(60)
