@@ -81,6 +81,16 @@ class ConfiguracionPartida:
             config.current_ultimas_index = current_ultimas_index.copy()
             pantalla_mapas(screen, bg_anim)
 
+        # Inicializar sistema de mandos
+        pygame.joystick.init()
+        mandos = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
+        for mando in mandos:
+            mando.init()
+
+        # Cooldowns para entradas del mando
+        mando_delay = 200  # ms
+        last_input_time = pygame.time.get_ticks()
+
         running = True
         while running:
             mouse_pos = pygame.mouse.get_pos()
@@ -89,6 +99,50 @@ class ConfiguracionPartida:
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+
+                # Entrada por joystick o cruceta
+                tiempo_actual = pygame.time.get_ticks()
+                if mandos and tiempo_actual - last_input_time > mando_delay:
+                    joystick = mandos[0]  # Solo usamos el primer mando conectado
+
+                    eje_y = joystick.get_axis(1)
+                    eje_x = joystick.get_axis(0)
+
+                    if eje_y < -0.5:  # Joystick arriba
+                        tira_activa_idx = (tira_activa_idx - 1) % len(keys)
+                        last_input_time = tiempo_actual
+                    elif eje_y > 0.5:  # Joystick abajo
+                        tira_activa_idx = (tira_activa_idx + 1) % len(keys)
+                        last_input_time = tiempo_actual
+
+                    elif eje_x < -0.5:  # Joystick izquierda
+                        key = keys[tira_activa_idx]
+                        if key == "sets" and current_set_index > 0:
+                            current_set_index -= 1
+                        elif key == "minutos" and current_minute > 1:
+                            current_minute -= 1
+                        elif key == "nivel_COM" and current_level_index > 0:
+                            current_level_index -= 1
+                        elif key == "pos_inicial" and current_position_index > 0:
+                            current_position_index -= 1
+                        elif key in current_ultimas_index and current_ultimas_index[key] > 0:
+                            current_ultimas_index[key] -= 1
+                        last_input_time = tiempo_actual
+
+                    elif eje_x > 0.5:  # Joystick derecha
+                        key = keys[tira_activa_idx]
+                        if key == "sets" and current_set_index < len(config.set_options) - 1:
+                            current_set_index += 1
+                        elif key == "minutos" and current_minute < 9:
+                            current_minute += 1
+                        elif key == "nivel_COM" and current_level_index < len(config.level_options) - 1:
+                            current_level_index += 1
+                        elif key == "pos_inicial" and current_position_index < len(config.position_options) - 1:
+                            current_position_index += 1
+                        elif key in current_ultimas_index and current_ultimas_index[key] < len(
+                                config.ultimas_opciones) - 1:
+                            current_ultimas_index[key] += 1
+                        last_input_time = tiempo_actual
 
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
@@ -107,7 +161,7 @@ class ConfiguracionPartida:
 
 
                     if audio_rect.collidepoint(mouse_pos):
-                        pantalla_audio(screen, bg_anim)
+                        pantalla_audio(screen, bg_anim, volver_callback=pantalla2_main)
 
                     for key, btn in botones.items():
                         if btn["rect"].collidepoint(mouse_pos):
@@ -168,6 +222,23 @@ class ConfiguracionPartida:
                         elif key in current_ultimas_index and current_ultimas_index[key] < len(
                                 config.ultimas_opciones) - 1:
                             current_ultimas_index[key] += 1
+
+                elif event.type == pygame.JOYBUTTONDOWN:
+                    if event.button == 0:  # Botón A → siguiente pantalla
+                        ir_a_pantalla_mapas()
+
+                    elif event.button == 1:  # Botón B → volver atrás
+                        config.__init__()
+                        background_screen(screen)
+
+                    elif event.button == 7:  # Botón OPTIONS/Start → ajustes
+                        pantalla_audio(screen, bg_anim, volver_callback=pantalla2_main)
+
+                elif event.type == pygame.JOYDEVICEADDED:
+                    nuevo_mando = pygame.joystick.Joystick(event.device_index)
+                    nuevo_mando.init()
+                    mandos.append(nuevo_mando)
+                    print("Mando conectado:", nuevo_mando.get_name())
 
             # Dibujar
             bg_anim.update()

@@ -90,9 +90,15 @@ def background_screen(screen):
     pygame.display.set_caption("Pantalla de Inicio - Fondo Animado")
     clock = pygame.time.Clock()
 
+    # Inicializar sistema de mandos
+    pygame.joystick.init()
+    mandos = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
+    for mando in mandos:
+        mando.init()
+
     # Configurar la fuente y parámetros del texto
     font = pygame.font.SysFont(None, 30)
-    message = "Pulsa cualquier tecla para continuar"
+    message = "Pulsa cualquier tecla o botón del mando para continuar"
     text_center = (screen_width // 2, screen_height - 100)
 
     # Cargar efecto sonido
@@ -106,19 +112,26 @@ def background_screen(screen):
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit();
+                pygame.quit()
                 sys.exit()
-            # Al pulsar cualquier tecla/raton se cambia a la siguiente pantalla
+
             if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
                 key_sound.play()
                 running = False
 
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    print("JUEGO CERRADO")
-                    pygame.quit()
-                    sys.exit()
+            if event.type == pygame.JOYBUTTONDOWN:
+                key_sound.play()
+                running = False
 
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                print("JUEGO CERRADO")
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.JOYDEVICEADDED:
+                nuevo_mando = pygame.joystick.Joystick(event.device_index)
+                nuevo_mando.init()
+                print("Mando conectado:", nuevo_mando.get_name())
 
         bg_anim.update()
         bg_anim.draw(screen)
@@ -126,6 +139,7 @@ def background_screen(screen):
         pygame.display.flip()
         clock.tick(60)
 
-    return bg_anim  # Retornamos el estado del fondo para usarlo como base
+    return bg_anim
+
 
 

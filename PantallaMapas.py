@@ -6,8 +6,19 @@ from Config import config
 
 
 def pantalla_mapas(screen, bg_anim):
+    global current_time
     clock = pygame.time.Clock()
-    pygame.display.set_caption("Pantalla 3")
+    pygame.display.set_caption("Pantalla Mapas")
+
+    # INICIALIZAR MANDOS
+    pygame.joystick.init()
+    mandos = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
+    for mando in mandos:
+        mando.init()
+
+    # Cooldown per evitar repeticions contínues
+    mando_delay = 200  # mil·lisegons
+    last_input_time = pygame.time.get_ticks()
 
     # BOTON ATRAS
     atras = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/siguiente.png"), (40, 40))
@@ -17,6 +28,10 @@ def pantalla_mapas(screen, bg_anim):
     # BOTON SIGUIENTE
     siguiente = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/siguiente.png"), (40, 40))
     siguiente_rect = siguiente.get_rect(bottomright=(screen.get_width() - 25, screen.get_height() - 25))
+
+    # BOTON SETTINGS
+    audio = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/settings.png"), (50, 40))
+    audio_rect = audio.get_rect(topleft=(25, 25))
 
     # MARCO CENTRAL
     marco = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_mapas/Mapselect.png"), (750, 450))
@@ -61,6 +76,22 @@ def pantalla_mapas(screen, bg_anim):
                 pygame.quit()
                 sys.exit()
 
+            tiempo_actual = pygame.time.get_ticks()
+            if mandos and tiempo_actual - last_input_time > mando_delay:
+                joystick = mandos[0]  # Primer mando
+
+                eje_y = joystick.get_axis(1)
+
+                if eje_y < -0.5:  # Joystick amunt
+                    selected_index = (selected_index - 1) % len(mapas)
+                    config.selected_map = selected_index + 1
+                    last_input_time = tiempo_actual
+
+                elif eje_y > 0.5:  # Joystick avall
+                    selected_index = (selected_index + 1) % len(mapas)
+                    config.selected_map = selected_index + 1
+                    last_input_time = tiempo_actual
+
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     from PantallaConfigPartida import pantalla2_main
@@ -95,6 +126,31 @@ def pantalla_mapas(screen, bg_anim):
                     from PantallaPersonajes import pantalla_personajes
                     pantalla_personajes(screen, bg_anim)
                     return
+
+                if audio_rect.collidepoint(mouse_pos):
+                    from PantallaAudio import pantalla_audio
+                    pantalla_audio(screen, bg_anim, volver_callback=pantalla_mapas)
+
+            elif event.type == pygame.JOYBUTTONDOWN:
+                if event.button == 0:  # A → següent pantalla
+                    from PantallaPersonajes import pantalla_personajes
+                    pantalla_personajes(screen, bg_anim)
+                    return
+
+                elif event.button == 1:  # B → enrere
+                    from PantallaConfigPartida import pantalla2_main
+                    pantalla2_main(screen, bg_anim)
+                    return
+
+                elif event.button == 7:  # OPTIONS → pantalla audio
+                    from PantallaAudio import pantalla_audio
+                    pantalla_audio(screen, bg_anim, volver_callback=pantalla_mapas)
+
+            elif event.type == pygame.JOYDEVICEADDED:
+                nuevo_mando = pygame.joystick.Joystick(event.device_index)
+                nuevo_mando.init()
+                mandos.append(nuevo_mando)
+                print("Mando conectado:", nuevo_mando.get_name())
 
                 # CLIC SOBRE MAPA
                 for idx, (mini, big, rect, name_surf) in enumerate(mapas):
@@ -133,21 +189,12 @@ def pantalla_mapas(screen, bg_anim):
                 name_rect = name_surf.get_rect(midtop=(preview_rect.centerx + 20, preview_rect.bottom + 22))
                 screen.blit(name_surf, name_rect)
 
-        # Hover botón ATRÁS
-        if atras_rect.collidepoint(mouse_pos):
-            atras_hover = pygame.transform.scale(atras_rotate, (int(atras_rect.width * 1.1), int(atras_rect.height * 1.1)))
-            atras_rect_hover = atras_hover.get_rect(center=atras_rect.center)
-            screen.blit(atras_hover, atras_rect_hover)
-        else:
-            screen.blit(atras_rotate, atras_rect)
-
-        # Hover botón SIGUIENTE
-        if siguiente_rect.collidepoint(mouse_pos):
-            siguiente_hover = pygame.transform.scale(siguiente, (int(siguiente_rect.width * 1.1), int(siguiente_rect.height * 1.1)))
-            siguiente_rect_hover = siguiente_hover.get_rect(center=siguiente_rect.center)
-            screen.blit(siguiente_hover, siguiente_rect_hover)
-        else:
-            screen.blit(siguiente, siguiente_rect)
+        # Botones fijos
+        for img, rc in [(atras_rotate, atras_rect), (siguiente, siguiente_rect), (audio, audio_rect)]:
+            if rc.collidepoint(mouse_pos):
+                screen.blit(pygame.transform.scale(img, (int(rc.width * 1.1), int(rc.height * 1.1))), rc)
+            else:
+                screen.blit(img, rc)
 
         # Mostrar título
         font = pygame.font.Font(None, 21)
