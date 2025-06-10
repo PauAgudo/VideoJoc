@@ -124,10 +124,17 @@ def pantalla_personajes(screen, bg_anim):
                     return
                 if siguiente_rect.collidepoint(mouse_pos):
                     listos = [j for j in temporizador_listos.values() if j]
-                    if len(listos) >= 2:
-                        import Bomberman
-                        Bomberman.main()
-                        return
+                    total_conectados = len(gestor_jugadores.jugadores)
+                    total_listos = len(listos)
+
+                    if total_listos >= 2:
+                        if total_listos == total_conectados:
+                            import Bomberman
+                            Bomberman.main()
+                            return
+                        else:
+                            mensaje_error = "Todos tus rivales no están listos"
+                            mensaje_timer = pygame.time.get_ticks()
                     else:
                         mensaje_error = "¡Deben estar listos al menos 2 jugadores!"
                         mensaje_timer = pygame.time.get_ticks()
@@ -139,13 +146,21 @@ def pantalla_personajes(screen, bg_anim):
                     return
                 if event.key == pygame.K_RETURN:
                     listos = [j for j in temporizador_listos.values() if j]
-                    if len(listos) >= 2:
-                        import Bomberman
-                        Bomberman.main()
-                        return
+                    total_conectados = len(gestor_jugadores.jugadores)
+                    total_listos = len(listos)
+
+                    if total_listos >= 2:
+                        if total_listos == total_conectados:
+                            import Bomberman
+                            Bomberman.main()
+                            return
+                        else:
+                            mensaje_error = "Todos tus rivales no están listos"
+                            mensaje_timer = pygame.time.get_ticks()
                     else:
                         mensaje_error = "¡Deben estar listos al menos 2 jugadores!"
                         mensaje_timer = pygame.time.get_ticks()
+
                 if event.key not in (pygame.K_ESCAPE, pygame.K_RETURN):
                     if gestor_jugadores.get_teclado() is None:
                         gestor_jugadores.unir_teclado()
@@ -202,10 +217,17 @@ def pantalla_personajes(screen, bg_anim):
                     temporizador_listos[joy_id] = False
                 elif event.button == 0:  # A
                     listos = [j for j in temporizador_listos.values() if j]
-                    if len(listos) >= 2:
-                        import Bomberman
-                        Bomberman.main()
-                        return
+                    total_conectados = len(gestor_jugadores.jugadores)
+                    total_listos = len(listos)
+
+                    if total_listos >= 2:
+                        if total_listos == total_conectados:
+                            import Bomberman
+                            Bomberman.main()
+                            return
+                        else:
+                            mensaje_error = "Todos tus rivales no están listos"
+                            mensaje_timer = pygame.time.get_ticks()
                     else:
                         mensaje_error = "¡Deben estar listos al menos 2 jugadores!"
                         mensaje_timer = pygame.time.get_ticks()

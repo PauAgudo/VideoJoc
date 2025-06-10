@@ -5,12 +5,19 @@ import math
 import random
 import time
 from Config import config
-
+from ConfiguraciónMandos import gestor_jugadores
 # ------------------------------------------------------------------------------------
 # Inicialización y configuración de pantalla
 # ------------------------------------------------------------------------------------
 pygame.init()
 pygame.mixer.init()
+
+# Inicialización de mandos
+pygame.joystick.init()
+for i in range(pygame.joystick.get_count()):
+    pygame.joystick.Joystick(i).init()
+print(f"[DEBUG] Mandos conectados: {pygame.joystick.get_count()}")
+
 
 BASE_DIR = os.path.dirname(__file__)
 ASSETS_DIR = os.path.join(BASE_DIR, "Media")
@@ -142,51 +149,26 @@ COGER_HABILIDAD_SOUND = pygame.mixer.Sound(COGER_HABILIDAD_SOUND_PATH)
 COGER_HABILIDAD_SOUND.set_volume(0.35)
 
 COGER_MALDICION_SOUND = pygame.mixer.Sound(
-    os.path.join(ASSETS_DIR, "Sonidos_juego", "habilidades", "coger_maldicion.mp3"))
+os.path.join(ASSETS_DIR, "Sonidos_juego", "habilidades", "coger_maldicion.mp3"))
 COGER_MALDICION_SOUND.set_volume(0.35)
 
-# Animaciones de jugadores
-RED_RIGHT_IMAGES = []
-red_right_folder = os.path.join(ASSETS_DIR, "Player1", "red", "right")
-for i in range(1, 10):
-    img = load_image("right" + str(i) + ".png", (120, 120), folder=red_right_folder)
-    RED_RIGHT_IMAGES.append(img)
-RED_LEFT_IMAGES = []
-red_left_folder = os.path.join(ASSETS_DIR, "Player1", "red", "left")
-for i in range(1, 10):
-    img = load_image("left" + str(i) + ".png", (120, 120), folder=red_left_folder)
-    RED_LEFT_IMAGES.append(img)
-RED_UP_IMAGES = []
-red_up_folder = os.path.join(ASSETS_DIR, "Player1", "red", "up")
-for i in range(1, 10):
-    img = load_image("up" + str(i) + ".png", (120, 120), folder=red_up_folder)
-    RED_UP_IMAGES.append(img)
-RED_DOWN_IMAGES = []
-red_down_folder = os.path.join(ASSETS_DIR, "Player1", "red", "down")
-for i in range(1, 10):
-    img = load_image("down" + str(i) + ".png", (120, 120), folder=red_down_folder)
-    RED_DOWN_IMAGES.append(img)
+posiciones_iniciales = [
+    (1, 1),
+    (GRID_COLS - 2, GRID_ROWS - 2),
+    (1, GRID_ROWS - 2),
+    (GRID_COLS - 2, 1),
+]
 
-BLUE_RIGHT_IMAGES = []
-blue_right_folder = os.path.join(ASSETS_DIR, "Player1", "blue", "right")
-for i in range(1, 10):
-    img = load_image("right" + str(i) + ".png", (120, 120), folder=blue_right_folder)
-    BLUE_RIGHT_IMAGES.append(img)
-BLUE_LEFT_IMAGES = []
-blue_left_folder = os.path.join(ASSETS_DIR, "Player1", "blue", "left")
-for i in range(1, 10):
-    img = load_image("left" + str(i) + ".png", (120, 120), folder=blue_left_folder)
-    BLUE_LEFT_IMAGES.append(img)
-BLUE_UP_IMAGES = []
-blue_up_folder = os.path.join(ASSETS_DIR, "Player1", "blue", "up")
-for i in range(1, 10):
-    img = load_image("up" + str(i) + ".png", (120, 120), folder=blue_up_folder)
-    BLUE_UP_IMAGES.append(img)
-BLUE_DOWN_IMAGES = []
-blue_down_folder = os.path.join(ASSETS_DIR, "Player1", "blue", "down")
-for i in range(1, 10):
-    img = load_image("down" + str(i) + ".png", (120, 120), folder=blue_down_folder)
-    BLUE_DOWN_IMAGES.append(img)
+# Controles por defecto para teclado
+controles_teclado = {
+    "up": pygame.K_UP,
+    "down": pygame.K_DOWN,
+    "left": pygame.K_LEFT,
+    "right": pygame.K_RIGHT,
+    "bomb": pygame.K_RETURN,
+    "hit": pygame.K_p,
+}
+
 
 # Animaciones de explosión de la bomba
 EXPLOSION_FRAMES = [load_image(f"explosion_{i}.png", (40, 40)) for i in range(3)]
@@ -941,24 +923,13 @@ class Player:
             )
             screen.blit(aura_behind, aura_rect_behind)
 
-        # 2) Dibujo del jugador (siempre)
-        if self.color == RED:
-            images_by_dir = {
-                "right": RED_RIGHT_IMAGES,
-                "left": RED_LEFT_IMAGES,
-                "up": RED_UP_IMAGES,
-                "down": RED_DOWN_IMAGES,
-            }
-        else:
-            images_by_dir = {
-                "right": BLUE_RIGHT_IMAGES,
-                "left": BLUE_LEFT_IMAGES,
-                "up": BLUE_UP_IMAGES,
-                "down": BLUE_DOWN_IMAGES,
-            }
-        image_list = images_by_dir.get(self.current_direction, images_by_dir["right"])
-        sprite = image_list[self.anim_frame]
-        screen.blit(sprite, (self.x, self.y + self.sprite_draw_offset_y + TOP_OFFSET))
+        # 2) Dibujo del jugador (sprite según dirección y personaje)
+        if hasattr(self, "animaciones") and self.current_direction in self.animaciones:
+           image_list = self.animaciones[self.current_direction]
+           sprite = image_list[self.anim_frame % len(image_list)]
+           screen.blit(sprite, (self.x, self.y + self.sprite_draw_offset_y + TOP_OFFSET))
+
+        
 
         # 3) Aura por delante (solo si hay maldición activa)
         if self.active_curse and CURSES[self.active_curse]["duration"] is not None:
@@ -1084,6 +1055,54 @@ class Player:
                     b.try_start_push(dx, dy, grid, bombs, players, powerups)
                 break
 
+
+# Función para cargar animaciones de un personaje según su nombre
+def cargar_animaciones_personaje(nombre_personaje):
+    animaciones = {}
+    for direccion in ["right", "left", "up", "down"]:
+        carpeta = os.path.join(ASSETS_DIR, "Jugadores", nombre_personaje, direccion)
+        imagenes = []
+        for i in range(1, 8):
+            img = load_image(f"{direccion}{i}.png", (120, 120), folder=carpeta)
+            imagenes.append(img)
+        animaciones[direccion] = imagenes
+    return animaciones
+
+# Diccionario de nombres por índice desde la pantalla de personajes
+nombres_por_indice = {
+    0: "Orco Verde",
+    1: "Guerrero Rojo",
+    2: "Vampiro",
+    3: "Orco Azul",
+    4: "Orco Marrón",
+}
+
+# Creamos la lista de jugadores
+players = []
+color_pool = [RED, BLUE, (0, 255, 0), (255, 255, 0)]  # Colores para 4 jugadores
+
+for idx, jugador in enumerate(gestor_jugadores.todos()):
+    if idx >= len(posiciones_iniciales):
+        break  # Solo se admiten hasta 4 jugadores actualmente
+
+    tipo = jugador.get("tipo")
+    personaje_idx = jugador.get("indice", 0)
+    tile_x, tile_y = posiciones_iniciales[idx]
+    color = color_pool[idx % len(color_pool)]
+
+    if tipo == "teclado":
+        controls = controles_teclado
+    elif tipo == "mando":
+        controls = {"joy_id": jugador["id"]}  # Guardamos solo el ID para control posterior
+    else:
+        continue  # No válido
+
+    nombre_personaje = nombres_por_indice.get(personaje_idx, "red")
+    animaciones = cargar_animaciones_personaje(nombre_personaje)
+
+    nuevo_jugador = Player(tile_x, tile_y, color, controls)
+    nuevo_jugador.animaciones = animaciones  # <- atributo nuevo para guardar sus sprites
+    players.append(nuevo_jugador)
 
 # ------------------------------------------------------------------------------------
 # Clase Bomb (con modificación en explode para que la explosión se detenga en la maldición)
@@ -1295,7 +1314,7 @@ class Bomb:
                     player.health -= 1
         return explosions
 
-    def hit_by_player(self, dx, dy, grid, bombs, powerups):
+    def hit_by_player(self, dx, dy, grid, bombs, powerups, bounce_length=3):
         import math
 
         # Obtén la celda de partida y su centro en píxeles
@@ -1310,8 +1329,8 @@ class Bomb:
 
         # Primer salto: se intenta saltar 3 casillas de un solo bote
         intended_tile = (
-            (start_tile[0] + dx * 3) % GRID_COLS,
-            (start_tile[1] + dy * 3) % GRID_ROWS
+            (start_tile[0] + dx * bounce_length) % GRID_COLS,
+            (start_tile[1] + dy * bounce_length) % GRID_ROWS
         )
         path_tiles.append(intended_tile)
 
@@ -1414,39 +1433,26 @@ class Bomb:
                 self.plant_time += freeze_time
                 self.timer_frozen = False
 
-            # Verificamos si ha caído sobre una calavera o poder
-            for p in powerups:
-                if p.x == self.tile_x and p.y == self.tile_y and p.visible and not p.disappearing:
-                    if p.type == "calavera":
-                        # Rebotar solo una casilla más
-                        dx = self.tile_x - int(self.hit_bounce_pixel_path[-2][0] // TILE_SIZE)
-                        dy = self.tile_y - int(self.hit_bounce_pixel_path[-2][1] // TILE_SIZE)
-                        next_tile = ((self.tile_x + dx) % GRID_COLS, (self.tile_y + dy) % GRID_ROWS)
+                # Verificamos si ha caído sobre una calavera o poder
+                for p in powerups:
+                    if p.x == self.tile_x and p.y == self.tile_y and p.visible and not p.disappearing:
+                        if p.type == "calavera":
+                            # Obtenemos la dirección del último movimiento
+                            last_point_index = max(0, len(self.hit_bounce_pixel_path) - 2)
+                            dx = self.tile_x - int(self.hit_bounce_pixel_path[last_point_index][0] // TILE_SIZE)
+                            dy = self.tile_y - int(self.hit_bounce_pixel_path[last_point_index][1] // TILE_SIZE)
 
-                        # Comprobar si es válida
-                        if grid[next_tile[1]][next_tile[0]] not in (1, 2, 3):
-                            if not any(b.tile_x == next_tile[0] and b.tile_y == next_tile[1] and not b.exploded for b in
-                                       bombs):
-                                if not any(p2.x == next_tile[0] and p2.y == next_tile[
-                                    1] and p2.visible and p2.type in CURSES for p2 in powerups):
-                                    new_path = [
-                                        (self.tile_x * TILE_SIZE + TILE_SIZE / 2,
-                                         self.tile_y * TILE_SIZE + TILE_SIZE / 2),
-                                        (next_tile[0] * TILE_SIZE + TILE_SIZE / 2,
-                                         next_tile[1] * TILE_SIZE + TILE_SIZE / 2)
-                                    ]
-                                    self.hit_bouncing = True
-                                    self.hit_bounce_pixel_path = new_path
-                                    self.hit_bounce_durations = [150]
-                                    self.hit_bounce_total_time = 150
-                                    self.hit_bounce_start_time = pygame.time.get_ticks()
-                                    self.hit_bounce_height = 15
-                                    return
-                    else:
-                        # Si es una habilidad, desaparecer inmediatamente
-                        p.visible = False
-                        p.start_disappear()
-            return
+                            # Normalizamos la dirección para asegurar que sea (1,0), (-1,0), (0,1) o (0,-1)
+                            if dx != 0: dx = 1 if dx > 0 else -1
+                            if dy != 0: dy = 1 if dy > 0 else -1
+
+                            # Inicia un nuevo rebote de una sola casilla
+                            self.hit_by_player(dx, dy, grid, bombs, powerups, bounce_length=1)
+                            return  # Salimos para que la nueva animación de rebote tome el control
+                        else:
+                            # Si es una habilidad, desaparecer inmediatamente
+                            p.start_disappear()
+                return
 
         # Determina en qué tramo de la ruta nos encontramos según el tiempo transcurrido
         t_accum = 0
@@ -1864,13 +1870,6 @@ TOTAL_TIME = config.current_minute * 60
 start_time = time.time()
 grid, powerups = generate_grid_and_powerups()
 game_grid = grid
-players = [
-    Player(1, 1, RED,
-           {'up': pygame.K_w, 'down': pygame.K_s, 'left': pygame.K_a, 'right': pygame.K_d, 'bomb': pygame.K_SPACE,
-            'hit': pygame.K_q}),
-    Player(19, 15, BLUE, {'up': pygame.K_UP, 'down': pygame.K_DOWN, 'left': pygame.K_LEFT, 'right': pygame.K_RIGHT,
-                          'bomb': pygame.K_RETURN, 'hit': pygame.K_p}),
-]
 bombs = []
 explosions = []
 dropped_abilities = []
@@ -1884,73 +1883,124 @@ while running:
     screen.fill(BLACK)
     draw_grid(screen, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG)
     draw_grid_lines(screen)
+
     for player in players:
         if player.auto_bombing:
             player.place_bomb(bombs, powerups, forced=True)
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+
+        # Eventos de teclado
         elif event.type == pygame.KEYDOWN:
             for player in players:
                 player.update_curse()
-                if event.key == player.controls['bomb']:
+                if 'bomb' in player.controls and event.key == player.controls['bomb']:
                     player.place_bomb(bombs, powerups)
                 elif 'hit' in player.controls and event.key == player.controls['hit']:
-                    # Si el jugador tiene el poder de golpear bombas
                     if player.hit_bomb_available:
-                        # Determinamos la dirección (dx, dy) según hacia dónde mira el jugador
                         dx, dy = 0, 0
-                        if player.current_direction == "up":
-                            dy = -1
-                        elif player.current_direction == "down":
-                            dy = 1
-                        elif player.current_direction == "left":
-                            dx = -1
-                        elif player.current_direction == "right":
-                            dx = 1
+                        if player.current_direction == "up": dy = -1
+                        elif player.current_direction == "down": dy = 1
+                        elif player.current_direction == "left": dx = -1
+                        elif player.current_direction == "right": dx = 1
                         if player.invert_controls:
                             dx, dy = -dx, -dy
-                        if dx > 0:
-                            player.move_right(grid, bombs)
-                        elif dx < 0:
-                            player.move_left(grid, bombs)
-                        if dy > 0:
-                            player.move_down(grid, bombs)
-                        elif dy < 0:
-                            player.move_up(grid, bombs)
-
-                        # Casilla que está frente al jugador
+                        if dx > 0: player.move_right(grid, bombs)
+                        elif dx < 0: player.move_left(grid, bombs)
+                        if dy > 0: player.move_down(grid, bombs)
+                        elif dy < 0: player.move_up(grid, bombs)
                         front_tile_x = player.get_center_tile()[0] + dx
                         front_tile_y = player.get_center_tile()[1] + dy
-
-                        # Buscamos si hay una bomba en esa casilla
                         for b in bombs:
                             if b.tile_x == front_tile_x and b.tile_y == front_tile_y:
-                                # Si no está ya rebotando ni deslizándose, la golpeamos
                                 if not b.hit_bouncing and not b.sliding:
                                     b.hit_by_player(dx, dy, grid, bombs, powerups)
-                                break  # Salimos tras golpear la primera bomba encontrada
+                                break
+
+        # Eventos de mando
+        elif event.type == pygame.JOYBUTTONDOWN:
+            for player in players:
+                if 'joy_id' in player.controls and event.joy == player.controls['joy_id']:
+                    # Botón A (0): colocar bomba
+                    if event.button == 0:
+                        player.place_bomb(bombs, powerups)
+                    # Botón B (1): golpear bomba
+                    elif event.button == 1 and player.hit_bomb_available:
+                        dx, dy = 0, 0
+                        if player.current_direction == "up": dy = -1
+                        elif player.current_direction == "down": dy = 1
+                        elif player.current_direction == "left": dx = -1
+                        elif player.current_direction == "right": dx = 1
+                        if player.invert_controls:
+                            dx, dy = -dx, -dy
+                        if dx > 0: player.move_right(grid, bombs)
+                        elif dx < 0: player.move_left(grid, bombs)
+                        if dy > 0: player.move_down(grid, bombs)
+                        elif dy < 0: player.move_up(grid, bombs)
+                        front_tile_x = player.get_center_tile()[0] + dx
+                        front_tile_y = player.get_center_tile()[1] + dy
+                        for b in bombs:
+                            if b.tile_x == front_tile_x and b.tile_y == front_tile_y:
+                                if not b.hit_bouncing and not b.sliding:
+                                    b.hit_by_player(dx, dy, grid, bombs, powerups)
+                                break
+            for player in players:
+                player.update_curse()
+                if isinstance(player.controls, dict) and 'bomb' in player.controls and event.type == player.controls['bomb']:
+                    player.place_bomb(bombs, powerups)
+                elif 'hit' in player.controls and event.type == player.controls['hit']:
+                    if player.hit_bomb_available:
+                        dx, dy = 0, 0
+                        if player.current_direction == "up": dy = -1
+                        elif player.current_direction == "down": dy = 1
+                        elif player.current_direction == "left": dx = -1
+                        elif player.current_direction == "right": dx = 1
+                        if player.invert_controls:
+                            dx, dy = -dx, -dy
+                        if dx > 0: player.move_right(grid, bombs)
+                        elif dx < 0: player.move_left(grid, bombs)
+                        if dy > 0: player.move_down(grid, bombs)
+                        elif dy < 0: player.move_up(grid, bombs)
+                        front_tile_x = player.get_center_tile()[0] + dx
+                        front_tile_y = player.get_center_tile()[1] + dy
+                        for b in bombs:
+                            if b.tile_x == front_tile_x and b.tile_y == front_tile_y:
+                                if not b.hit_bouncing and not b.sliding:
+                                    b.hit_by_player(dx, dy, grid, bombs, powerups)
+                                break
 
     keys = pygame.key.get_pressed()
     for player in players:
-        if player.curse == "inverted":
-            if keys[player.controls['up']]:
-                player.move_down(grid, bombs)
-            elif keys[player.controls['down']]:
-                player.move_up(grid, bombs)
-            elif keys[player.controls['left']]:
-                player.move_right(grid, bombs)
-            elif keys[player.controls['right']]:
-                player.move_left(grid, bombs)
-        else:
-            if keys[player.controls['up']]:
-                player.move_up(grid, bombs)
-            elif keys[player.controls['down']]:
-                player.move_down(grid, bombs)
-            elif keys[player.controls['left']]:
-                player.move_left(grid, bombs)
-            elif keys[player.controls['right']]:
-                player.move_right(grid, bombs)
+        if 'up' in player.controls:
+            # Jugador de teclado
+            if player.curse == "inverted":
+                if keys[player.controls['up']]: player.move_down(grid, bombs)
+                elif keys[player.controls['down']]: player.move_up(grid, bombs)
+                elif keys[player.controls['left']]: player.move_right(grid, bombs)
+                elif keys[player.controls['right']]: player.move_left(grid, bombs)
+            else:
+                if keys[player.controls['up']]: player.move_up(grid, bombs)
+                elif keys[player.controls['down']]: player.move_down(grid, bombs)
+                elif keys[player.controls['left']]: player.move_left(grid, bombs)
+                elif keys[player.controls['right']]: player.move_right(grid, bombs)
+        elif 'joy_id' in player.controls:
+            # Jugador de mando: movimiento por joystick
+            joy = pygame.joystick.Joystick(player.controls['joy_id'])
+            axis_threshold = 0.3
+            dx = joy.get_axis(0)
+            dy = joy.get_axis(1)
+            if abs(dx) > abs(dy):
+                if dx > axis_threshold:
+                    player.move_right(grid, bombs)
+                elif dx < -axis_threshold:
+                    player.move_left(grid, bombs)
+            else:
+                if dy > axis_threshold:
+                    player.move_down(grid, bombs)
+                elif dy < -axis_threshold:
+                    player.move_up(grid, bombs)
 
         player.update_animation()
         player.update_passable(bombs)
@@ -1966,6 +2016,10 @@ while running:
                 if not bomb_exists:
                     player.place_bomb(bombs, powerups, forced=True)
             player.last_auto_bomb_tile = current_tile
+
+    for player in players:
+        player.draw(screen)
+
 
     current_time = time.time()
     for i in range(len(players)):
@@ -2006,8 +2060,12 @@ while running:
                 tx, ty, expl_type, direction = pos
                 explosions.append(Explosion(tx, ty, explosion_type=expl_type, direction=direction))
 
+    dt = clock.tick(60) / 1000.0  # ← define dt (a 60 FPS, en segundos)
+    update_powerups(powerups, dt)  # Actualiza los powerups
+    draw_powerups(screen, powerups)  # DIBUJA LOS POWERUPS PRIMERO
+
     for bomb in bombs:
-        bomb.draw(screen)
+        bomb.draw(screen)  # LUEGO DIBUJA LAS BOMBAS ENCIMA
 
     for explosion in explosions[:]:
         explosion.update()
@@ -2015,10 +2073,6 @@ while running:
             explosions.remove(explosion)
         else:
             explosion.draw(screen)
-
-    dt = clock.tick(60) / 1000.0  # ← define dt (a 60 FPS, en segundos)
-    update_powerups(powerups, dt)  # Ahora dt ya está definidod
-    draw_powerups(screen, powerups)
 
 
     def check_pickup(players, powerups):
@@ -2127,9 +2181,6 @@ while running:
 
 
     check_pickup(players, powerups)
-
-    for player in players:
-        player.draw(screen)
 
     dt = clock.get_time() / 1000.0
     for da in dropped_abilities[:]:
