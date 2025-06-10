@@ -14,9 +14,12 @@ pygame.mixer.init()
 
 # Inicialización de mandos
 pygame.joystick.init()
-for i in range(pygame.joystick.get_count()):
-    pygame.joystick.Joystick(i).init()
-print(f"[DEBUG] Mandos conectados: {pygame.joystick.get_count()}")
+def get_joystick_by_instance_id(instance_id: int):
+    for i in range(pygame.joystick.get_count()):
+        joy = pygame.joystick.Joystick(i)
+        if joy.get_instance_id() == instance_id:
+            return joy
+    return None        # si se ha desconectado
 
 
 BASE_DIR = os.path.dirname(__file__)
@@ -1093,7 +1096,8 @@ for idx, jugador in enumerate(gestor_jugadores.todos()):
     if tipo == "teclado":
         controls = controles_teclado
     elif tipo == "mando":
-        controls = {"joy_id": jugador["id"]}  # Guardamos solo el ID para control posterior
+        controls = {"instance_id": jugador["instance_id"]}
+
     else:
         continue  # No válido
 
@@ -1922,7 +1926,8 @@ while running:
         # Eventos de mando
         elif event.type == pygame.JOYBUTTONDOWN:
             for player in players:
-                if 'joy_id' in player.controls and event.joy == player.controls['joy_id']:
+                if 'instance_id' in player.controls and getattr(event, "instance_id", event.joy) == player.controls[
+                    'instance_id']:
                     # Botón A (0): colocar bomba
                     if event.button == 0:
                         player.place_bomb(bombs, powerups)
@@ -1971,6 +1976,31 @@ while running:
                                     b.hit_by_player(dx, dy, grid, bombs, powerups)
                                 break
 
+        # DESCONEXION Y RECONEXIÓN DE MANDOS
+        elif event.type == pygame.JOYDEVICEREMOVED:
+            lost_id = event.instance_id
+            for player in players:
+                if player.controls.get("instance_id") == lost_id:
+                    player.controls["active"] = False
+                    break
+
+        elif event.type == pygame.JOYDEVICEADDED:
+            new_joy = pygame.joystick.Joystick(event.device_index)
+            new_joy.init()
+
+            new_guid = new_joy.get_guid()
+            new_instance_id = new_joy.get_instance_id()
+
+            # ¿Hay algún jugador «desconectado» con este mismo GUID?
+            for player in players:
+                c = player.controls
+                if c.get("guid") == new_guid and not c.get("active", True):
+                    c["instance_id"] = new_instance_id
+                    c["id"] = event.device_index
+                    c["active"] = True
+                    print(f"Reasignado mando → jugador {players.index(player) + 1}")
+                    break
+
     keys = pygame.key.get_pressed()
     for player in players:
         if 'up' in player.controls:
@@ -1985,9 +2015,14 @@ while running:
                 elif keys[player.controls['down']]: player.move_down(grid, bombs)
                 elif keys[player.controls['left']]: player.move_left(grid, bombs)
                 elif keys[player.controls['right']]: player.move_right(grid, bombs)
-        elif 'joy_id' in player.controls:
-            # Jugador de mando: movimiento por joystick
-            joy = pygame.joystick.Joystick(player.controls['joy_id'])
+
+        elif "instance_id" in player.controls and player.controls.get("active", True):
+            joy = get_joystick_by_instance_id(player.controls["instance_id"])
+            if joy is None:  # se ha ido justo ahora
+                player.controls["active"] = False
+                continue
+            # … aquí el código de movimiento / botones …
+
             axis_threshold = 0.3
             dx = joy.get_axis(0)
             dy = joy.get_axis(1)

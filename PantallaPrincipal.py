@@ -123,6 +123,12 @@ def background_screen(screen):
                 key_sound.play()
                 running = False
 
+            if event.type == pygame.JOYBUTTONDOWN:
+                if event.button == 1:
+                    print ("JUEGO CERRADO")
+                    pygame.quit()
+                    sys.exit()
+
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 print("JUEGO CERRADO")
                 pygame.quit()
