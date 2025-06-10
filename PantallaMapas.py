@@ -10,6 +10,7 @@ def pantalla_mapas(screen, bg_anim):
     clock = pygame.time.Clock()
     pygame.display.set_caption("Pantalla Mapas")
 
+
     # INICIALIZAR MANDOS
     pygame.joystick.init()
     mandos = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
@@ -66,6 +67,11 @@ def pantalla_mapas(screen, bg_anim):
     last_click_time = 0
     double_click_delay = 300  # milisegundos
 
+    # Ajustar sensibilidad del eje del mando
+    axis_ready = True
+    THRESHOLD = 0.6  # Cuándo actúa el eje
+    DEADZONE = 0.3  # Cuándo se rearma
+
     running = True
     while running:
         mouse_pos = pygame.mouse.get_pos()
@@ -76,21 +82,31 @@ def pantalla_mapas(screen, bg_anim):
                 pygame.quit()
                 sys.exit()
 
-            tiempo_actual = pygame.time.get_ticks()
-            if mandos and tiempo_actual - last_input_time > mando_delay:
-                joystick = mandos[0]  # Primer mando
+            if event.type == pygame.JOYDEVICEADDED:
+                nuevo = pygame.joystick.Joystick(event.device_index)
+                nuevo.init()
+                mandos.append(nuevo)
 
-                eje_y = joystick.get_axis(1)
-
-                if eje_y < -0.5:  # Joystick amunt
-                    selected_index = (selected_index - 1) % len(mapas)
-                    config.selected_map = selected_index + 1
-                    last_input_time = tiempo_actual
-
-                elif eje_y > 0.5:  # Joystick avall
+            elif event.type == pygame.JOYHATMOTION and event.hat == 0:
+                _, hat_y = event.value  # D-pad: arriba −1, abajo 1
+                if hat_y == -1:
                     selected_index = (selected_index + 1) % len(mapas)
-                    config.selected_map = selected_index + 1
-                    last_input_time = tiempo_actual
+                elif hat_y == 1:
+                    selected_index = (selected_index - 1) % len(mapas)
+                config.selected_map = selected_index + 1
+
+            # SOLO PERMITE QUE EL PRIMER MANDO MUEVA EL STICK
+            elif event.type == pygame.JOYAXISMOTION:
+                if event.axis == 1:  # eje vertical
+                    if axis_ready and abs(event.value) > THRESHOLD:
+                        if event.value < 0:
+                            selected_index = (selected_index - 1) % len(mapas)
+                        else:
+                            selected_index = (selected_index + 1) % len(mapas)
+                        config.selected_map = selected_index + 1
+                        axis_ready = False  # bloqueo hasta volver a centro
+                    elif abs(event.value) < DEADZONE:
+                        axis_ready = True  # rearme
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
@@ -146,11 +162,7 @@ def pantalla_mapas(screen, bg_anim):
                     from PantallaAudio import pantalla_audio
                     pantalla_audio(screen, bg_anim, volver_callback=pantalla_mapas)
 
-            elif event.type == pygame.JOYDEVICEADDED:
-                nuevo_mando = pygame.joystick.Joystick(event.device_index)
-                nuevo_mando.init()
-                mandos.append(nuevo_mando)
-                print("Mando conectado:", nuevo_mando.get_name())
+
 
                 # CLIC SOBRE MAPA
                 for idx, (mini, big, rect, name_surf) in enumerate(mapas):

@@ -1,5 +1,7 @@
 # CLASE PARA GESTIONAR JUGADORES Y MANDOS
 
+import pygame
+
 class GestorJugadores:
     def __init__(self):
         self.jugadores = []  # Lista de dicts: tipo ("teclado"/"mando"), id, indice personaje
@@ -15,8 +17,19 @@ class GestorJugadores:
         return None
 
     def unir_mando(self, joy_id):
-        if not any(j["tipo"] == "mando" and j["id"] == joy_id for j in self.jugadores) and len(self.jugadores) < self.max_jugadores:
-            self.jugadores.append({"tipo": "mando", "id": joy_id, "indice": 0})
+        if not any(j["tipo"] == "mando" and j["id"] == joy_id for j in self.jugadores) \
+                and len(self.jugadores) < self.max_jugadores:
+
+            joy = pygame.joystick.Joystick(joy_id)
+            if not joy.get_init():
+                joy.init()
+
+            self.jugadores.append({
+                "tipo": "mando",
+                "id": joy_id,  # lo conservamos por si hace falta
+                "instance_id": joy.get_instance_id(),  # ¡el que nunca cambia!
+                "indice": 0
+            })
             return len(self.jugadores)
         return None
 
