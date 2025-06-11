@@ -155,6 +155,8 @@ COGER_MALDICION_SOUND = pygame.mixer.Sound(
 os.path.join(ASSETS_DIR, "Sonidos_juego", "habilidades", "coger_maldicion.mp3"))
 COGER_MALDICION_SOUND.set_volume(0.35)
 
+modo_posicion = config.current_position_index
+
 posiciones_iniciales = [
     (1, 1),
     (GRID_COLS - 2, GRID_ROWS - 2),
@@ -1073,11 +1075,17 @@ def cargar_animaciones_personaje(nombre_personaje):
 
 # Diccionario de nombres por índice desde la pantalla de personajes
 nombres_por_indice = {
-    0: "Orco Verde",
+    0: "Mork",
     1: "Guerrero Rojo",
-    2: "Vampiro",
-    3: "Orco Azul",
-    4: "Orco Marrón",
+    2: "Mortis",
+    3: "Grimfang",
+    4: "Warlord",
+    5: "Vael",
+    6: "Sarthus",
+    7: "Guerrero Azul",
+    8: "Guerrero Blanco",
+    9: "Guerrero Negro",
+    10: "Calvo"
 }
 
 # Creamos la lista de jugadores
@@ -1866,6 +1874,20 @@ def draw_curse_info(screen, player, color, pos):
         text = "No curse"
     screen.blit(font.render(text, True, color), (x, y))
 
+# CONDICION POSICION FIJA O ALEATORIA
+def obtener_posiciones_aleatorias(grid, num_players):
+    libres = []
+    for y in range(GRID_ROWS):
+        for x in range(GRID_COLS):
+            if grid[y][x] == 0:  # 0 = casilla libre
+                libres.append((x, y))
+    random.shuffle(libres)
+    return libres[:num_players]
+
+
+# Obtener el modo desde la configuración
+modo_posicion = config.current_position_index  # 0 = fija, 1 = aleatoria
+
 
 # ------------------------------------------------------------------------------------
 # Bucle principal
@@ -1874,6 +1896,20 @@ TOTAL_TIME = config.current_minute * 60
 start_time = time.time()
 grid, powerups = generate_grid_and_powerups()
 game_grid = grid
+
+# Calcular las posiciones
+if modo_posicion == 0:
+    posiciones = posiciones_iniciales[:len(players)]
+else:
+    posiciones = obtener_posiciones_aleatorias(grid, len(players))
+
+# Colocar a cada jugador en su posición
+for i, jugador in enumerate(players):
+    x, y = posiciones[i]
+    jugador.x = x * TILE_SIZE - 40
+    jugador.y = y * TILE_SIZE - 40
+
+
 bombs = []
 explosions = []
 dropped_abilities = []
@@ -2018,24 +2054,46 @@ while running:
 
         elif "instance_id" in player.controls and player.controls.get("active", True):
             joy = get_joystick_by_instance_id(player.controls["instance_id"])
-            if joy is None:  # se ha ido justo ahora
+            if joy is None:
                 player.controls["active"] = False
                 continue
-            # … aquí el código de movimiento / botones …
-
-            axis_threshold = 0.3
+            # Lectura de entradas
             dx = joy.get_axis(0)
             dy = joy.get_axis(1)
-            if abs(dx) > abs(dy):
-                if dx > axis_threshold:
-                    player.move_right(grid, bombs)
-                elif dx < -axis_threshold:
-                    player.move_left(grid, bombs)
-            else:
-                if dy > axis_threshold:
-                    player.move_down(grid, bombs)
-                elif dy < -axis_threshold:
-                    player.move_up(grid, bombs)
+            hat_x, hat_y = joy.get_hat(0)  # ← cruzeta
+            # Inversión si tiene maldición
+            if player.curse == "inverted":
+                dx *= -1
+                dy *= -1
+                hat_x *= -1
+                hat_y *= -1
+            axis_threshold = 0.3
+            cruzeta_usada = False
+            # Movimiento con cruzeta (prioridad)
+            if hat_x == -1:
+                player.move_left(grid, bombs)
+                cruzeta_usada = True
+            elif hat_x == 1:
+                player.move_right(grid, bombs)
+                cruzeta_usada = True
+            elif hat_y == -1:
+                player.move_down(grid, bombs)
+                cruzeta_usada = True
+            elif hat_y == 1:
+                player.move_up(grid, bombs)
+                cruzeta_usada = True
+            # Si no hay entrada en la cruzeta, usar joystick
+            if not cruzeta_usada:
+                if abs(dx) > abs(dy):
+                    if dx > axis_threshold:
+                        player.move_right(grid, bombs)
+                    elif dx < -axis_threshold:
+                        player.move_left(grid, bombs)
+                else:
+                    if dy > axis_threshold:
+                        player.move_down(grid, bombs)
+                    elif dy < -axis_threshold:
+                        player.move_up(grid, bombs)
 
         player.update_animation()
         player.update_passable(bombs)

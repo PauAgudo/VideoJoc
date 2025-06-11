@@ -144,6 +144,49 @@ class ConfiguracionPartida:
                             current_ultimas_index[key] += 1
                         last_input_time = tiempo_actual
 
+                    elif event.type == pygame.JOYHATMOTION:
+                        tiempo_actual = pygame.time.get_ticks()
+                        if mandos and tiempo_actual - last_input_time > mando_delay:
+                            x, y = event.value  # D-Pad (x: izq/dcha, y: arriba/abajo)
+
+                            if y == 1:  # Flecha arriba
+                                tira_activa_idx = (tira_activa_idx - 1) % len(keys)
+                                last_input_time = tiempo_actual
+
+                            elif y == -1:  # Flecha abajo
+                                tira_activa_idx = (tira_activa_idx + 1) % len(keys)
+                                last_input_time = tiempo_actual
+
+                            elif x == -1:  # Flecha izquierda
+                                key = keys[tira_activa_idx]
+                                if key == "sets" and current_set_index > 0:
+                                    current_set_index -= 1
+                                elif key == "minutos" and current_minute > 1:
+                                    current_minute -= 1
+                                elif key == "nivel_COM" and current_level_index > 0:
+                                    current_level_index -= 1
+                                elif key == "pos_inicial" and current_position_index > 0:
+                                    current_position_index -= 1
+                                elif key in current_ultimas_index and current_ultimas_index[key] > 0:
+                                    current_ultimas_index[key] -= 1
+                                last_input_time = tiempo_actual
+
+                            elif x == 1:  # Flecha derecha
+                                key = keys[tira_activa_idx]
+                                if key == "sets" and current_set_index < len(config.set_options) - 1:
+                                    current_set_index += 1
+                                elif key == "minutos" and current_minute < 9:
+                                    current_minute += 1
+                                elif key == "nivel_COM" and current_level_index < len(config.level_options) - 1:
+                                    current_level_index += 1
+                                elif key == "pos_inicial" and current_position_index < len(config.position_options) - 1:
+                                    current_position_index += 1
+                                elif key in current_ultimas_index and current_ultimas_index[key] < len(
+                                        config.ultimas_opciones) - 1:
+                                    current_ultimas_index[key] += 1
+                                last_input_time = tiempo_actual
+
+
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         config.__init__()

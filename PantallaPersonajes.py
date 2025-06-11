@@ -103,9 +103,16 @@ def pantalla_personajes(screen, bg_anim):
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/vampiro1.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/orco2.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/orco3.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/vampiro2.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/vampiro3.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/azul.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/blanco.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/negro.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/calvo.png").convert_alpha(), (90, 90))
     ]
 
-    nombres_personajes = ["Orco Verde", "Guerrero Rojo", "Vampiro", "Orco Azul", "Orco Marrón"]
+    nombres_personajes = ["Mork", "Guerrero Rojo", "Mortis", "Grimfang", "Warlord", "Vael", "Sarthus", "Guerrero Azul",
+                          "Guerrero Blanco", "Guerrero Negro", "Calvo"]
 
     personajes_centros = [(160 + i * (110 + 70), 280) for i in range(4)]
 
