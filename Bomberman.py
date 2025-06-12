@@ -6,6 +6,7 @@ import random
 import time
 from Config import config
 from ConfiguraciónMandos import gestor_jugadores
+from PausaPartida import menu_pausa
 # ------------------------------------------------------------------------------------
 # Inicialización y configuración de pantalla
 # ------------------------------------------------------------------------------------
@@ -1874,17 +1875,6 @@ def draw_curse_info(screen, player, color, pos):
         text = "No curse"
     screen.blit(font.render(text, True, color), (x, y))
 
-# CONDICION POSICION FIJA O ALEATORIA
-def obtener_posiciones_aleatorias(grid, num_players):
-    libres = []
-    for y in range(GRID_ROWS):
-        for x in range(GRID_COLS):
-            if grid[y][x] == 0:  # 0 = casilla libre
-                libres.append((x, y))
-    random.shuffle(libres)
-    return libres[:num_players]
-
-
 # Obtener el modo desde la configuración
 modo_posicion = config.current_position_index  # 0 = fija, 1 = aleatoria
 
@@ -1897,13 +1887,14 @@ start_time = time.time()
 grid, powerups = generate_grid_and_powerups()
 game_grid = grid
 
-# Calcular las posiciones
-if modo_posicion == 0:
-    posiciones = posiciones_iniciales[:len(players)]
+# CONDICION POSICION FIJA O ALEATORIA
+if modo_posicion == 1:
+    posiciones = posiciones_iniciales.copy()
+    random.shuffle(posiciones)
 else:
-    posiciones = obtener_posiciones_aleatorias(grid, len(players))
+    posiciones = posiciones_iniciales[:]
 
-# Colocar a cada jugador en su posición
+# Asignar posiciones a los jugadores
 for i, jugador in enumerate(players):
     x, y = posiciones[i]
     jugador.x = x * TILE_SIZE - 40
@@ -2300,6 +2291,13 @@ while running:
 
     draw_HUD(screen, players[0], (10, 5), RED)
     draw_HUD(screen, players[1], (WIDTH - 210, 5), BLUE)
+
+    for event in pygame.event.get():
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            resultado = menu_pausa(screen, jugador_controlador="teclado")
+            if resultado == "reanudar":
+                continue
+
 
     pygame.display.flip()
     clock.tick(60)
