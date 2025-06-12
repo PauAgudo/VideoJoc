@@ -25,37 +25,67 @@ class Config:
 config = Config()
 
 
+import pygame
+import os
+
+import pygame
+import os
+
+import pygame
+import os
+
 class Audio:
     def __init__(self):
-        # Volumen música de fondo
         self.volume = 1.0
-        # Volumen efectos de sonido
         self.volume_effects = 1.0
-
-        # Parámetros de los sliders (posición y tamaño, igual que antes)
         self.slider_pos = (300, 120)
         self.slider_size = (300, 10)
-        # Ahora sólo hay dos valores: [volume (música), volume_effects]
         self.slider_values = [1.0, 1.0]
 
+        self.efectos = {}
+        self._cargar_efectos()
+
+    def _cargar_efectos(self):
+        pygame.mixer.init()
+        carpeta_base = os.path.join("Media", "Sonidos_juego")
+        if not os.path.exists(carpeta_base):
+            print(f"[AUDIO] Carpeta no encontrada: {carpeta_base}")
+            return
+
+        for subdir, _, archivos in os.walk(carpeta_base):
+            for archivo in archivos:
+                if archivo.endswith((".wav", ".ogg")):
+                    nombre_carpeta = os.path.basename(subdir)
+                    nombre_archivo = os.path.splitext(archivo)[0]
+                    clave = f"{nombre_carpeta}_{nombre_archivo}".lower()  # Ej: bomba_explosion
+                    ruta = os.path.join(subdir, archivo)
+                    try:
+                        sonido = pygame.mixer.Sound(ruta)
+                        sonido.set_volume(self.volume_effects)
+                        self.efectos[clave] = sonido
+                    except pygame.error as e:
+                        print(f"[AUDIO] Error cargando {ruta}: {e}")
+
+    def reproducir(self, nombre):
+        if nombre in self.efectos:
+            self.efectos[nombre].play()
+        else:
+            print(f"[AUDIO] Efecto no encontrado: {nombre}")
+
     def save(self):
-        self.slider_values = [
-            self.volume,
-            self.volume_effects
-        ]
+        self.slider_values = [self.volume, self.volume_effects]
 
     def load(self):
         if len(self.slider_values) >= 2:
             self.volume = self.slider_values[0]
             self.volume_effects = self.slider_values[1]
         else:
-            # Si por alguna razón slider_values no está inicializada correctamente,
-            # reasignamos valores por defecto.
             self.volume = 1.0
             self.volume_effects = 1.0
 
 audio = Audio()
-audio.load()  # Cargar valores iniciales
+audio.load()
+
 
 
 # clase para guardar seleccion de personajes para cada uno de los jugadores

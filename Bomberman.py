@@ -2293,10 +2293,43 @@ while running:
     draw_HUD(screen, players[1], (WIDTH - 210, 5), BLUE)
 
     for event in pygame.event.get():
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            resultado = menu_pausa(screen, jugador_controlador="teclado")
-            if resultado == "reanudar":
-                continue
+        if event.type == pygame.KEYDOWN:
+            if event.key in [pygame.K_LCTRL, pygame.K_RCTRL]:
+                # Buscar qué jugador es el del teclado
+                for jugador in gestor_jugadores.jugadores:
+                    if jugador["tipo"] == "teclado":
+                        resultado = menu_pausa(screen, jugador_controlador_id="teclado",
+                                                         jugador_nombre=jugador["id_jugador"])
+                        if resultado == "reanudar":
+                            continue
+                        break
+
+            elif event.key == pygame.K_ESCAPE:
+                # También válido, si lo quieres permitir
+                for jugador in gestor_jugadores.jugadores:
+                    if jugador["tipo"] == "teclado":
+                        resultado = menu_pausa(screen, jugador_controlador_id="teclado",
+                                                         jugador_nombre=jugador["id_jugador"])
+                        if resultado == "reanudar":
+                            continue
+                        break
+
+
+        elif event.type == pygame.JOYBUTTONDOWN and event.button == 7:
+            instance_id = event.instance_id
+            for jugador in gestor_jugadores.jugadores:
+                if jugador["tipo"] == "mando" and jugador["instance_id"] == instance_id:
+                    resultado = menu_pausa(screen, jugador_controlador_id=instance_id,
+                                                    jugador_nombre=jugador["id_jugador"])
+                    if resultado == "Reanudar partida":
+                       continue
+
+                    elif resultado == "Ajustar volumen":
+                        from PantallaAudio import (pantalla_audio)
+
+                        pantalla_audio(screen, bg_anim= None, volver_callback = lambda screen, bg_anim:
+                        menu_pausa(screen, jugador_controlador_id=instance_id))
+
 
 
     pygame.display.flip()
