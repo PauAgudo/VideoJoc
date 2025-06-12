@@ -102,7 +102,7 @@ def pantalla_personajes(screen, bg_anim):
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/rojo.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/vampiro1.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/orco2.png").convert_alpha(), (90, 90)),
-        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/orco3.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Warlord.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/vampiro2.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/vampiro3.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/azul.png").convert_alpha(), (90, 90)),
@@ -145,6 +145,10 @@ def pantalla_personajes(screen, bg_anim):
                     else:
                         mensaje_error = "¡Deben estar listos al menos 2 jugadores!"
                         mensaje_timer = pygame.time.get_ticks()
+
+                if audio_rect.collidepoint(mouse_pos):
+                    from PantallaAudio import pantalla_audio
+                    pantalla_audio(screen, bg_anim, volver_callback=pantalla_personajes)
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:

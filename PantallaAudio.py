@@ -50,12 +50,12 @@ def inicializar_componentes_ui(screen):
     try:
         boton_atras = pygame.transform.scale(
             pygame.image.load("Media/Menu/Botones/siguiente.png"),
-            (40, 40)
-        )
+            (40, 40))
+        boton_atras_rotate = pygame.transform.rotate(boton_atras, 180)
     except pygame.error:
         print("Error al cargar la imagen: siguiente.png")
         sys.exit(1)
-    rect_atras = boton_atras.get_rect(topleft=(25, 25))
+    rect_atras = boton_atras_rotate.get_rect(topleft=(25, 25))
 
     # Fondo gris
     try:
@@ -70,24 +70,22 @@ def inicializar_componentes_ui(screen):
         midright=(screen.get_width(), screen.get_height() // 2)
     )
 
-    return boton_atras, rect_atras, fondo_gris, rect_fondo_gris
+    return boton_atras_rotate, rect_atras, fondo_gris, rect_fondo_gris
 
 
 def crear_sliders(rect_fondo_gris):
     base_x, base_y = audio.slider_pos
     ancho_slider, alto_slider = audio.slider_size
-    # Ajustamos el espacio vertical para sólo dos sliders
     espacio = alto_slider + 90
     sliders = []
 
     for i, tipo_volumen in enumerate(TIPOS_DE_VOLUMEN):
-        # Obtiene los valores iniciales para cada tipo de volumen desde Config
         if tipo_volumen == "MÚSICA":
             valor_inicial = audio.volume
         elif tipo_volumen == "EFECTOS":
             valor_inicial = audio.volume_effects
         else:
-            valor_inicial = 1.0  # Por defecto, máximo
+            valor_inicial = 1.0
 
         slider = SliderRect(
             rect_fondo_gris.left + base_x,
@@ -106,7 +104,6 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_a
     bg_anim.draw(screen)
     screen.blit(fondo_gris, rect_fondo_gris)
 
-    # Dibuja el botón "Atrás" con efecto hover
     mouse_pos = pygame.mouse.get_pos()
     if rect_atras.collidepoint(mouse_pos):
         screen.blit(
@@ -119,24 +116,21 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_a
     else:
         screen.blit(boton_atras, rect_atras)
 
-    # Dibuja los sliders, sus etiquetas y valores porcentuales
     font = pygame.font.SysFont(None, 16)
     for slider in sliders:
         slider.draw(screen)
 
         porcentaje = round(slider.value * 100)
-
-        # Etiqueta a la izquierda
         etiqueta_surf = font.render(f"{slider.tipo_volumen}: ", True, BLANCO)
         etiqueta_x = slider.rect.left - etiqueta_surf.get_width() - 10
         etiqueta_y = slider.rect.y + (slider.rect.height // 2 - etiqueta_surf.get_height() // 2)
         screen.blit(etiqueta_surf, (etiqueta_x, etiqueta_y))
 
-        # Valor porcentual a la derecha
         valor_surf = font.render(f"{porcentaje}%", True, BLANCO)
         valor_x = slider.rect.right + 10
         valor_y = slider.rect.y + (slider.rect.height // 2 - valor_surf.get_height() // 2)
         screen.blit(valor_surf, (valor_x, valor_y))
+
 
 def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
     mouse_pos = pygame.mouse.get_pos()
@@ -157,7 +151,7 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
             volver_callback(screen, bg_anim)
             return "ATRAS"
 
-        if event.type == pygame.JOYBUTTONDOWN and event.button == 1:  # Botó B
+        if event.type == pygame.JOYBUTTONDOWN and event.button == 1:
             guardar_volumenes(sliders)
             volver_callback(screen, bg_anim)
             return "ATRAS"
@@ -166,16 +160,17 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
             nuevo_mando = pygame.joystick.Joystick(event.device_index)
             nuevo_mando.init()
 
-    # Update sliders
     for slider in sliders:
         slider.update(mouse_pos, mouse_click)
 
-    # Apply volume live
     for slider in sliders:
         if slider.tipo_volumen == "MÚSICA":
             pygame.mixer.music.set_volume(slider.value)
         elif slider.tipo_volumen == "EFECTOS":
             audio.volume_effects = slider.value
+            for efecto in audio.efectos.values():
+                efecto.set_volume(slider.value)
+
 
 def guardar_volumenes(sliders):
     for slider in sliders:
@@ -183,12 +178,20 @@ def guardar_volumenes(sliders):
             audio.volume = slider.value
         elif slider.tipo_volumen == "EFECTOS":
             audio.volume_effects = slider.value
+            for efecto in audio.efectos.values():
+                efecto.set_volume(slider.value)
     audio.save()
 
 
 def pantalla_audio(screen, bg_anim, volver_callback):
     pygame.display.set_caption("Pantalla Audio")
     clock = pygame.time.Clock()
+
+    if bg_anim is None:
+        class DummyBG:
+            def update(self): pass
+            def draw(self, s): pass
+        bg_anim = DummyBG()
 
     pygame.joystick.init()
     mandos = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]

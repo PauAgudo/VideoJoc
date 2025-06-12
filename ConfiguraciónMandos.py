@@ -12,7 +12,14 @@ class GestorJugadores:
 
     def unir_teclado(self):
         if not any(j["tipo"] == "teclado" for j in self.jugadores) and len(self.jugadores) < self.max_jugadores:
-            self.jugadores.append({"tipo": "teclado", "id": None, "indice": 0})
+            nuevo_id = f"J{len(self.jugadores) + 1}"  # Asignar identificador dinámico
+
+            self.jugadores.append({
+                "tipo": "teclado",
+                "id": None,
+                "indice": 0,
+                "id_jugador": nuevo_id
+            })
             return len(self.jugadores)
         return None
 
@@ -24,11 +31,14 @@ class GestorJugadores:
             if not joy.get_init():
                 joy.init()
 
+            nuevo_id = f"J{len(self.jugadores) + 1}"  # Asignamos ID como J1, J2...
+
             self.jugadores.append({
                 "tipo": "mando",
                 "id": joy_id,  # lo conservamos por si hace falta
                 "instance_id": joy.get_instance_id(),  # ¡el que nunca cambia!
-                "indice": 0
+                "indice": 0,
+                "id_jugador": nuevo_id  # ← ¡ahora sí definido!
             })
             return len(self.jugadores)
         return None
