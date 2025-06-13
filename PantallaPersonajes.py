@@ -2,6 +2,24 @@ import pygame
 import sys
 import math
 from ConfiguraciónMandos import gestor_jugadores  # INSTANCIA DETECCION TECLADO Y MANDO
+pygame.init()
+# AÑADE ESTA LÍNEA ANTES DE CARGAR mixer.Sound
+if not pygame.mixer.get_init():
+    pygame.mixer.init()
+# Añadir justo tras los imports
+import os
+from Config import personajes
+from pygame import mixer
+
+# Inicializar sonidos de selección
+SONIDOS_PERSONAJE = {
+    "Mork": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Mork.mp3")),
+    "Mortis": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Mortis.mp3"))
+}
+# Opcional: ajustar volumen
+for s in SONIDOS_PERSONAJE.values():
+    s.set_volume(1.0)
+
 # Diccionario temporal para guardar estado de mandos desconectados
 temporizador_listos = {} # Diccionario para guardar si un jugador está listo
 estado_mandos_desconectados = {}
@@ -102,7 +120,7 @@ def pantalla_personajes(screen, bg_anim):
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/rojo.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/vampiro1.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/orco2.png").convert_alpha(), (90, 90)),
-        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Warlord.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/orco3.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/vampiro2.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/vampiro3.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/azul.png").convert_alpha(), (90, 90)),
@@ -146,10 +164,6 @@ def pantalla_personajes(screen, bg_anim):
                         mensaje_error = "¡Deben estar listos al menos 2 jugadores!"
                         mensaje_timer = pygame.time.get_ticks()
 
-                if audio_rect.collidepoint(mouse_pos):
-                    from PantallaAudio import pantalla_audio
-                    pantalla_audio(screen, bg_anim, volver_callback=pantalla_personajes)
-
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     from PantallaMapas import pantalla_mapas
@@ -178,7 +192,12 @@ def pantalla_personajes(screen, bg_anim):
                     else:
                         jugador = gestor_jugadores.get_teclado()
                         if event.key == pygame.K_l:
-                            temporizador_listos["teclado"] = True
+                            if not temporizador_listos.get("teclado", False):
+                                temporizador_listos["teclado"] = True
+                                personaje_idx = gestor_jugadores.get_teclado()["indice"]
+                                nombre = nombres_personajes[personaje_idx]
+                                if nombre in SONIDOS_PERSONAJE:
+                                    SONIDOS_PERSONAJE[nombre].play()
                         elif event.key == pygame.K_b:
                             temporizador_listos["teclado"] = False
                         elif not temporizador_listos.get("teclado"):
@@ -214,7 +233,14 @@ def pantalla_personajes(screen, bg_anim):
 
                 # Ahora ya procesamos normalmente
                 if event.button == 3:  # Y
-                    temporizador_listos[joy_id] = True
+                    if not temporizador_listos.get(joy_id, False):
+                        temporizador_listos[joy_id] = True
+                        jugador = gestor_jugadores.get_jugador_por_joy(joy_id)
+                        if jugador:
+                            personaje_idx = jugador["indice"]
+                            nombre = nombres_personajes[personaje_idx]
+                            if nombre in SONIDOS_PERSONAJE:
+                                SONIDOS_PERSONAJE[nombre].play()
 
                 elif event.button == 7:  # OPTIONS
                     from PantallaAudio import pantalla_audio
