@@ -34,13 +34,15 @@ import os
 import pygame
 import os
 
+import pygame
+import os
+
 class Audio:
     def __init__(self):
         self.volume = 1.0
-        self.volume_effects = 1.0
-        self.slider_pos = (300, 120)
+        self.slider_pos = (285, 150)
         self.slider_size = (300, 10)
-        self.slider_values = [1.0, 1.0]
+        self.slider_values = [1.0]
 
         self.efectos = {}
         self._cargar_efectos()
@@ -57,11 +59,11 @@ class Audio:
                 if archivo.endswith((".wav", ".ogg")):
                     nombre_carpeta = os.path.basename(subdir)
                     nombre_archivo = os.path.splitext(archivo)[0]
-                    clave = f"{nombre_carpeta}_{nombre_archivo}".lower()  # Ej: bomba_explosion
+                    clave = f"{nombre_carpeta}_{nombre_archivo}".lower()
                     ruta = os.path.join(subdir, archivo)
                     try:
                         sonido = pygame.mixer.Sound(ruta)
-                        sonido.set_volume(self.volume_effects)
+                        sonido.set_volume(self.volume)
                         self.efectos[clave] = sonido
                     except pygame.error as e:
                         print(f"[AUDIO] Error cargando {ruta}: {e}")
@@ -73,18 +75,17 @@ class Audio:
             print(f"[AUDIO] Efecto no encontrado: {nombre}")
 
     def save(self):
-        self.slider_values = [self.volume, self.volume_effects]
+        self.slider_values = [self.volume]
 
     def load(self):
-        if len(self.slider_values) >= 2:
+        if len(self.slider_values) >= 1:
             self.volume = self.slider_values[0]
-            self.volume_effects = self.slider_values[1]
         else:
             self.volume = 1.0
-            self.volume_effects = 1.0
 
 audio = Audio()
 audio.load()
+
 
 
 

@@ -7,21 +7,22 @@ AZUL = (0, 0, 255)
 BLANCO = (255, 255, 255)
 ROJO = (255, 0, 0)
 NEGRO = (0, 0, 0)
+GRIS_CLARO = (200, 200, 200)
+GRIS_MEDIO = (150, 150, 150)
+GRIS_OSCURO = (100, 100, 100)
 
-# Tipos de volumen que se pueden ajustar
-TIPOS_DE_VOLUMEN = ["MÚSICA", "EFECTOS"]
+# Solo un tipo de volumen
+TIPOS_DE_VOLUMEN = ["GENERAL"]
 
 
 class SliderRect:
-    # CLASE PARA LOS SLIDERS
-    def __init__(self, x, y, width, height, initial=1.0, tipo_volumen="MÚSICA"):
+    def __init__(self, x, y, width, height, initial=1.0, tipo_volumen="GENERAL"):
         self.rect = pygame.Rect(x, y, width, height)
         self.value = initial
         self.handle_size = 15
         self.tipo_volumen = tipo_volumen
 
     def draw(self, screen):
-        # DIBUJAR SLIDERS
         x, y, w, h = self.rect
         center_x = x + int(self.value * w)
         ancho_azul = center_x - x
@@ -46,7 +47,6 @@ class SliderRect:
 
 
 def inicializar_componentes_ui(screen):
-    # Configuración del botón "Atrás"
     try:
         boton_atras = pygame.transform.scale(
             pygame.image.load("Media/Menu/Botones/siguiente.png"),
@@ -57,18 +57,10 @@ def inicializar_componentes_ui(screen):
         sys.exit(1)
     rect_atras = boton_atras_rotate.get_rect(topleft=(25, 25))
 
-    # Fondo gris
-    try:
-        fondo_gris = pygame.transform.scale(
-            pygame.image.load("Media/Menu/gris.png"),
-            (750, 450)
-        )
-    except pygame.error:
-        print("Error al cargar la imagen: gris.png")
-        sys.exit(1)
-    rect_fondo_gris = fondo_gris.get_rect(
-        midright=(screen.get_width(), screen.get_height() // 2)
-    )
+    ancho = 750
+    alto = 450
+    fondo_gris = pygame.Surface((ancho, alto), pygame.SRCALPHA)
+    rect_fondo_gris = fondo_gris.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
 
     return boton_atras_rotate, rect_atras, fondo_gris, rect_fondo_gris
 
@@ -76,33 +68,62 @@ def inicializar_componentes_ui(screen):
 def crear_sliders(rect_fondo_gris):
     base_x, base_y = audio.slider_pos
     ancho_slider, alto_slider = audio.slider_size
-    espacio = alto_slider + 90
     sliders = []
 
-    for i, tipo_volumen in enumerate(TIPOS_DE_VOLUMEN):
-        if tipo_volumen == "MÚSICA":
-            valor_inicial = audio.volume
-        elif tipo_volumen == "EFECTOS":
-            valor_inicial = audio.volume_effects
-        else:
-            valor_inicial = 1.0
-
-        slider = SliderRect(
-            rect_fondo_gris.left + base_x,
-            rect_fondo_gris.top + base_y + i * espacio,
-            ancho_slider,
-            alto_slider,
-            initial=valor_inicial,
-            tipo_volumen=tipo_volumen
-        )
-        sliders.append(slider)
+    slider = SliderRect(
+        rect_fondo_gris.left + base_x,
+        rect_fondo_gris.top + base_y,
+        ancho_slider,
+        alto_slider,
+        initial=audio.volume,
+        tipo_volumen="GENERAL"
+    )
+    sliders.append(slider)
     return sliders
 
 
 def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_atras, sliders):
+    font_titulo = pygame.font.SysFont(None, 30)
+    font_opciones = pygame.font.SysFont(None, 20)
+    titulo_surf = font_titulo.render("AJUSTES DE AUDIO Y CONTROLES", True, NEGRO)
+    titulo_rect = titulo_surf.get_rect(center=(rect_fondo_gris.centerx, rect_fondo_gris.top + 30))
+
+    # Crear casillas de opciones debajo del slider
+    slider_rect = sliders[0].rect
+    casilla_ancho = 250
+    casilla_alto = 50
+    espacio_horizontal = 40
+    total_ancho = casilla_ancho * 2 + espacio_horizontal
+    casillas_top = slider_rect.bottom + 80  # 40 píxeles debajo del slider
+    casilla1_left = rect_fondo_gris.centerx - total_ancho // 2
+    casilla2_left = rect_fondo_gris.centerx + espacio_horizontal // 2
+
+    casilla1_rect = pygame.Rect(casilla1_left, casillas_top, casilla_ancho, casilla_alto)
+    casilla2_rect = pygame.Rect(casilla2_left, casillas_top, casilla_ancho, casilla_alto)
+
+    texto_casilla1 = font_opciones.render("APRENDE LOS CONTROLES", True, NEGRO)
+    texto_casilla2 = font_opciones.render("GUÍA DEL JUEGO", True, NEGRO)
+
+    texto1_rect = texto_casilla1.get_rect(center=casilla1_rect.center)
+    texto2_rect = texto_casilla2.get_rect(center=casilla2_rect.center)
+    font_titulo = pygame.font.SysFont(None, 30)
+    titulo_surf = font_titulo.render("AJUSTES DE AUDIO Y CONTROLES", True, NEGRO)
+    titulo_rect = titulo_surf.get_rect(center=(rect_fondo_gris.centerx, rect_fondo_gris.top + 30))
     bg_anim.update()
     bg_anim.draw(screen)
-    screen.blit(fondo_gris, rect_fondo_gris)
+
+    # Dibujar marco gris personalizado
+    pygame.draw.rect(screen, GRIS_MEDIO, rect_fondo_gris, border_radius=10)
+    pygame.draw.rect(screen, GRIS_OSCURO, rect_fondo_gris, width=4, border_radius=10)
+    screen.blit(titulo_surf, titulo_rect)
+
+    # Dibujar casillas
+    pygame.draw.rect(screen, (230, 230, 230), casilla1_rect, border_radius=10)
+    pygame.draw.rect(screen, (0, 200, 0), casilla1_rect, width=3, border_radius=10)
+    pygame.draw.rect(screen, (230, 230, 230), casilla2_rect, border_radius=10)
+    pygame.draw.rect(screen, (0, 200, 0), casilla2_rect, width=3, border_radius=10)
+    screen.blit(texto_casilla1, texto1_rect)
+    screen.blit(texto_casilla2, texto2_rect)
 
     mouse_pos = pygame.mouse.get_pos()
     if rect_atras.collidepoint(mouse_pos):
@@ -117,13 +138,25 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_a
         screen.blit(boton_atras, rect_atras)
 
     font = pygame.font.SysFont(None, 16)
+    etiqueta_font = pygame.font.SysFont(None, 20)
     for slider in sliders:
         slider.draw(screen)
 
         porcentaje = round(slider.value * 100)
-        etiqueta_surf = font.render(f"{slider.tipo_volumen}: ", True, BLANCO)
+        etiqueta_surf = etiqueta_font.render("VOLUMEN DEL JUEGO", True, BLANCO)
         etiqueta_x = slider.rect.left - etiqueta_surf.get_width() - 10
         etiqueta_y = slider.rect.y + (slider.rect.height // 2 - etiqueta_surf.get_height() // 2)
+        etiqueta_bg_rect = pygame.Rect(etiqueta_x - 5, etiqueta_y - 2, etiqueta_surf.get_width() + 10,
+                                       etiqueta_surf.get_height() + 4)
+        pygame.draw.rect(screen, GRIS_OSCURO, etiqueta_bg_rect, border_radius=6)
+        pygame.draw.rect(screen, NEGRO, etiqueta_bg_rect, width=2, border_radius=6)
+
+        etiqueta_x = slider.rect.left - etiqueta_surf.get_width() - 10
+        etiqueta_y = slider.rect.y + (slider.rect.height // 2 - etiqueta_surf.get_height() // 2)
+        etiqueta_bg_rect = pygame.Rect(etiqueta_x - 5, etiqueta_y - 2, etiqueta_surf.get_width() + 10,
+                                       etiqueta_surf.get_height() + 4)
+        pygame.draw.rect(screen, GRIS_OSCURO, etiqueta_bg_rect, border_radius=6)
+        pygame.draw.rect(screen, NEGRO, etiqueta_bg_rect, width=2, border_radius=6)
         screen.blit(etiqueta_surf, (etiqueta_x, etiqueta_y))
 
         valor_surf = font.render(f"{porcentaje}%", True, BLANCO)
@@ -164,9 +197,9 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
         slider.update(mouse_pos, mouse_click)
 
     for slider in sliders:
-        if slider.tipo_volumen == "MÚSICA":
+        if slider.tipo_volumen == "GENERAL":
             pygame.mixer.music.set_volume(slider.value)
-        elif slider.tipo_volumen == "EFECTOS":
+            audio.volume = slider.value
             audio.volume_effects = slider.value
             for efecto in audio.efectos.values():
                 efecto.set_volume(slider.value)
@@ -174,9 +207,8 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
 
 def guardar_volumenes(sliders):
     for slider in sliders:
-        if slider.tipo_volumen == "MÚSICA":
+        if slider.tipo_volumen == "GENERAL":
             audio.volume = slider.value
-        elif slider.tipo_volumen == "EFECTOS":
             audio.volume_effects = slider.value
             for efecto in audio.efectos.values():
                 efecto.set_volume(slider.value)
@@ -190,7 +222,9 @@ def pantalla_audio(screen, bg_anim, volver_callback):
     if bg_anim is None:
         class DummyBG:
             def update(self): pass
+
             def draw(self, s): pass
+
         bg_anim = DummyBG()
 
     pygame.joystick.init()
