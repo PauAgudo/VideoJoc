@@ -6,6 +6,7 @@ import random
 import time
 from Config import config
 from ConfiguraciónMandos import gestor_jugadores
+from PausaPartida import menu_pausa
 
 # ------------------------------------------------------------------------------------
 # Inicialización y configuración de pantalla
@@ -1942,15 +1943,16 @@ def draw_curse_info(screen, player, color, pos):
 
 
 # CONDICION POSICION FIJA O ALEATORIA
-def obtener_posiciones_aleatorias(grid, num_players):
-    libres = []
-    for y in range(GRID_ROWS):
-        for x in range(GRID_COLS):
-            if grid[y][x] == 0:  # 0 = casilla libre
-                libres.append((x, y))
-    random.shuffle(libres)
-    return libres[:num_players]
-
+def obtener_posiciones_aleatorias(num_players):
+    # Esquinas interiores seguras (no borde del mapa)
+    esquinas = [
+        (1, 1),
+        (GRID_COLS - 2, GRID_ROWS - 2),
+        (1, GRID_ROWS - 2),
+        (GRID_COLS - 2, 1),
+    ]
+    random.shuffle(esquinas)
+    return esquinas[:num_players]
 
 # Obtener el modo desde la configuración
 modo_posicion = config.current_position_index  # 0 = fija, 1 = aleatoria
@@ -1963,11 +1965,11 @@ start_time = time.time()
 grid, powerups = generate_grid_and_powerups()
 game_grid = grid
 
-# Calcular las posiciones
 if modo_posicion == 0:
     posiciones = posiciones_iniciales[:len(players)]
 else:
-    posiciones = obtener_posiciones_aleatorias(grid, len(players))
+    posiciones = obtener_posiciones_aleatorias(len(players))
+
 
 # Colocar a cada jugador en su posición
 for i, jugador in enumerate(players):
@@ -2127,6 +2129,41 @@ while running:
                     print(f"Reasignado mando → jugador {players.index(player) + 1}")
                     break
 
+        # Teclado pausa (ESCAPE)
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            jugador_controlador_id = "teclado"
+            jugador_nombre = "J1"  # Ajusta esto según cómo determines qué jugador es el de teclado
+            resultado = menu_pausa(screen, jugador_controlador_id, jugador_nombre)
+            if resultado == "Salir de la partida":
+                running = False  # o lo que uses para volver al menú
+            elif resultado == "Ajustar volumen":
+                from PantallaAudio import pantalla_audio
+
+                pantalla_audio(screen, bg_anim=None,
+                               volver_callback=lambda: menu_pausa(screen, jugador_controlador_id, jugador_nombre))
+            elif resultado == "Guía de juego":
+                from GuiaJuego import pantalla_guia_juego
+
+                pantalla_guia_juego(screen, jugador_controlador_id)
+
+        # Mando pausa (BOTÓN START / OPTIONS)
+        if event.type == pygame.JOYBUTTONDOWN and event.button == 7:  # START / OPTIONS
+            instance_id = event.instance_id
+            jugador_controlador_id = instance_id
+            jugador_nombre = "J1"  # Debes mapear correctamente el nombre según ese instance_id
+            resultado = menu_pausa(screen, jugador_controlador_id, jugador_nombre)
+            if resultado == "Salir de la partida":
+                running = False
+            elif resultado == "Ajustar volumen":
+                from PantallaAudio import pantalla_audio
+
+                pantalla_audio(screen, bg_anim=None,
+                               volver_callback=lambda: menu_pausa(screen, jugador_controlador_id, jugador_nombre))
+            elif resultado == "Guía de juego":
+                from GuiaJuego import pantalla_guia_juego
+
+                pantalla_guia_juego(screen, jugador_controlador_id)
+
     keys = pygame.key.get_pressed()
     for player in players:
         if 'up' in player.controls:
@@ -2272,6 +2309,7 @@ while running:
             explosions.remove(explosion)
         else:
             explosion.draw(screen)
+
 
     
     def check_pickup(players, powerups):
