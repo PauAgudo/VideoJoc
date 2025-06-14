@@ -118,12 +118,34 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_a
     screen.blit(titulo_surf, titulo_rect)
 
     # Dibujar casillas
-    pygame.draw.rect(screen, (230, 230, 230), casilla1_rect, border_radius=10)
-    pygame.draw.rect(screen, (0, 200, 0), casilla1_rect, width=3, border_radius=10)
-    pygame.draw.rect(screen, (230, 230, 230), casilla2_rect, border_radius=10)
-    pygame.draw.rect(screen, (0, 200, 0), casilla2_rect, width=3, border_radius=10)
+    if casilla1_rect.collidepoint(pygame.mouse.get_pos()):
+        pygame.draw.rect(screen, (210, 255, 210), casilla1_rect, border_radius=10)  # hover verde claro
+    else:
+        pygame.draw.rect(screen, (230, 230, 230), casilla1_rect, border_radius=10)
+        pygame.draw.rect(screen, (0, 200, 0), casilla1_rect, width=3, border_radius=10)
+        pygame.draw.rect(screen, (0, 200, 0), casilla1_rect, width=3, border_radius=10)
+    if casilla2_rect.collidepoint(pygame.mouse.get_pos()):
+        pygame.draw.rect(screen, (210, 255, 210), casilla2_rect, border_radius=10)
+    else:
+        pygame.draw.rect(screen, (230, 230, 230), casilla2_rect, border_radius=10)
+        pygame.draw.rect(screen, (0, 200, 0), casilla2_rect, width=3, border_radius=10)
+
+
     screen.blit(texto_casilla1, texto1_rect)
     screen.blit(texto_casilla2, texto2_rect)
+
+    # Dibujar nueva casilla roja debajo de las anteriores
+    casilla_roja_top = casilla1_rect.bottom + 60
+    casilla_roja_rect = pygame.Rect(rect_fondo_gris.centerx - 125, casilla_roja_top, 250, 50)
+    if casilla_roja_rect.collidepoint(pygame.mouse.get_pos()):
+        pygame.draw.rect(screen, (255, 200, 200), casilla_roja_rect, border_radius=10)
+    else:
+        pygame.draw.rect(screen, (255, 180, 180), casilla_roja_rect, border_radius=10)
+        pygame.draw.rect(screen, (200, 0, 0), casilla_roja_rect, width=3, border_radius=10)
+
+    texto_rojo = font_opciones.render("CERRAR EL JUEGO", True, NEGRO)
+    texto_rojo_rect = texto_rojo.get_rect(center=casilla_roja_rect.center)
+    screen.blit(texto_rojo, texto_rojo_rect)
 
     mouse_pos = pygame.mouse.get_pos()
     if rect_atras.collidepoint(mouse_pos):
@@ -140,6 +162,22 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_a
     font = pygame.font.SysFont(None, 16)
     etiqueta_font = pygame.font.SysFont(None, 20)
     for slider in sliders:
+        # Dibujar fondo del slider
+        etiqueta_font = pygame.font.SysFont(None, 20)
+        etiqueta_surf = etiqueta_font.render("VOLUMEN DEL JUEGO", True, BLANCO)
+        etiqueta_x = slider.rect.left - etiqueta_surf.get_width() - 10
+        etiqueta_y = slider.rect.y + (slider.rect.height // 2 - etiqueta_surf.get_height() // 2)
+        etiqueta_bg_rect = pygame.Rect(etiqueta_x - 5, etiqueta_y - 2, etiqueta_surf.get_width() + 10,
+                                       etiqueta_surf.get_height() + 4)
+
+        slider_bg_x = etiqueta_bg_rect.left - 10
+        slider_bg_y = etiqueta_bg_rect.top - 15
+        slider_bg_width = slider.rect.right + 35 - slider_bg_x + 10
+        slider_bg_height = slider.rect.bottom + 15 - slider_bg_y
+        slider_bg_rect = pygame.Rect(slider_bg_x, slider_bg_y, slider_bg_width, slider_bg_height)
+        pygame.draw.rect(screen, GRIS_CLARO, slider_bg_rect, border_radius=8)
+        pygame.draw.rect(screen, GRIS_OSCURO, slider_bg_rect, width=2, border_radius=8)
+
         slider.draw(screen)
 
         porcentaje = round(slider.value * 100)
@@ -159,7 +197,7 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_a
         pygame.draw.rect(screen, NEGRO, etiqueta_bg_rect, width=2, border_radius=6)
         screen.blit(etiqueta_surf, (etiqueta_x, etiqueta_y))
 
-        valor_surf = font.render(f"{porcentaje}%", True, BLANCO)
+        valor_surf = font.render(f"{porcentaje}%", True, NEGRO)
         valor_x = slider.rect.right + 10
         valor_y = slider.rect.y + (slider.rect.height // 2 - valor_surf.get_height() // 2)
         screen.blit(valor_surf, (valor_x, valor_y))
