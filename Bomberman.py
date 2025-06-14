@@ -138,6 +138,9 @@ PUÑO_IMG = load_image("puño.png", (40, 40), folder=os.path.join(ASSETS_DIR, "G
 # Maldiciones
 CALAVERA_IMG = load_image("calavera.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Maldiciones"))
 
+# Lapidas
+LAPIDA_IMG = load_image("lapida.png", (TILE_SIZE, TILE_SIZE), folder=os.path.join(ASSETS_DIR, "Mapas"))
+
 # Marcas de jugadores (escalado proporcional)
 def load_mark_scaled(path):
     full_path = os.path.join(ASSETS_DIR, "Jugadores", "Marca", path)
@@ -146,6 +149,7 @@ def load_mark_scaled(path):
     new_width = int(img.get_width() * scale_factor)
     new_height = int(img.get_height() * scale_factor)
     return pygame.transform.smoothscale(img, (new_width, new_height))
+
 
 PLAYER_MARKS = [
     load_mark_scaled("Jugador 1.png"),
@@ -249,6 +253,40 @@ def tile_blocked_for_player(grid, bombs, tile_x, tile_y, player):
                 return True
     return False
 
+def generar_poderes_al_morir(grid, bombs, powerups, players):
+    """
+    Genera entre 2 y 5 gadgets aleatorios en casillas completamente libres cuando un jugador muere.
+    Cada gadget se coloca en una casilla diferente y con animación de aparición.
+    """
+    tipos_poderes = ["speed", "more_bomb", "major_explosion", "push_bomb", "golpear_bombas"]
+    cantidad = random.randint(2, 5)
+    celdas_validas = []
+
+    for y in range(1, GRID_ROWS - 1):
+        for x in range(1, GRID_COLS - 1):
+            if grid[y][x] != 0:
+                continue
+            if any(b.tile_x == x and b.tile_y == y for b in bombs):
+                continue
+            if any(p.x == x and p.y == y and p.visible for p in powerups):
+                continue
+            if any(
+                pygame.Rect(jugador.x, jugador.y, jugador.hitbox_size, jugador.hitbox_size).colliderect(
+                    pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                ) for jugador in players
+            ):
+                continue
+            # Casilla válida
+            celdas_validas.append((x, y))
+
+    random.shuffle(celdas_validas)
+    for i in range(min(cantidad, len(celdas_validas))):
+        x, y = celdas_validas[i]
+        tipo = random.choice(tipos_poderes)
+        nuevo_poder = PowerUp(x, y, tipo)
+        nuevo_poder.visible = True
+        nuevo_poder.start_spawn_animation()
+        powerups.append(nuevo_poder)
 
 def reveal_powerup_if_any(powerups, x, y):
     for p in powerups:
@@ -639,6 +677,8 @@ class PowerUp:
 # ------------------------------------------------------------------------------------
 class Player:
     def __init__(self, init_tile_x, init_tile_y, color, controls):
+        self.initial_tile_x = init_tile_x
+        self.initial_tile_y = init_tile_y
         self.active_curse = None
         self.curse_ends_at = None
         self.x = init_tile_x * TILE_SIZE - 40
@@ -654,7 +694,6 @@ class Player:
         self.pending_speed_boosts = 0
         self.controls = controls
         self.original_controls = controls.copy()
-        self.health = 3
         self.bomb_range = 1
         self.bomb_limit = 1
         self.sprite_size = 120
@@ -915,31 +954,41 @@ class Player:
         self.invert_controls = False
         # Aquí debes llamar a tu rutina de respawn/animación:
         respawn_all_abilities_with_animation()
+
     def reset_to_respawn(self):
-        self._do_reset()
+        """
+        Resetea por completo al jugador a su estado inicial y lo mueve a su
+        casilla de reaparición. Se usa cuando el jugador muere.
+        """
+        # Resetear habilidades y poderes a los valores por defecto
         self.bomb_limit = 1
         self.bomb_range = 1
-        self.hit_bomb_available = False
-        self.push_bomb_available = False
-        self.curse = None
-        self.active_curse = None
-        self.curse_ends_at = None
-        self.pending_speed_boosts = 0
         self.base_speed = 2.0
         self.speed = 2.0
         self.display_speed = 1
+        self.pending_speed_boosts = 0
+        self.push_bomb_available = False
+        self.hit_bomb_available = False
+
+        # Si había una maldición activa, limpiar sus efectos (ej. controles invertidos)
+        if self.active_curse:
+            self._clear_curse_effects(self.active_curse)
+
+        # Resetear el estado de las maldiciones y otros estados del jugador
+        self.active_curse = None
+        self.curse_ends_at = None
         self.auto_bombing = False
         self.can_place_bombs = True
         self.can_pick_abilities = True
         self.invert_controls = False
 
-        # Volver a la posición inicial (posición de respawn)
-        idx = getattr(self, "player_index", 0)
-        if modo_posicion == 0:
-            if idx < len(posiciones_iniciales):
-                x, y = posiciones_iniciales[idx]
-                self.x = x * TILE_SIZE - 40
-                self.y = y * TILE_SIZE - 40
+        # Asegurarse de que los controles vuelven a la normalidad
+        self.controls = self.original_controls.copy()
+
+        # Recolocar al jugador en su posición inicial guardada
+        if hasattr(self, 'initial_tile_x') and hasattr(self, 'initial_tile_y'):
+            self.x = self.initial_tile_x * TILE_SIZE - 40
+            self.y = self.initial_tile_y * TILE_SIZE - 40
 
     def draw(self, screen):
         # 1) Aura por detrás (solo si hay maldición activa)
@@ -1384,10 +1433,6 @@ class Bomb:
                 else:
                     explosions.append((nx, ny, "lateral", (dx, dy)))
 
-        for (ex, ey, _, _) in explosions:
-            for player in players:
-                if player.get_center_tile() == (ex, ey):
-                    player.health -= 1
         return explosions
 
     def hit_by_player(self, dx, dy, grid, bombs, powerups, bounce_length=3):
@@ -1702,13 +1747,65 @@ class Explosion:
             py = self.tile_y * TILE_SIZE + TOP_OFFSET
 
             frame_data = self.frames[self.current_frame]
-            frame_image = frame_data["image"]
+
+            # --- INICIO DE LA CORRECCIÓN ---
+            # Comprobamos si el frame es un diccionario o una imagen directa
+            if isinstance(frame_data, dict):
+                frame_image = frame_data.get("image")
+            else:
+                frame_image = frame_data  # Es directamente una Surface
+
+            # Si por alguna razón no se encuentra la imagen, no hacemos nada para evitar un error.
+            if frame_image is None:
+                return
+            # --- FIN DE LA CORRECCIÓN ---
+
             self.current_sprite = frame_data  # guardamos también el nombre para detección
 
             if self.explosion_type in ("extreme", "lateral") and self.rotation_angle != 0:
                 frame_image = pygame.transform.rotate(frame_image, -self.rotation_angle)
 
             screen.blit(frame_image, (px, py))
+
+# ------------------------------------------------------------------------------------
+# Clase Lapida
+# ------------------------------------------------------------------------------------
+class Lapida:
+    def __init__(self, tile_x, tile_y, image):
+        self.tile_x = tile_x
+        self.tile_y = tile_y
+        self.image = image
+        self.creation_time = time.time()
+        self.duration = 10.0  # Durará 10 segundos
+        self.state = "active"  # Estados: active, fading
+        self.fade_duration = 1.0  # Duración del desvanecimiento
+        self.fade_start_time = 0
+        self.alpha = 255
+
+    def update(self):
+        current_time = time.time()
+        # Si han pasado los 10 segundos, empieza a desvanecerse
+        if self.state == "active" and current_time - self.creation_time > self.duration:
+            self.state = "fading"
+            self.fade_start_time = current_time
+
+        # Lógica de la animación de desvanecimiento
+        if self.state == "fading":
+            elapsed_fade = current_time - self.fade_start_time
+            if elapsed_fade >= self.fade_duration:
+                self.alpha = 0
+            else:
+                self.alpha = 255 * (1 - (elapsed_fade / self.fade_duration))
+
+    def is_finished(self):
+        return self.alpha <= 0
+
+    def draw(self, screen):
+        if self.alpha > 0:
+            temp_image = self.image.copy()
+            temp_image.set_alpha(self.alpha)
+            screen.blit(temp_image, (self.tile_x * TILE_SIZE, self.tile_y * TILE_SIZE + TOP_OFFSET))
+
 # ------------------------------------------------------------------------------------
 # Clase DroppedAbility (sin cambios)
 # ------------------------------------------------------------------------------------
@@ -1954,6 +2051,7 @@ def obtener_posiciones_aleatorias(num_players):
     random.shuffle(esquinas)
     return esquinas[:num_players]
 
+
 # Obtener el modo desde la configuración
 modo_posicion = config.current_position_index  # 0 = fija, 1 = aleatoria
 
@@ -1970,16 +2068,19 @@ if modo_posicion == 0:
 else:
     posiciones = obtener_posiciones_aleatorias(len(players))
 
-
-# Colocar a cada jugador en su posición
+# Colocar a cada jugador en su posición y guardar su posición inicial para reapariciones
 for i, jugador in enumerate(players):
     x, y = posiciones[i]
+    jugador.initial_tile_x = x
+    jugador.initial_tile_y = y
     jugador.x = x * TILE_SIZE - 40
     jugador.y = y * TILE_SIZE - 40
     jugador.player_index = i
 bombs = []
 explosions = []
 dropped_abilities = []
+lapidas = []
+lapida_por_colocar = None
 
 SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG = cargar_mapa()
 
@@ -1990,7 +2091,8 @@ while running:
     screen.fill(BLACK)
     draw_grid(screen, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG)
     draw_grid_lines(screen)
-
+    for lapida in lapidas:
+        lapida.draw(screen)
     for player in players:
         if player.auto_bombing:
             player.place_bomb(bombs, powerups, forced=True)
@@ -2128,8 +2230,6 @@ while running:
                     c["active"] = True
                     print(f"Reasignado mando → jugador {players.index(player) + 1}")
                     break
-
-        # Teclado pausa (ESCAPE)
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             jugador_controlador_id = "teclado"
             jugador_nombre = "J1"  # Ajusta esto según cómo determines qué jugador es el de teclado
@@ -2146,7 +2246,7 @@ while running:
 
                 pantalla_guia_juego(screen, jugador_controlador_id)
 
-        # Mando pausa (BOTÓN START / OPTIONS)
+            # Mando pausa (BOTÓN START / OPTIONS)
         if event.type == pygame.JOYBUTTONDOWN and event.button == 7:  # START / OPTIONS
             instance_id = event.instance_id
             jugador_controlador_id = instance_id
@@ -2163,7 +2263,6 @@ while running:
                 from GuiaJuego import pantalla_guia_juego
 
                 pantalla_guia_juego(screen, jugador_controlador_id)
-
     keys = pygame.key.get_pressed()
     for player in players:
         if 'up' in player.controls:
@@ -2311,7 +2410,6 @@ while running:
             explosion.draw(screen)
 
 
-    
     def check_pickup(players, powerups):
 
         global dropped_abilities
@@ -2419,6 +2517,44 @@ while running:
 
     check_pickup(players, powerups)
 
+    # (Justo antes de la sección de dibujo de los elementos del juego)
+
+    # (Justo antes de la sección de dibujo de los elementos del juego)
+
+    # --- INICIO DE LA NUEVA LÓGICA DE GESTIÓN DE LÁPIDAS (VERSIÓN 2) ---
+
+    # 1. Colocar la lápida solo cuando no queden explosiones en pantalla
+    if lapida_por_colocar and not explosions:
+        pos = lapida_por_colocar
+        # Evitar poner una lápida encima de otra ya existente
+        if not any(l.tile_x == pos[0] and l.tile_y == pos[1] for l in lapidas):
+            lapidas.append(Lapida(pos[0], pos[1], LAPIDA_IMG))
+        lapida_por_colocar = None  # Reseteamos la variable para la próxima muerte
+
+    # 2. Actualizar y eliminar lápidas que han terminado su animación de desvanecimiento
+    for lapida in lapidas[:]:
+        lapida.update()
+        if lapida.is_finished():
+            lapidas.remove(lapida)
+
+    # 3. Eliminar lápidas si un objeto se coloca encima
+    for lapida in lapidas[:]:
+        debe_ser_eliminada = False
+        # Si se coloca una bomba
+        if any(b.tile_x == lapida.tile_x and b.tile_y == lapida.tile_y for b in bombs):
+            debe_ser_eliminada = True
+        # Si le alcanza una explosión
+        if any(e.tile_x == lapida.tile_x and e.tile_y == lapida.tile_y and not e.finished for e in explosions):
+            debe_ser_eliminada = True
+        # Si cae o se coloca un gadget
+        if any(p.x == lapida.tile_x and p.y == lapida.tile_y and p.visible for p in powerups):
+            debe_ser_eliminada = True
+
+        if debe_ser_eliminada:
+            lapidas.remove(lapida)
+
+    # --- FIN DE LA LÓGICA DE GESTIÓN DE LÁPIDAS ---
+
     dt = clock.get_time() / 1000.0
     for da in dropped_abilities[:]:
         da.update(dt)
@@ -2444,30 +2580,51 @@ while running:
 
     draw_HUD(screen, players[0], (10, 5), RED)
     draw_HUD(screen, players[1], (WIDTH - 210, 5), BLUE)
-    
+
+    # --- INICIO DE LA NUEVA LÓGICA DE MUERTE POR EXPLOSIÓN ---
+    # 1. Crear un conjunto de todas las casillas mortales activas en este frame.
+    #    Una casilla es mortal si tiene una explosión de tipo 'center', 'extreme', o 'lateral'.
+    mortal_tiles = set()
     for explosion in explosions:
-        if explosion.finished:
-            continue
+        if not explosion.finished and explosion.explosion_type in ["center", "extreme", "lateral"]:
+            mortal_tiles.add((explosion.tile_x, explosion.tile_y))
 
-        exp_rect = pygame.Rect(
-            explosion.tile_x * TILE_SIZE,
-            explosion.tile_y * TILE_SIZE,  # ¡Importante! SIN TOP_OFFSET
-            TILE_SIZE, TILE_SIZE
-        )
+    # 2. Comprobar cada jugador contra las casillas mortales.
+    if mortal_tiles:  # Optimización: solo hacer la comprobación si hay explosiones activas.
+        for player in list(players):
+            player_hitbox = player.get_hitbox()
+            player_hitbox_area = player_hitbox.width * player_hitbox.height
 
-        for player in players:
-            player_rect = player.get_hitbox()
-            player_rect.top -= TOP_OFFSET  # Alineamos jugador con sistema de explosión
+            # Si el área del hitbox es 0, no se puede hacer la división (evita error).
+            if player_hitbox_area == 0:
+                continue
 
-            interseccion = exp_rect.clip(player_rect)
-            area_interseccion = interseccion.width * interseccion.height
-            area_jugador = player_rect.width * player_rect.height
+            # 3. Calcular el área total de superposición del hitbox del jugador con todas las casillas mortales.
+            total_overlap_area = 0
 
-            if area_interseccion >= 0.10 * area_jugador:
-                print(
-                    f"[MUERTE] Jugador {player.player_index + 1} ha muerto por explosión ({explosion.tile_x}, {explosion.tile_y})")
+            # Determinar el rango de casillas que el hitbox podría estar tocando.
+            min_tile_x = player_hitbox.left // TILE_SIZE
+            max_tile_x = (player_hitbox.right - 1) // TILE_SIZE
+            min_tile_y = player_hitbox.top // TILE_SIZE
+            max_tile_y = (player_hitbox.bottom - 1) // TILE_SIZE
+
+            for tile_x in range(min_tile_x, max_tile_x + 1):
+                for tile_y in range(min_tile_y, max_tile_y + 1):
+                    # Si la casilla que toca el jugador está en nuestro conjunto de casillas mortales...
+                    if (tile_x, tile_y) in mortal_tiles:
+                        # ...calculamos el área de intersección.
+                        mortal_tile_rect = pygame.Rect(tile_x * TILE_SIZE, tile_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                        overlap_rect = player_hitbox.clip(mortal_tile_rect)
+                        total_overlap_area += overlap_rect.width * overlap_rect.height
+
+            # 4. Si la superposición es del 15% o más, el jugador muere y reaparece.
+            if (total_overlap_area / player_hitbox_area) >= 0.15:
+                print(f"¡El jugador {player.player_index + 1} ha muerto y reaparece!")
+                casilla_muerte = player.get_center_tile()
+                if lapida_por_colocar is None:  # Solo registramos la primera muerte por explosión
+                    lapida_por_colocar = player.get_center_tile()
                 player.reset_to_respawn()
-                break
+                generar_poderes_al_morir(grid, bombs, powerups, players)
 
     pygame.display.flip()
     clock.tick(60)
