@@ -7,6 +7,8 @@ from PantallaConfigPartida import pantalla2_main
 from PantallaMapas import pantalla_mapas
 from PantallaAudio import pantalla_audio
 from PantallaPersonajes import pantalla_personajes
+from AprendeControles import pantalla_controles
+
 def main():
     pygame.init()
 
@@ -34,7 +36,9 @@ def main():
         return
     if not pantalla_mapas(screen, bg_anim):
         return
-    if not pantalla_audio(screen, bg_anim):
+    if not pantalla_audio(screen, bg_anim, pygame.mixer):
+        return
+    if not pantalla_controles(screen, bg_anim):
         return
     if not pantalla_personajes(screen, bg_anim):
         return

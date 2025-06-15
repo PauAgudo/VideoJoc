@@ -1,21 +1,30 @@
 import pygame
 import sys
 
-def pantalla_guia_juego(screen, jugador_controlador_id):
+def pantalla_guia(screen, bg_anim):
+    """
+    Pantalla temporal para comprobar si se carga correctamente.
+    """
+    pygame.font.init()
+    font = pygame.font.Font(None, 60)  # Fuente grande
     clock = pygame.time.Clock()
-    ejecutando = True
-    while ejecutando:
+
+    running = True
+    while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                ejecutando = False
-            if isinstance(jugador_controlador_id, int):
-                if event.type == pygame.JOYBUTTONDOWN and event.instance_id == jugador_controlador_id:
-                    if event.button == 1:  # Botón B
-                        ejecutando = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
 
-        screen.fill((0, 0, 0))  # Pantalla completamente negra
+        screen.fill((0, 0, 0))  # Fondo negro
+
+        # Texto centrado
+        texto = font.render("GUIA DEL JUEGO", True, (255, 255, 255))
+        texto_rect = texto.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
+        screen.blit(texto, texto_rect)
+
         pygame.display.flip()
         clock.tick(60)
