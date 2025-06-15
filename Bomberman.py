@@ -1806,6 +1806,12 @@ class Lapida:
             temp_image.set_alpha(self.alpha)
             screen.blit(temp_image, (self.tile_x * TILE_SIZE, self.tile_y * TILE_SIZE + TOP_OFFSET))
 
+    def start_slow_fade(self):
+        self.state = "fading"
+        self.fade_start_time = time.time()
+        self.fade_duration = 3.0  # ← duración más lenta al contagiar
+
+
 # ------------------------------------------------------------------------------------
 # Clase DroppedAbility (sin cambios)
 # ------------------------------------------------------------------------------------
@@ -2514,6 +2520,15 @@ while running:
             if r in powerups:
                 powerups.remove(r)
 
+        for lapida in lapidas[:]:
+            if lapida.state == "active":
+                for player in players:
+                    if player.get_center_tile() == (lapida.tile_x, lapida.tile_y):
+                        COGER_MALDICION_SOUND.play()
+                        curse_name = random.choice(list(CURSES.keys()))
+                        player.apply_curse(curse_name)
+                        lapida.start_slow_fade()
+                        break
 
     check_pickup(players, powerups)
 
