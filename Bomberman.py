@@ -2594,7 +2594,6 @@ while running:
                 (bomb.chain_triggered and time.time() - bomb.chain_trigger_time >= 0.75) or
                 (not bomb.chain_triggered and time.time() - bomb.plant_time >= bomb.timer)
         ):
-            # El método explode ahora devuelve una lista de objetos Explosion completos
             lista_de_explosiones = bomb.explode(grid, players, bombs, powerups)
             # Simplemente añadimos esa lista a nuestra lista principal de explosiones
             explosions.extend(lista_de_explosiones)
