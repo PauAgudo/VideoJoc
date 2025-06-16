@@ -34,14 +34,14 @@ class ConfiguracionPartida:
         tira_activa_idx = 0  # Índice de la tira activa
 
         # Definición de las claves y sus respectivas imágenes
-        keys = ["sets", "minutos", "nivel_COM", "pos_inicial", "aviones", "Maldiciones", "Bloques_final"]
+        keys = ["sets", "minutos", "nivel_COM", "pos_inicial", "Fantasmas", "Maldiciones", "Bloques_final"]
 
         tira_files = {
             "sets": "Media/Menu/Pantalla_configuracion_partida/tira_sets.png",
             "minutos": "Media/Menu/Pantalla_configuracion_partida/tiempo.png",
             "nivel_COM": "Media/Menu/Pantalla_configuracion_partida/tira_COM.png",
             "pos_inicial": "Media/Menu/Pantalla_configuracion_partida/tira_posicion.png",
-            "aviones": "Media/Menu/Pantalla_configuracion_partida/tira_aviones.png",
+            "Fantasmas": "Media/Menu/Pantalla_configuracion_partida/tira_fantasmas.png",
             "Maldiciones": "Media/Menu/Pantalla_configuracion_partida/tira_maldiciones.png",
             "Bloques_final": "Media/Menu/Pantalla_configuracion_partida/tira_bloques.png"
         }
@@ -59,7 +59,7 @@ class ConfiguracionPartida:
             "minutos": (280, 160 + vertical_shift),
             "nivel_COM": (280, 200 + vertical_shift),
             "pos_inicial": (280, 240 + vertical_shift),
-            "aviones": (280, 280 + vertical_shift),
+            "Fantasmas": (280, 280 + vertical_shift),
             "Maldiciones": (280, 320 + vertical_shift),
             "Bloques_final": (280, 360 + vertical_shift)
         }
@@ -335,7 +335,7 @@ class ConfiguracionPartida:
                     cx = (lx + 30 + rx) // 2
                     cy = cur_rect.centery
                     screen.blit(surf, (cx - surf.get_width() // 2, cy - surf.get_height() // 2))
-                if key in ["aviones", "Maldiciones", "Bloques_final"]:
+                if key in ["Fantasmas", "Maldiciones", "Bloques_final"]:
                     txt = config.ultimas_opciones[current_ultimas_index[key]]
                     surf = font.render(txt, True, (255, 255, 255))
                     lx = flechas_pos[key]["izquierda"][0] - (shift_amount if hov else 0)

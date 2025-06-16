@@ -8,7 +8,6 @@ from PantallaMapas import pantalla_mapas
 from PantallaAudio import pantalla_audio
 from PantallaPersonajes import pantalla_personajes
 from AprendeControles import pantalla_controles
-
 def main():
     pygame.init()
 
