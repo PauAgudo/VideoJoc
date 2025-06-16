@@ -2627,7 +2627,7 @@ while running:
         else:
             explosion.draw(screen)
 
-    # DIBUJAR FANTASMAS AL FINAL PARA QUE SE VEAN POR ENCIMA DE TODO
+    # DIBUJAR FANTASMAS AL FINAL PARA QUE SE VEAN POR ENCIMA DE
     for player in players:
         if player.is_ghost:
             player.draw(screen)
@@ -2895,7 +2895,7 @@ while running:
                 if killer and killer.is_ghost:
                     print(f"¡El FANTASMA {killer.player_index + 1} mató a {player.player_index + 1}!")
 
-                    # 1. El fantasma que mató resucita (el sonido de reaparición se reproduce dentro del método)
+                    # 1. El fantasma que mató resucita (el sonido de reaparición se reproduce dentro del MODO)
                     killer.resurrect()
 
                     # 2. El jugador asesinado se convierte en fantasma
