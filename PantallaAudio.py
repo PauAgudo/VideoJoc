@@ -3,7 +3,6 @@ import sys
 from Config import audio
 
 
-
 # Constantes para los colores
 AZUL = (0, 0, 255)
 BLANCO = (255, 255, 255)
@@ -23,7 +22,10 @@ selected_element_index = 0  # Índice del elemento seleccionado (0 para slider, 
 hover_casillas = [False] * 5  # Lista para controlar el hover de las casillas
 ultimo_index_hover = 0  # Índice del último hover para evitar cambios innecesarios
 opciones_modo_pantalla = ["Pantalla completa", "Ventana", "Ventana completa"]
-indice_modo_actual = 0  # (por defecto)
+indice_modo_actual = 1  # (por defecto)
+tiempo_ultimo_movimiento = 0  # Para controlar el tiempo entre movimientos de mando
+JOYSTICK_COOLDOWN = 200  # milisegundos
+last_joystick_move_time = 0 # tiempo del último movimiento del joystick
 
 
 class SliderRect:
@@ -167,6 +169,7 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_a
     casilla_roja_rect = pygame.Rect(rect_fondo_gris.centerx - 125, casilla_roja_top, 250, 50)
 
     # Lista de todas las casillas en orden
+    global casillas_rects
     casillas_rects = [slider_bg_rect, casilla_modo_rect, casilla1_rect, casilla2_rect, casilla_roja_rect]
 
     # --------- GESTIÓN DE HOVER Y SELECCIÓN ---------
@@ -309,6 +312,9 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_a
 
 def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
     global selected_element_index
+    global casillas_rects
+    if 'casillas_rects' not in globals() or not casillas_rects:
+        return
     mouse_pos = pygame.mouse.get_pos()
     mouse_click = pygame.mouse.get_pressed()[0]
 
@@ -393,14 +399,122 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                     confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
                     return
 
+            # Confirmar con botón A
+            if event.type == pygame.JOYBUTTONDOWN:
+                last_input_method = "gamepad"
+                if event.button == 0:  # A
+                    if selected_element_index == 0:
+                        pass  # No hace falta confirmar el slider
+                    elif selected_element_index == 1:
+                        # No hace nada al pulsar A en PANTALLA MODO
+                        pass
+                    elif selected_element_index == 2:
+                        from AprendeControles import pantalla_controles
+                        pantalla_controles(screen, bg_anim)
+                    elif selected_element_index == 3:
+                        from GuiaJuego import pantalla_guia
+                        pantalla_guia(screen, bg_anim)
+                    elif selected_element_index == 4:
+                        confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
+
         if event.type == pygame.JOYBUTTONDOWN and event.button == 1:
             guardar_volumenes(sliders)
             volver_callback(screen, bg_anim)
             return "ATRAS"
 
+        if event.type == pygame.JOYBUTTONDOWN:
+            last_input_method = "gamepad"
+            if event.button == 0:
+                if selected_element_index == 0:
+                    pass
+                elif selected_element_index == 1:
+                    pass
+                elif selected_element_index == 2:
+                    guardar_volumenes(sliders)
+                    from AprendeControles import pantalla_controles
+                    pantalla_controles(screen, bg_anim)
+                elif selected_element_index == 3:
+                    guardar_volumenes(sliders)
+                    from GuiaJuego import pantalla_guia
+                    pantalla_guia(screen, bg_anim)
+                elif selected_element_index == 4:
+                    guardar_volumenes(sliders)
+                    confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
+
         if event.type == pygame.JOYDEVICEADDED:
             nuevo_mando = pygame.joystick.Joystick(event.device_index)
             nuevo_mando.init()
+
+    # --------------------------------------------
+    # Movimiento con HAT (cruceta del mando)
+    # --------------------------------------------
+    joys = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
+    if joys:
+        joy = joys[0]  # Tomamos el primer mando conectado
+        hat_x, hat_y = joy.get_hat(0)
+
+        global tiempo_ultimo_movimiento
+        current_time = pygame.time.get_ticks()
+        delay = 200  # milisegundos
+
+        if current_time - tiempo_ultimo_movimiento > delay:
+            last_input_method = "gamepad"
+
+            # Movimiento vertical para navegar por las casillas
+            if hat_y == -1:  # Abajo
+                selected_element_index = min(selected_element_index + 1, len(casillas_rects) - 1)
+                tiempo_ultimo_movimiento = current_time
+            elif hat_y == 1:  # Arriba
+                selected_element_index = max(selected_element_index - 1, 0)
+                tiempo_ultimo_movimiento = current_time
+
+            # Movimiento horizontal para cambiar opciones o valores
+            elif hat_x == -1:
+                if selected_element_index == 0:  # Slider
+                    sliders[0].value = max(0.0, sliders[0].value - 0.01)
+                elif selected_element_index == 1:  # Pantalla modo
+                    indice_modo_actual = (indice_modo_actual - 1) % len(opciones_modo_pantalla)
+                tiempo_ultimo_movimiento = current_time
+
+            elif hat_x == 1:
+                if selected_element_index == 0:  # Slider
+                    sliders[0].value = min(1.0, sliders[0].value + 0.01)
+                elif selected_element_index == 1:  # Pantalla modo
+                    indice_modo_actual = (indice_modo_actual + 1) % len(opciones_modo_pantalla)
+                tiempo_ultimo_movimiento = current_time
+
+    # movimiento con joystic mando
+    global last_joystick_move_time
+    current_time = pygame.time.get_ticks()
+
+    for i in range(pygame.joystick.get_count()):
+        joystick = pygame.joystick.Joystick(i)
+        joystick.init()
+
+        # Movimiento arriba/abajo
+        y_axis = joystick.get_axis(1)  # Eje vertical
+
+        if abs(y_axis) > 0.5 and current_time - last_joystick_move_time > JOYSTICK_COOLDOWN:
+            if y_axis > 0.5:
+                selected_element_index = (selected_element_index + 1) % len(casillas_rects)
+            elif y_axis < -0.5:
+                selected_element_index = (selected_element_index - 1) % len(casillas_rects)
+            last_joystick_move_time = current_time
+
+        # Movimiento izquierda/derecha
+        x_axis = joystick.get_axis(0)
+        if abs(x_axis) > 0.5 and current_time - last_joystick_move_time > JOYSTICK_COOLDOWN:
+            if selected_element_index == 0:
+                if x_axis > 0.5:
+                    sliders[0].value = min(1.0, sliders[0].value + 0.01)
+                elif x_axis < -0.5:
+                    sliders[0].value = max(0.0, sliders[0].value - 0.01)
+            elif selected_element_index == 1:
+                if x_axis > 0.5:
+                    indice_modo_actual = (indice_modo_actual + 1) % len(opciones_modo_pantalla)
+                elif x_axis < -0.5:
+                    indice_modo_actual = (indice_modo_actual - 1) % len(opciones_modo_pantalla)
+            last_joystick_move_time = current_time
 
     # Interacción con sliders por ratón
     for slider in sliders:
@@ -555,6 +669,33 @@ def confirmar_salida(screen, bg_anim, fondo_anterior):
                 elif event.key in [pygame.K_RIGHT, pygame.K_d]:
                     seleccion = 1
                 elif event.key == pygame.K_RETURN:
+                    if seleccion == 0:
+                        pygame.quit()
+                        sys.exit()
+                    else:
+                        return
+
+            elif event.type == pygame.JOYHATMOTION:
+                last_input_method = "gamepad"
+                hat_x, hat_y = event.value
+                if hat_x < 0:
+                    seleccion = 0
+                elif hat_x > 0:
+                    seleccion = 1
+
+            elif event.type == pygame.JOYAXISMOTION:
+                last_input_method = "gamepad"
+                axis_x = event.axis
+                axis_value = event.value
+                if axis_x == 0:
+                    if axis_value < -0.5:
+                        seleccion = 0
+                    elif axis_value > 0.5:
+                        seleccion = 1
+
+            elif event.type == pygame.JOYBUTTONDOWN:
+                last_input_method = "gamepad"
+                if event.button == 0:  # Botón A
                     if seleccion == 0:
                         pygame.quit()
                         sys.exit()

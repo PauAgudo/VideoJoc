@@ -18,6 +18,9 @@ def pantalla_guia(screen, bg_anim):
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
+            elif event.type == pygame.JOYBUTTONDOWN:
+                if event.button == 1:  # Botón B
+                    running = False
 
         screen.fill((0, 0, 0))  # Fondo negro
 

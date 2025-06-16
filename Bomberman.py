@@ -179,6 +179,18 @@ COGER_MALDICION_SOUND = pygame.mixer.Sound(
     os.path.join(ASSETS_DIR, "Sonidos_juego", "habilidades", "coger_maldicion.mp3"))
 COGER_MALDICION_SOUND.set_volume(0.35)
 
+MUERTE_SOUND_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "Personajes", "muerte.mpeg")
+MUERTE_SOUND = pygame.mixer.Sound(MUERTE_SOUND_PATH)
+MUERTE_SOUND.set_volume(0.4)
+
+REAPARICION_SOUND_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "Personajes", "reaparicion.mp3")
+REAPARICION_SOUND = pygame.mixer.Sound(REAPARICION_SOUND_PATH)
+REAPARICION_SOUND.set_volume(0.4)
+
+FANTASMA_SOUND_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "movimiento", "fantasma.mp3")
+FANTASMA_SOUND = pygame.mixer.Sound(FANTASMA_SOUND_PATH)
+FANTASMA_SOUND.set_volume(0.7)
+
 modo_posicion = config.current_position_index
 
 posiciones_iniciales = [
@@ -243,15 +255,26 @@ POWERUP_DESTROY_FRAMES[1].fill((255, 100, 0))
 def tile_blocked_for_player(grid, bombs, tile_x, tile_y, player):
     if tile_x < 0 or tile_x >= GRID_COLS or tile_y < 0 or tile_y >= GRID_ROWS:
         return True
-    if grid[tile_y][tile_x] in (1, 2, 3):
-        return True
-    for b in bombs:
-        if b.tile_x == tile_x and b.tile_y == tile_y:
-            if player in b.passable_players:
-                return False
-            else:
-                return True
-    return False
+
+    # --- > LÓGICA MODIFICADA AQUÍ <---
+    # Comprobar si el jugador es un fantasma
+    if player.is_ghost:
+        # Un fantasma solo es bloqueado por muros irrompibles (2) y límites (3)
+        if grid[tile_y][tile_x] in (2, 3):
+            return True
+        # Los fantasmas ignoran bloques rompibles (1) y bombas, así que no hacemos más comprobaciones
+        return False
+    else:
+        # Lógica original para jugadores vivos
+        if grid[tile_y][tile_x] in (1, 2, 3):
+            return True
+        for b in bombs:
+            if b.tile_x == tile_x and b.tile_y == tile_y:
+                if player in b.passable_players:
+                    return False
+                else:
+                    return True
+        return False
 
 def generar_poderes_al_morir(grid, bombs, powerups, players):
     """
@@ -344,18 +367,45 @@ def draw_powerups(screen, powerups):
 def draw_HUD(screen, player, pos, color):
     x, y = pos
     line_height = 20
-    text = f"Bombas x{player.bomb_limit}"
+
+    # --- > INICIO DE LA MODIFICACIÓN <---
+    # Lógica para mostrar el estado de las bombas
+    if player.is_ghost:
+        # Si el jugador es un fantasma, comprobar el cooldown
+        current_time = time.time()
+        elapsed_since_bomb = current_time - player.last_bomb_placed_time
+
+        if elapsed_since_bomb < player.ghost_bomb_cooldown:
+            # Si la bomba está en cooldown, mostrar el tiempo restante
+            remaining_cooldown = player.ghost_bomb_cooldown - elapsed_since_bomb
+            # Se usa max(0, ...) para evitar números negativos y +1 para que el contador sea más intuitivo (30s a 1s)
+            text = f"Bombas: x0 ({max(0, int(remaining_cooldown)) + 1}s)"
+        else:
+            # Si el cooldown ha terminado, la bomba está disponible
+            text = "Bombas: x1"
+    else:
+        # Si es un jugador vivo, mostrar el límite de bombas normal
+        text = f"Bombas: x{player.bomb_limit}"
+
     screen.blit(font.render(text, True, color), (x, y))
     y += line_height
+    # --- > FIN DE LA MODIFICACIÓN <---
+
+    # El resto de la función se mantiene como la tenías
     text = f"Rango x{player.bomb_range}"
     screen.blit(font.render(text, True, color), (x, y))
     y += line_height
-    if player.curse == "slow_speed":
+
+    # Lógica para la velocidad
+    if player.is_ghost:
+        text = "Velocidad: Fantasma"
+    elif player.curse == "slow_speed":
         text = "Velocidad: slow"
     elif player.curse == "hyper_speed":
         text = "Velocidad: fast"
     else:
         text = f"Velocidad x{player.display_speed}"
+
     screen.blit(font.render(text, True, color), (x, y))
     y += line_height
     text = "Empujar bomba: Sí" if player.push_bomb_available else "Empujar bomba: No"
@@ -374,16 +424,8 @@ def draw_HUD(screen, player, pos, color):
             text = "No curse"
     else:
         text = "No curse"
-    if getattr(player, 'active_curse', None) and getattr(player, 'curse_ends_at', None):
-        meta = CURSES[player.active_curse]
-        # Solo mostrar temporales
-        if meta["shows_in_hud"] and meta["duration"] is not None:
-            remaining = max(0, int(player.curse_ends_at - time.time()))
-            text = f"{player.active_curse}: {remaining}s"
-        else:
-            text = "No curse"
-    else:
-        text = "No curse"
+
+    # Este bloque if/else estaba duplicado en tu código, lo he dejado en una sola versión
     screen.blit(font.render(text, True, color), (x, y))
 
 
@@ -718,6 +760,17 @@ class Player:
         self.last_auto_bomb_tile = None
         self.push_bomb_available = False
         self.hit_bomb_available = False
+        self.is_ghost = False
+        self.ghost_anim_frames = []
+        self.ghost_anim_frame_index = 0
+        self.last_ghost_anim_update = 0
+        self.ghost_anim_delay = 100  # ms por frame del GIF
+        self.last_bomb_placed_time = 0
+        self.ghost_bomb_cooldown = 30.0  # 30 segundos
+        self.is_invulnerable = False
+        self.invulnerable_until = 0
+        self.invulnerable_duration = 3.0  # 3 segundos
+        self.invulnerable_flash_timer = 0
 
     def get_center_coords(self):
         return (self.x + self.sprite_size / 2, self.y + self.sprite_size / 2)
@@ -734,6 +787,25 @@ class Player:
         return int(cx // TILE_SIZE), int(cy // TILE_SIZE)
 
     def check_collision(self, grid, bombs):
+        # SI ES FANTASMA, APLICA REGLAS DE COLISIÓN ESPECIALES
+        if self.is_ghost:
+            rect = self.get_hitbox()
+            left_cell = rect.left // TILE_SIZE
+            right_cell = (rect.right - 1) // TILE_SIZE
+            top_cell = rect.top // TILE_SIZE
+            bottom_cell = (rect.bottom - 1) // TILE_SIZE
+
+            for cell_x in range(left_cell, right_cell + 1):
+                for cell_y in range(top_cell, bottom_cell + 1):
+                    if cell_x < 0 or cell_x >= GRID_COLS or cell_y < 0 or cell_y >= GRID_ROWS:
+                        return True # Choca con los límites exteriores del mapa
+                    # Un fantasma solo choca con muros irrompibles (2) y límites (3)
+                    if grid[cell_y][cell_x] in (2, 3):
+                        return True
+            # Los fantasmas no chocan con bombas ni con bloques rompibles.
+            return False
+
+        # CÓDIGO ORIGINAL PARA JUGADORES VIVOS (SIN CAMBIOS)
         rect = self.get_hitbox()
         left_cell = rect.left // TILE_SIZE
         right_cell = (rect.right - 1) // TILE_SIZE
@@ -955,42 +1027,104 @@ class Player:
         # Aquí debes llamar a tu rutina de respawn/animación:
         respawn_all_abilities_with_animation()
 
-    def reset_to_respawn(self):
+    def become_ghost(self):
         """
-        Resetea por completo al jugador a su estado inicial y lo mueve a su
-        casilla de reaparición. Se usa cuando el jugador muere.
+        Transforma al jugador en un fantasma en la casilla donde murió.
         """
-        # Resetear habilidades y poderes a los valores por defecto
-        self.bomb_limit = 1
-        self.bomb_range = 1
-        self.base_speed = 2.0
-        self.speed = 2.0
-        self.display_speed = 1
-        self.pending_speed_boosts = 0
-        self.push_bomb_available = False
-        self.hit_bomb_available = False
+        print(f"¡El jugador {self.player_index + 1} se ha convertido en un fantasma!")
 
-        # Si había una maldición activa, limpiar sus efectos (ej. controles invertidos)
+        # 1. Estado de fantasma
+        self.is_ghost = True
+        self.is_invulnerable = False  # No es invulnerable como fantasma
+
+        # 2. Limpiar estado de jugador vivo
         if self.active_curse:
             self._clear_curse_effects(self.active_curse)
-
-        # Resetear el estado de las maldiciones y otros estados del jugador
         self.active_curse = None
         self.curse_ends_at = None
-        self.auto_bombing = False
-        self.can_place_bombs = True
-        self.can_pick_abilities = True
-        self.invert_controls = False
+        self.bomb_limit = 1
+        self.bomb_range = 1
+        self.push_bomb_available = False
+        self.hit_bomb_available = False
+        self.display_speed = 1  # Mostramos la velocidad del fantasma
+        self.pending_speed_boosts = 0
 
-        # Asegurarse de que los controles vuelven a la normalidad
-        self.controls = self.original_controls.copy()
+        # 3. Aplicar propiedades de fantasma
+        self.speed = 1  # Velocidad reducida
 
-        # Recolocar al jugador en su posición inicial guardada
-        if hasattr(self, 'initial_tile_x') and hasattr(self, 'initial_tile_y'):
-            self.x = self.initial_tile_x * TILE_SIZE - 40
-            self.y = self.initial_tile_y * TILE_SIZE - 40
+        # El jugador no se mueve, se queda en la casilla donde murió.
+        # Su posición (self.x, self.y) ya es la correcta.
+
+    def resurrect(self):
+        """
+        Devuelve al fantasma a la vida en su posición inicial.
+        """
+        print(f"¡El jugador {self.player_index + 1} ha vuelto a la vida!")
+        REAPARICION_SOUND.play()  # Reproduce el sonido de reaparición
+        self.is_ghost = False
+
+        # Restaurar habilidades y estado de jugador vivo
+        self.bomb_limit = 1
+        self.bomb_range = 1
+        self.speed = self.base_speed
+        self.display_speed = 1
+        self.push_bomb_available = False
+        self.hit_bomb_available = False
+        self.active_curse = None  # Limpiar cualquier maldición residual
+
+        # Mover al jugador a su posición de inicio de partida
+        self.x = self.initial_tile_x * TILE_SIZE - 40
+        self.y = self.initial_tile_y * TILE_SIZE - 40
+
+        # Activar invulnerabilidad temporal con parpadeo
+        self.is_invulnerable = True
+        self.invulnerable_until = time.time() + self.invulnerable_duration
+        self.invulnerable_flash_timer = time.time()  # Inicia el temporizador para el parpadeo
 
     def draw(self, screen):
+        # SI ES FANTASMA, DIBUJA EL GIF CON TRANSPARENCIA
+        if self.is_ghost:
+            if not self.ghost_anim_frames:
+                return  # No hacer nada si la animación no se cargó
+
+            # Actualizar frame de la animación del fantasma (siempre se mueve)
+            current_time_ms = pygame.time.get_ticks()
+            if current_time_ms - self.last_ghost_anim_update > self.ghost_anim_delay:
+                self.ghost_anim_frame_index = (self.ghost_anim_frame_index + 1) % len(self.ghost_anim_frames)
+                self.last_ghost_anim_update = current_time_ms
+
+            sprite = self.ghost_anim_frames[self.ghost_anim_frame_index].copy()
+            sprite.set_alpha(int(255 * 0.80))  # 80% de opacidad
+            offset_x = (self.sprite_size - sprite.get_width()) // 2
+            offset_y = (self.sprite_size - sprite.get_height()) // 2
+            # Aplicamos el offset a las coordenadas de dibujado
+            draw_x = self.x + offset_x
+            draw_y = self.y + offset_y + self.sprite_draw_offset_y + TOP_OFFSET
+            screen.blit(sprite, (draw_x, draw_y))
+            return
+
+        # SI ES UN JUGADOR VIVO, COMPROBAR INVULNERABILIDAD Y DIBUJAR NORMAL
+        if self.is_invulnerable:
+            # Lógica de parpadeo blanco
+            flash_interval = 0.1  # segundos
+            if time.time() > self.invulnerable_flash_timer:
+                self.invulnerable_flash_timer = time.time() + flash_interval
+
+            # Dibuja el jugador normal y luego un recuadro blanco parpadeante encima
+            # Esta condición hace que parpadee
+            if int((self.invulnerable_flash_timer - time.time()) / flash_interval * 10) % 2 == 0:
+                # El código de dibujo del jugador normal va aquí (copiado de más abajo)
+                if hasattr(self, "animaciones") and self.current_direction in self.animaciones:
+                    image_list = self.animaciones[self.current_direction]
+                    player_sprite = image_list[self.anim_frame % len(image_list)]
+                    screen.blit(player_sprite, (self.x, self.y + self.sprite_draw_offset_y + TOP_OFFSET))
+
+                # Superponemos el efecto de parpadeo
+                flash_surf = pygame.Surface((self.sprite_size, self.sprite_size))
+                flash_surf.fill(WHITE)
+                flash_surf.set_alpha(150)
+                screen.blit(flash_surf, (self.x, self.y + self.sprite_draw_offset_y + TOP_OFFSET))
+                return
         # 1) Aura por detrás (solo si hay maldición activa)
         if self.active_curse and CURSES[self.active_curse]["duration"] is not None:
             if not hasattr(Player, 'aura_frames'):
@@ -1070,6 +1204,46 @@ class Player:
                     self.flashing = False
 
     def place_bomb(self, bombs, powerups, forced=False):
+        # SI ES FANTASMA, APLICA REGLAS ESPECIALES
+        if self.is_ghost:
+            current_time = time.time()
+            # Comprobar si el cooldown ha terminado para poder poner una bomba
+            if current_time - self.last_bomb_placed_time >= self.ghost_bomb_cooldown:
+                cx = self.x + self.sprite_size // 2
+                cy = self.y + self.sprite_size // 2
+                bomb_tile_x = int(cx // TILE_SIZE)
+                bomb_tile_y = int(cy // TILE_SIZE)
+
+                # --- > INICIO DE LA MODIFICACIÓN <---
+
+                # 1. RESTRICCIÓN: No colocar bomba sobre un bloque rompible (grid == 1)
+                if grid[bomb_tile_y][bomb_tile_x] == 1:
+                    return  # Salir de la función sin hacer nada
+
+                # 2. RESTRICCIÓN: Comprobar si ya hay una bomba en esa casilla
+                if any(b.tile_x == bomb_tile_x and b.tile_y == bomb_tile_y and not b.exploded for b in bombs):
+                    return
+
+                # 3. EFECTO: Hacer desaparecer cualquier gadget o lápida en la casilla
+                for p in powerups[:]:
+                    if p.visible and not p.disappearing and (p.x, p.y) == (bomb_tile_x, bomb_tile_y):
+                        p.start_disappear()  # Inicia la animación para que el gadget se desvanezca
+
+                for lapida in lapidas[:]:
+                    if (lapida.tile_x, lapida.tile_y) == (bomb_tile_x, bomb_tile_y):
+                        lapida.start_slow_fade()  # Inicia la animación para que la lápida se desvanezca
+
+                # --- > FIN DE LA MODIFICACIÓN <---
+
+                # Si pasa todas las comprobaciones, se crea la bomba
+                new_bomb = Bomb(bomb_tile_x, bomb_tile_y, 1)  # La bomba del fantasma siempre tiene rango 1
+                new_bomb.owner = self
+                bombs.append(new_bomb)
+                COLOCAR_BOMBA_SOUND.play()
+                self.last_bomb_placed_time = current_time  # Actualiza el tiempo para iniciar el cooldown
+            return  # Es importante que el fantasma termine su lógica aquí
+
+        # --- Lógica para el jugador VIVO (sin cambios) ---
         if self.auto_bombing and not forced:
             return
         if not self.can_place_bombs and not forced:
@@ -1170,7 +1344,7 @@ class Player:
                     b.try_start_push(dx, dy, grid, bombs, players, powerups)
                 break
 
-
+#--------------------------------------------------------------------------------
 # Función para cargar animaciones de un personaje según su nombre
 def cargar_animaciones_personaje(nombre_personaje):
     animaciones = {}
@@ -1183,6 +1357,51 @@ def cargar_animaciones_personaje(nombre_personaje):
         animaciones[direccion] = imagenes
     return animaciones
 
+
+def cargar_animacion_fantasma(player_index):
+    """Carga los frames del GIF de fantasma para un jugador específico."""
+    # Los GIFs están indexados a partir de 1, pero nuestro player_index empieza en 0
+    gif_name = f"Jugador {player_index + 1}.gif"
+    path = os.path.join(ASSETS_DIR, "Jugadores", "Fantasma muerto", f"Jugador {player_index + 1}", gif_name)
+
+    # --- > PUEDES MODIFICAR ESTE VALOR PARA AJUSTAR EL TAMAÑO <---
+    # 1.0 es el tamaño original, 0.7 es el 70%, 0.5 es el 50%, etc.
+    GHOST_SCALE_FACTOR = 0.07
+
+    if not os.path.exists(path):
+        print(f"Advertencia: No se encontró el GIF del fantasma en {path}")
+        return []
+
+    try:
+        from PIL import Image
+        pil_image = Image.open(path)
+        frames = []
+        while True:
+            # Convertimos cada frame del GIF a una superficie de Pygame
+            frame = pil_image.convert("RGBA")
+            pygame_frame = pygame.image.fromstring(frame.tobytes(), frame.size, frame.mode)
+
+            # --- > ESTA ES LA LÓGICA DE REESCALADO CORREGIDA <---
+            # 1. Obtenemos el tamaño original del frame del GIF
+            original_width, original_height = pygame_frame.get_size()
+
+            # 2. Calculamos el nuevo tamaño usando el factor de escala
+            new_width = int(original_width * GHOST_SCALE_FACTOR)
+            new_height = int(original_height * GHOST_SCALE_FACTOR)
+
+            # 3. Escalamos el frame al nuevo tamaño, manteniendo la proporción
+            scaled_frame = pygame.transform.scale(pygame_frame, (new_width, new_height))
+
+            frames.append(scaled_frame)
+            pil_image.seek(pil_image.tell() + 1)
+
+    except EOFError:
+        pass  # Fin de los frames del GIF
+    except ImportError:
+        print("Error: La librería Pillow (PIL) es necesaria para cargar GIFs.")
+        return []
+
+    return frames
 
 # Diccionario de nombres por índice desde la pantalla de personajes
 nombres_por_indice = {
@@ -1224,8 +1443,9 @@ for idx, jugador in enumerate(gestor_jugadores.todos()):
     animaciones = cargar_animaciones_personaje(nombre_personaje)
 
     nuevo_jugador = Player(tile_x, tile_y, color, controls)
-    nuevo_jugador.animaciones = animaciones  # <- atributo nuevo para guardar sus sprites
-    nuevo_jugador.player_index = idx  # ← Guardamos índice para saber si es J1, J2, J3 o J4
+    nuevo_jugador.animaciones = animaciones
+    nuevo_jugador.player_index = idx
+    nuevo_jugador.ghost_anim_frames = cargar_animacion_fantasma(idx)
     players.append(nuevo_jugador)
 
 
@@ -1372,44 +1592,33 @@ class Bomb:
         if self in bombs:
             bombs.remove(self)
         EXPLOSION_SOUND.play()
-        explosions = [(self.tile_x, self.tile_y, "center", None)]
+
+        # --- LÓGICA MODIFICADA PARA CREAR OBJETOS EXPLOSION CON DUEÑO ---
+        explosions = [Explosion(self.tile_x, self.tile_y, "center", None, owner=self.owner)]
         directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+
         for dx, dy in directions:
             for i in range(1, self.blast_range + 1):
                 nx = self.tile_x + dx * i
                 ny = self.tile_y + dy * i
 
-                # Si está fuera de los límites, detenemos la explosión
                 if not (0 <= nx < GRID_COLS and 0 <= ny < GRID_ROWS):
                     break
-
-                # Si es un bloque rompible (ladrillo)
                 if grid[ny][nx] == 1:
                     if (nx, ny) not in exploding_blocks:
                         exploding_blocks[(nx, ny)] = time.time()
                         reveal_powerup_if_any(powerups, nx, ny)
                     break
-
-                # Si es un bloque irrompible o límite
                 if grid[ny][nx] in (2, 3):
                     break
 
-                # Comprobamos si hay una bomba en esta celda
-                bomb_found = None
-                for b in bombs:
-                    # Solo nos interesa si la bomba aún no ha explotado
-                    if b.tile_x == nx and b.tile_y == ny and not b.exploded:
-                        bomb_found = b
-                        break
-
-                # Si hay una bomba, la activamos en cadena (si no lo estaba ya) y paramos la explosión
+                bomb_found = next((b for b in bombs if b.tile_x == nx and b.tile_y == ny and not b.exploded), None)
                 if bomb_found is not None:
                     if not bomb_found.chain_triggered:
                         bomb_found.chain_triggered = True
                         bomb_found.chain_trigger_time = time.time()
                     break
 
-                # Si hay un powerup (por ejemplo, una maldición), se maneja y puede detener la explosión
                 found_powerup = False
                 for p in powerups:
                     if p.x == nx and p.y == ny and p.visible and not p.disappearing:
@@ -1417,21 +1626,18 @@ class Bomb:
                             p.visible = True
                             p.start_bounce((dx, dy), grid, bombs, powerups)
                         else:
-                            # Caso de habilidadessssssssssssssss /poderes: inicia animación de desaparecer
                             p.start_disappear()
-                            explosions.append((nx, ny, "ability", (dx, dy)))
+                            explosions.append(Explosion(nx, ny, "ability", (dx, dy), owner=self.owner))
                         found_powerup = True
                         break
-
-                # Si el powerup detuvo la explosión, no seguimos en esta dirección
                 if found_powerup:
                     break
 
-                # Si hemos llegado aquí, añadimos la explosión en esta celda
+                # Añadimos la explosión como un objeto completo con su dueño
                 if i == self.blast_range:
-                    explosions.append((nx, ny, "extreme", (dx, dy)))
+                    explosions.append(Explosion(nx, ny, "extreme", (dx, dy), owner=self.owner))
                 else:
-                    explosions.append((nx, ny, "lateral", (dx, dy)))
+                    explosions.append(Explosion(nx, ny, "lateral", (dx, dy), owner=self.owner))
 
         return explosions
 
@@ -1686,11 +1892,12 @@ class Bomb:
 # Clase Explosion (sin cambios)
 # ------------------------------------------------------------------------------------
 class Explosion:
-    def __init__(self, tile_x, tile_y, explosion_type="normal", direction=None):
+    def __init__(self, tile_x, tile_y, explosion_type="normal", direction=None, owner=None):
         self.tile_x = tile_x
         self.tile_y = tile_y
         self.explosion_type = explosion_type
         self.direction = direction
+        self.owner = owner
         self.current_frame = 0
         self.last_update = pygame.time.get_ticks()
         self.finished = False
@@ -2065,6 +2272,7 @@ modo_posicion = config.current_position_index  # 0 = fija, 1 = aleatoria
 # Bucle principal
 # ------------------------------------------------------------------------------------
 TOTAL_TIME = config.current_minute * 60
+usar_fantasmas = config.current_ultimas_index.get("Fantasmas", 0) == 0
 start_time = time.time()
 grid, powerups = generate_grid_and_powerups()
 game_grid = grid
@@ -2092,6 +2300,9 @@ SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG = cargar_mapa()
 
 running = True
 clock = pygame.time.Clock()
+ghost_sound_channel = pygame.mixer.Channel(5)
+last_ghost_sound_time = 0
+ghost_sound_interval = 20  # segundos
 
 while running:
     screen.fill(BLACK)
@@ -2271,6 +2482,8 @@ while running:
                 pantalla_guia_juego(screen, jugador_controlador_id)
     keys = pygame.key.get_pressed()
     for player in players:
+        if player.is_invulnerable and time.time() > player.invulnerable_until:
+            player.is_invulnerable = False
         if 'up' in player.controls:
             # Jugador de teclado
             if player.curse == "inverted":
@@ -2377,36 +2590,48 @@ while running:
                 p2.last_curse_exchange = current_time
 
     for bomb in bombs[:]:
-        if bomb.chain_triggered:
-            if time.time() - bomb.chain_trigger_time >= 0.75:
-                exp_positions = bomb.explode(grid, players, bombs, powerups)
-                for pos in exp_positions:
-                    tx, ty, expl_type, direction = pos
-                    explosions.append(Explosion(tx, ty, explosion_type=expl_type, direction=direction))
-        elif time.time() - bomb.plant_time >= bomb.timer:
-            exp_positions = bomb.explode(grid, players, bombs, powerups)
-            for pos in exp_positions:
-                tx, ty, expl_type, direction = pos
-                explosions.append(Explosion(tx, ty, explosion_type=expl_type, direction=direction))
+        if not bomb.exploded and (
+                (bomb.chain_triggered and time.time() - bomb.chain_trigger_time >= 0.75) or
+                (not bomb.chain_triggered and time.time() - bomb.plant_time >= bomb.timer)
+        ):
+            # El método explode ahora devuelve una lista de objetos Explosion completos
+            lista_de_explosiones = bomb.explode(grid, players, bombs, powerups)
+            # Simplemente añadimos esa lista a nuestra lista principal de explosiones
+            explosions.extend(lista_de_explosiones)
 
     dt = clock.tick(60) / 1000.0  # ← define dt (a 60 FPS, en segundos)
     update_powerups(powerups, dt)  # Actualiza los powerups
     draw_powerups(screen, powerups)  # DIBUJA LOS POWERUPS PRIMERO
-    # Dibujar bombas y jugadores según su Y para que los más bajos se vean encima
+    # Dibujar bombas y jugadores VIVOS según su Y
     objetos_a_dibujar = []
 
     for bomb in bombs:
-        objetos_a_dibujar.append(("bomba", bomb.pos_y, bomb))
+        bomb.draw(screen)  # Las bombas se dibujan primero
 
     for player in players:
-        objetos_a_dibujar.append(("jugador", player.y + player.sprite_size, player))  # parte inferior del sprite
+        # Solo añadimos jugadores vivos a la lista de ordenación Y
+        if not player.is_ghost:
+            objetos_a_dibujar.append(("jugador", player.y + player.sprite_size, player))
 
-    # Ordenar por coordenada Y (de arriba a abajo)
+    # Ordenar solo a los jugadores vivos por coordenada Y
     objetos_a_dibujar.sort(key=lambda x: x[1])
 
-    # Dibujar en orden
+    # Dibujar jugadores vivos en orden
     for tipo, _, obj in objetos_a_dibujar:
         obj.draw(screen)
+
+    # Dibujar explosiones
+    for explosion in explosions[:]:
+        explosion.update()
+        if explosion.finished:
+            explosions.remove(explosion)
+        else:
+            explosion.draw(screen)
+
+    # DIBUJAR FANTASMAS AL FINAL PARA QUE SE VEAN POR ENCIMA DE TODO
+    for player in players:
+        if player.is_ghost:
+            player.draw(screen)
 
     for explosion in explosions[:]:
         explosion.update()
@@ -2423,6 +2648,8 @@ while running:
         for p in powerups:
             if p.visible and not p.disappearing and not p.vanished:
                 for player in players:
+                    if player.is_ghost:
+                        continue
                     if player.get_center_tile() == (p.x, p.y):
                         if player.curse == "no_ability" and p.type != "calavera":
                             continue
@@ -2523,6 +2750,10 @@ while running:
         for lapida in lapidas[:]:
             if lapida.state == "active":
                 for player in players:
+                    # AÑADE ESTA CONDICIÓN:
+                    if player.is_ghost:
+                        continue  # Si es un fantasma, pasa al siguiente jugador
+
                     if player.get_center_tile() == (lapida.tile_x, lapida.tile_y):
                         COGER_MALDICION_SOUND.play()
                         curse_name = random.choice(list(CURSES.keys()))
@@ -2531,8 +2762,6 @@ while running:
                         break
 
     check_pickup(players, powerups)
-
-    # (Justo antes de la sección de dibujo de los elementos del juego)
 
     # (Justo antes de la sección de dibujo de los elementos del juego)
 
@@ -2587,37 +2816,61 @@ while running:
     for pos in to_remove:
         del exploding_blocks[pos]
 
+    # Reproducción global de sonido de fantasmas
+    hay_fantasmas = any(player.is_ghost for player in players)
+    current_time = time.time()
+
+    if hay_fantasmas:
+        if not ghost_sound_channel.get_busy() and current_time - last_ghost_sound_time >= ghost_sound_interval:
+            ghost_sound_channel.play(FANTASMA_SOUND)
+            last_ghost_sound_time = current_time
+    else:
+        if ghost_sound_channel.get_busy():
+            ghost_sound_channel.stop()
+
+
     elapsed = time.time() - start_time
     remaining_time = TOTAL_TIME - elapsed
     if remaining_time < 0:
         remaining_time = 0
     draw_timer(screen, remaining_time)
 
-    draw_HUD(screen, players[0], (10, 5), RED)
-    draw_HUD(screen, players[1], (WIDTH - 210, 5), BLUE)
+    # Mostrar HUD de todos los jugadores activos, ajustando colores
+    colores_por_jugador = [(0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0)]  # Verde, Rojo, Azul, Amarillo
+    GRIS = (128, 128, 128)
+    for i, player in enumerate(players):
+        x = 10 + i * 220
+        color = colores_por_jugador[i] if not getattr(player, "muerto", False) else GRIS
+        draw_HUD(screen, player, (x, 5), color)
 
-    # --- INICIO DE LA NUEVA LÓGICA DE MUERTE POR EXPLOSIÓN ---
-    # 1. Crear un conjunto de todas las casillas mortales activas en este frame.
-    #    Una casilla es mortal si tiene una explosión de tipo 'center', 'extreme', o 'lateral'.
-    mortal_tiles = set()
+    # --- INICIO DE LA LÓGICA DE MUERTE POR EXPLOSIÓN (VERSIÓN FINAL) ---
+
+    # 1. Crear un diccionario de casillas mortales que guarda quién las causó.
+    mortal_tiles_with_owner = {}
     for explosion in explosions:
         if not explosion.finished and explosion.explosion_type in ["center", "extreme", "lateral"]:
-            mortal_tiles.add((explosion.tile_x, explosion.tile_y))
+            tile_key = (explosion.tile_x, explosion.tile_y)
+            # Guardamos la casilla y el dueño de la bomba que causó la explosión
+            if tile_key not in mortal_tiles_with_owner:
+                mortal_tiles_with_owner[tile_key] = explosion.owner
 
     # 2. Comprobar cada jugador contra las casillas mortales.
-    if mortal_tiles:  # Optimización: solo hacer la comprobación si hay explosiones activas.
-        for player in list(players):
+    if mortal_tiles_with_owner:
+        for player in players[:]:
+            # Ignorar si el jugador ya es fantasma o invulnerable
+            if player.is_ghost or player.is_invulnerable:
+                continue
+
             player_hitbox = player.get_hitbox()
             player_hitbox_area = player_hitbox.width * player_hitbox.height
 
-            # Si el área del hitbox es 0, no se puede hacer la división (evita error).
             if player_hitbox_area == 0:
                 continue
 
-            # 3. Calcular el área total de superposición del hitbox del jugador con todas las casillas mortales.
             total_overlap_area = 0
+            killer = None  # Variable para guardar quién mató al jugador
 
-            # Determinar el rango de casillas que el hitbox podría estar tocando.
+            # Determinar el rango de casillas que el hitbox podría tocar
             min_tile_x = player_hitbox.left // TILE_SIZE
             max_tile_x = (player_hitbox.right - 1) // TILE_SIZE
             min_tile_y = player_hitbox.top // TILE_SIZE
@@ -2625,21 +2878,58 @@ while running:
 
             for tile_x in range(min_tile_x, max_tile_x + 1):
                 for tile_y in range(min_tile_y, max_tile_y + 1):
-                    # Si la casilla que toca el jugador está en nuestro conjunto de casillas mortales...
-                    if (tile_x, tile_y) in mortal_tiles:
-                        # ...calculamos el área de intersección.
+                    tile_key = (tile_x, tile_y)
+                    if tile_key in mortal_tiles_with_owner:
                         mortal_tile_rect = pygame.Rect(tile_x * TILE_SIZE, tile_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
                         overlap_rect = player_hitbox.clip(mortal_tile_rect)
                         total_overlap_area += overlap_rect.width * overlap_rect.height
 
-            # 4. Si la superposición es del 15% o más, el jugador muere y reaparece.
+                        # Si encontramos al asesino, lo guardamos. Priorizamos un asesino real sobre None.
+                        if mortal_tiles_with_owner[tile_key] is not None:
+                            killer = mortal_tiles_with_owner[tile_key]
+
+            # 4. Si la superposición es suficiente, el jugador muere.
             if (total_overlap_area / player_hitbox_area) >= 0.15:
-                print(f"¡El jugador {player.player_index + 1} ha muerto y reaparece!")
-                casilla_muerte = player.get_center_tile()
-                if lapida_por_colocar is None:  # Solo registramos la primera muerte por explosión
-                    lapida_por_colocar = player.get_center_tile()
-                player.reset_to_respawn()
-                generar_poderes_al_morir(grid, bombs, powerups, players)
+                MUERTE_SOUND.play()  # El sonido de muerte suena en cualquier caso
+
+                # --- LÓGICA DE INTERCAMBIO DE ROLES ---
+                if killer and killer.is_ghost:
+                    print(f"¡El FANTASMA {killer.player_index + 1} mató a {player.player_index + 1}!")
+
+                    # 1. El fantasma que mató resucita (el sonido de reaparición se reproduce dentro del método)
+                    killer.resurrect()
+
+                    # 2. El jugador asesinado se convierte en fantasma
+                    player.become_ghost()
+
+                    # 3. Generar gadgets (como en la muerte normal) y lápida
+                    if lapida_por_colocar is None:
+                        lapida_por_colocar = player.get_center_tile()
+                    generar_poderes_al_morir(grid, bombs, powerups, players)
+
+                # --- LÓGICA DE MUERTE NORMAL ---
+                else:
+                    if killer:
+                        print(f"¡El jugador {killer.player_index + 1} mató a {player.player_index + 1}!")
+                    else:
+                        print(f"¡El jugador {player.player_index + 1} ha muerto!")
+
+                    if lapida_por_colocar is None:
+                        lapida_por_colocar = player.get_center_tile()
+
+                    if usar_fantasmas:
+                        print("Transformando en fantasma")
+                        player.become_ghost()
+                    else:
+                        print("Eliminando jugador completamente")
+                        players.remove(player)
+
+                    generar_poderes_al_morir(grid, bombs, powerups, players)
+
+                    generar_poderes_al_morir(grid, bombs, powerups, players)
+
+                # Rompemos el bucle para que un jugador no pueda morir dos veces en el mismo frame
+                break
 
     pygame.display.flip()
     clock.tick(60)

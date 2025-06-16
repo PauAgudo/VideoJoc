@@ -1,4 +1,4 @@
-import pygame
+
 
 
 class Config:
@@ -9,7 +9,7 @@ class Config:
         self.current_level_index = 1  # Nivel COM: 0:"Fácil", 1:"Intermedio", 2:"Avanzado"
         self.current_position_index = 0  # Posición inicial: 0:"Fija", 1:"Aleatoria"
         self.current_ultimas_index = {
-            "aviones": 0,  # 0:"Sí", 1:"No"
+            "Fantasmas": 0,  # 0:"Sí", 1:"No"
             "Maldiciones": 0,
             "Bloques_final": 0
         }
@@ -25,14 +25,6 @@ class Config:
 config = Config()
 
 
-import pygame
-import os
-
-import pygame
-import os
-
-import pygame
-import os
 
 import pygame
 import os
