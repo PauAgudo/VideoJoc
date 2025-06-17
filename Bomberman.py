@@ -4,7 +4,7 @@ import sys
 import math
 import random
 import time
-from Config import config
+from Config import config, audio
 from ConfiguraciónMandos import gestor_jugadores
 from PausaPartida import menu_pausa
 
@@ -31,7 +31,7 @@ ASSETS_DIR = os.path.join(BASE_DIR, "Media")
 
 MUSIC_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "musica_fondo", "juego.mp3")
 pygame.mixer.music.load(MUSIC_PATH)
-pygame.mixer.music.set_volume(0.2)
+pygame.mixer.music.set_volume(audio.volume)
 pygame.mixer.music.play(-1)
 
 TOP_OFFSET = 80  # Espacio para el contador y el HUD

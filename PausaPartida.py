@@ -60,22 +60,12 @@ class SliderRect:
 
 
 def inicializar_componentes_ui(screen):
-    try:
-        boton_atras = pygame.transform.scale(
-            pygame.image.load("Media/Menu/Botones/siguiente.png"),
-            (40, 40))
-        boton_atras_rotate = pygame.transform.rotate(boton_atras, 180)
-    except pygame.error:
-        print("Error al cargar la imagen: siguiente.png")
-        sys.exit(1)
-    rect_atras = boton_atras_rotate.get_rect(topleft=(25, 25))
-
     ancho = 750
     alto = 450
     fondo_gris = pygame.Surface((ancho, alto), pygame.SRCALPHA)
     rect_fondo_gris = fondo_gris.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
 
-    return boton_atras_rotate, rect_atras, fondo_gris, rect_fondo_gris
+    return  fondo_gris, rect_fondo_gris
 
 
 def crear_sliders(rect_fondo_gris):
@@ -114,9 +104,10 @@ def cambiar_a_raton():
 
 
 
-def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_atras, sliders,
+def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, sliders,
                flecha_izquierda_img, flecha_derecha_img):
     global hover_casillas, casillas_rects, last_input_method, ultimo_hover_index, indice_modo_actual
+    from Config import audio
 
     font_titulo = pygame.font.SysFont(None, 30)
     font_opciones = pygame.font.SysFont(None, 20)
@@ -124,37 +115,34 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_a
     titulo_surf = font_titulo.render("AJUSTES DE JUEGO", True, NEGRO)
     titulo_rect = titulo_surf.get_rect(center=(rect_fondo_gris.centerx, rect_fondo_gris.top + 30))
 
-    slider = sliders[0]
-    slider_rect = slider.rect
-    mouse_pos = pygame.mouse.get_pos()
-
     pygame.draw.rect(screen, GRIS_MEDIO, rect_fondo_gris, border_radius=10)
     pygame.draw.rect(screen, GRIS_OSCURO, rect_fondo_gris, width=4, border_radius=10)
     screen.blit(titulo_surf, titulo_rect)
 
-    font = pygame.font.SysFont(None, 16)
-    etiqueta_font = pygame.font.SysFont(None, 20)
+    # Casilla REANUDAR
+    casilla_reanudar_rect = pygame.Rect(rect_fondo_gris.centerx - 125, titulo_rect.bottom + 30, 250, 50)
 
-    # Etiqueta y fondo del slider
-    etiqueta_surf = etiqueta_font.render("VOLUMEN DEL JUEGO", True, BLANCO)
-    etiqueta_x = slider.rect.left - etiqueta_surf.get_width() - 10
-    etiqueta_y = slider.rect.y + (slider.rect.height // 2 - etiqueta_surf.get_height() // 2)
-    etiqueta_bg_rect = pygame.Rect(etiqueta_x - 5, etiqueta_y - 2, etiqueta_surf.get_width() + 10, etiqueta_surf.get_height() + 4)
+    # Casilla de fondo para el slider
+    # Posicionar el slider centrado dentro de la casilla
+    slider = sliders[0]
+    ancho_slider, alto_slider = audio.slider_size
 
-    slider_bg_x = etiqueta_bg_rect.left - 10
-    slider_bg_y = etiqueta_bg_rect.top - 15
-    slider_bg_width = slider.rect.right + 35 - slider_bg_x + 10
-    slider_bg_height = slider.rect.bottom + 15 - slider_bg_y
-    slider_bg_rect = pygame.Rect(slider_bg_x, slider_bg_y, slider_bg_width, slider_bg_height)
-    slider_bg_rect.y = rect_fondo_gris.top + 80
+    slider_bg_rect = pygame.Rect(
+        rect_fondo_gris.centerx - 265,
+        casilla_reanudar_rect.bottom + 20,
+        ancho_slider + 250, 35  # tamaño ajustable
+    )
 
-    # Casilla "PANTALLA MODO"
-    casilla_modo_rect = slider_bg_rect.copy()
-    casilla_modo_rect.y = slider_bg_rect.bottom + 40
+    slider.rect.width = ancho_slider
+    slider.rect.height = alto_slider
+    slider.rect.center = (slider_bg_rect.centerx + 65, slider_bg_rect.centery)  # 30px a la derecha DENTRO de la casilla
 
-    # Casillas adicionales
+    # Casilla modo pantalla
+    casilla_modo_rect = pygame.Rect(slider_bg_rect.left, slider_bg_rect.bottom + 30, slider_bg_rect.width, 35)
+
+    # Casillas aprende/guia/salir
     casilla_ancho = 250
-    casilla_alto = 50
+    casilla_alto = 40
     espacio_horizontal = 40
     total_ancho = casilla_ancho * 2 + espacio_horizontal
     casillas_top = casilla_modo_rect.bottom + 40
@@ -163,13 +151,19 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_a
     casilla1_rect = pygame.Rect(casilla1_left, casillas_top, casilla_ancho, casilla_alto)
     casilla2_rect = pygame.Rect(casilla2_left, casillas_top, casilla_ancho, casilla_alto)
     casilla_roja_top = casilla1_rect.bottom + 40
-    casilla_roja_rect = pygame.Rect(rect_fondo_gris.centerx - 125, casilla_roja_top, 250, 50)
+    casilla_roja_rect = pygame.Rect(rect_fondo_gris.centerx - 125, casilla_roja_top, 250, 40)
 
-    # Lista de todas las casillas en orden
-    global casillas_rects
-    casillas_rects = [slider_bg_rect, casilla_modo_rect, casilla1_rect, casilla2_rect, casilla_roja_rect]
+    casillas_rects = [
+        casilla_reanudar_rect,  # [0]
+        slider_bg_rect,         # [1]
+        casilla_modo_rect,      # [2]
+        casilla1_rect,          # [3] Aprende controles
+        casilla2_rect,          # [4] Guía del juego
+        casilla_roja_rect       # [5] Salir
+    ]
 
-    # --------- GESTIÓN DE HOVER Y SELECCIÓN ---------
+    # ------------------ DETECCIÓN DE HOVER ------------------
+    mouse_pos = pygame.mouse.get_pos()
     if last_input_method == "mouse":
         if 'ultimo_hover_index' not in globals():
             ultimo_hover_index = 0
@@ -193,124 +187,82 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_a
     else:
         seleccionados = [selected_element_index == i for i in range(len(casillas_rects))]
 
-    # --------- DIBUJAR SLIDER VOLUMEN ---------
-    if seleccionados[0]:
-        pygame.draw.rect(screen, (220, 220, 220), slider_bg_rect, border_radius=8)
-    else:
-        pygame.draw.rect(screen, GRIS_CLARO, slider_bg_rect, border_radius=8)
-    pygame.draw.rect(screen, GRIS_OSCURO, slider_bg_rect, width=2, border_radius=8)
+    # ------------------ DIBUJAR CASILLAS ------------------
+    dibujar_seleccion(screen, casilla_reanudar_rect, seleccionados[0], VERDE_HOVER, (230, 230, 230), (0, 200, 0))
+    dibujar_seleccion(screen, slider_bg_rect, seleccionados[1], VERDE_HOVER, GRIS_CLARO, GRIS_OSCURO)
+    dibujar_seleccion(screen, casilla_modo_rect, seleccionados[2], VERDE_HOVER, GRIS_CLARO, GRIS_OSCURO)
+    dibujar_seleccion(screen, casilla1_rect, seleccionados[3], VERDE_HOVER, (230, 230, 230), (0, 200, 0))
+    dibujar_seleccion(screen, casilla2_rect, seleccionados[4], VERDE_HOVER, (230, 230, 230), (0, 200, 0))
+    dibujar_seleccion(screen, casilla_roja_rect, seleccionados[5], ROJO_HOVER, (255, 180, 180), (200, 0, 0))
+
+    # Textos
+    font = pygame.font.SysFont(None, 16)
+    etiqueta_font = pygame.font.SysFont(None, 20)
+
+    texto_reanudar = font_opciones.render("REANUDAR PARTIDA", True, NEGRO)
+    screen.blit(texto_reanudar, texto_reanudar.get_rect(center=casilla_reanudar_rect.center))
+
+    etiqueta_surf = etiqueta_font.render("VOLUMEN DEL JUEGO", True, BLANCO)
+    etiqueta_bg_rect = pygame.Rect(
+        slider_bg_rect.left + 15, slider_bg_rect.top + 8,
+        etiqueta_surf.get_width() + 10, etiqueta_surf.get_height() + 4
+    )
+    pygame.draw.rect(screen, GRIS_OSCURO, etiqueta_bg_rect, border_radius=6)
+    pygame.draw.rect(screen, NEGRO, etiqueta_bg_rect, width=2, border_radius=6)
+    screen.blit(etiqueta_surf, (etiqueta_bg_rect.left + 5, etiqueta_bg_rect.top + 2))
 
     slider.draw(screen)
     porcentaje = round(slider.value * 100)
-
-    pygame.draw.rect(screen, GRIS_OSCURO, etiqueta_bg_rect, border_radius=6)
-    pygame.draw.rect(screen, NEGRO, etiqueta_bg_rect, width=2, border_radius=6)
-    screen.blit(etiqueta_surf, (etiqueta_x, etiqueta_y))
-
     valor_surf = font.render(f"{porcentaje}%", True, NEGRO)
     valor_x = slider.rect.right + 10
     valor_y = slider.rect.y + (slider.rect.height // 2 - valor_surf.get_height() // 2)
     screen.blit(valor_surf, (valor_x, valor_y))
 
-    # --------- DIBUJAR CASILLA PANTALLA MODO ---------
-    fuente_opcion = pygame.font.SysFont(None, 20)
-    texto_titulo = fuente_opcion.render("PANTALLA MODO:", True, NEGRO)
-    if seleccionados[1]:
-        pygame.draw.rect(screen, (220, 220, 220), casilla_modo_rect, border_radius=8)
-    else:
-        pygame.draw.rect(screen, GRIS_CLARO, casilla_modo_rect, border_radius=8)
-    pygame.draw.rect(screen, GRIS_OSCURO, casilla_modo_rect, width=2, border_radius=8)
-
-    # Etiqueta decorada igual que la del volumen
-    etiqueta_modo_surf = fuente_opcion.render("PANTALLA MODO", True, BLANCO)
-    etiqueta_modo_x = casilla_modo_rect.left + 15
-    etiqueta_modo_y = casilla_modo_rect.top + 15
-    etiqueta_modo_bg = pygame.Rect(etiqueta_modo_x - 5, etiqueta_modo_y - 2, etiqueta_modo_surf.get_width() + 10,
-                                   etiqueta_modo_surf.get_height() + 4)
-
+    # Casilla modo pantalla
+    etiqueta_modo_surf = etiqueta_font.render("PANTALLA MODO", True, BLANCO)
+    etiqueta_modo_bg = pygame.Rect(
+        casilla_modo_rect.left + 15, casilla_modo_rect.top + 8,
+        etiqueta_modo_surf.get_width() + 10, etiqueta_modo_surf.get_height() + 4
+    )
     pygame.draw.rect(screen, GRIS_OSCURO, etiqueta_modo_bg, border_radius=6)
     pygame.draw.rect(screen, NEGRO, etiqueta_modo_bg, width=2, border_radius=6)
-    screen.blit(etiqueta_modo_surf, (etiqueta_modo_x, etiqueta_modo_y))
+    screen.blit(etiqueta_modo_surf, (etiqueta_modo_bg.left + 5, etiqueta_modo_bg.top + 2))
 
-    # ----- FLECHAS COMO BOTONES -----
+    # Flechas
     modo_actual = opciones_modo_pantalla[indice_modo_actual]
-
+    fuente_opcion = pygame.font.SysFont(None, 20)
     texto_valor = fuente_opcion.render(modo_actual, True, NEGRO)
 
-    # Posiciones y tamaños
-    flecha_size_normal = 30
-    flecha_size_hover = 36
-
+    flecha_size = 30
     x_flecha_izq = casilla_modo_rect.right - 250
     x_valor = casilla_modo_rect.right - 150
     x_flecha_der = casilla_modo_rect.right - 50
     centro_y = etiqueta_modo_bg.centery
 
-    # Rects para detección de colisión
-    rect_flecha_izq = pygame.Rect(0, 0, flecha_size_hover, flecha_size_hover)
-    rect_flecha_der = pygame.Rect(0, 0, flecha_size_hover, flecha_size_hover)
+    rect_flecha_izq = pygame.Rect(0, 0, flecha_size, flecha_size)
+    rect_flecha_der = pygame.Rect(0, 0, flecha_size, flecha_size)
     rect_flecha_izq.center = (x_flecha_izq, centro_y)
     rect_flecha_der.center = (x_flecha_der, centro_y)
 
-    # Hover detection
-    hover_izq = rect_flecha_izq.collidepoint(mouse_pos)
-    hover_der = rect_flecha_der.collidepoint(mouse_pos)
-
-    # Escalado según hover
-    flecha_izq_dib = pygame.transform.scale(flecha_izquierda_img, (flecha_size_hover, flecha_size_hover) if hover_izq else (
-    flecha_size_normal, flecha_size_normal))
-    flecha_der_dib = pygame.transform.scale(flecha_derecha_img, (flecha_size_hover, flecha_size_hover) if hover_der else (
-    flecha_size_normal, flecha_size_normal))
-
-    # Nuevos rects para dibujar
-    rect_flecha_izq = flecha_izq_dib.get_rect(center=(x_flecha_izq, centro_y))
-    rect_flecha_der = flecha_der_dib.get_rect(center=(x_flecha_der, centro_y))
-
-    # Dibujar flechas
-    screen.blit(flecha_izq_dib, rect_flecha_izq)
-    screen.blit(flecha_der_dib, rect_flecha_der)
-
-    # Texto del modo actual entre las flechas
-    texto_valor = fuente_opcion.render(modo_actual, True, NEGRO)
+    screen.blit(pygame.transform.scale(flecha_izquierda_img, (flecha_size, flecha_size)), rect_flecha_izq)
+    screen.blit(pygame.transform.scale(flecha_derecha_img, (flecha_size, flecha_size)), rect_flecha_der)
     screen.blit(texto_valor, texto_valor.get_rect(center=(x_valor, centro_y)))
 
-    # Cambio con click
-    mouse_buttons = pygame.mouse.get_pressed()
-    if mouse_buttons[0]:  # Click izquierdo
-        if hover_izq:
-            if indice_modo_actual > 0:
-                indice_modo_actual -= 1
-                pygame.time.wait(300)  # pequeño delay para evitar doble click
-        elif hover_der:
-            if indice_modo_actual < len(opciones_modo_pantalla) - 1:
-                indice_modo_actual += 1
-                pygame.time.wait(300)
-
-    # --------- DIBUJAR RESTO DE CASILLAS ---------
-    dibujar_seleccion(screen, casilla1_rect, seleccionados[2], VERDE_HOVER, (230, 230, 230), (0, 200, 0))
-    dibujar_seleccion(screen, casilla2_rect, seleccionados[3], VERDE_HOVER, (230, 230, 230), (0, 200, 0))
-    dibujar_seleccion(screen, casilla_roja_rect, seleccionados[4], ROJO_HOVER, (255, 180, 180), (200, 0, 0))
-
+    # Textos de casillas inferiores
     texto_casilla1 = font_opciones.render("APRENDE LOS CONTROLES", True, NEGRO)
     texto_casilla2 = font_opciones.render("GUÍA DEL JUEGO", True, NEGRO)
     texto_rojo = font_opciones.render("SALIR DE LA PARTIDA", True, NEGRO)
-
     screen.blit(texto_casilla1, texto_casilla1.get_rect(center=casilla1_rect.center))
     screen.blit(texto_casilla2, texto_casilla2.get_rect(center=casilla2_rect.center))
     screen.blit(texto_rojo, texto_rojo.get_rect(center=casilla_roja_rect.center))
 
-    # --------- BOTÓN ATRÁS ---------
-    if rect_atras.collidepoint(mouse_pos):
-        screen.blit(pygame.transform.scale(boton_atras, (int(rect_atras.width * 1.1), int(rect_atras.height * 1.1))), rect_atras)
-    else:
-        screen.blit(boton_atras, rect_atras)
 
 
-def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
-    global selected_element_index
-    global casillas_rects
+def manejar_eventos(sliders, screen, bg_anim, volver_callback):
+    global selected_element_index, casillas_rects
     if 'casillas_rects' not in globals() or not casillas_rects:
         return
+
     mouse_pos = pygame.mouse.get_pos()
     mouse_click = pygame.mouse.get_pressed()[0]
 
@@ -322,40 +274,26 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
         if event.type == pygame.MOUSEMOTION:
             cambiar_a_raton()
 
-        # Verificar si ha hecho clic en alguna casilla
-        for i, rect in enumerate(casillas_rects):
-            if rect.collidepoint(mouse_pos):
-                selected_element_index = i
-                break
-
         if event.type == pygame.MOUSEBUTTONDOWN:
             cambiar_a_raton()
-            if rect_atras.collidepoint(mouse_pos):
-                guardar_volumenes(sliders)
-                return "ATRAS"
-
             for i, rect in enumerate(casillas_rects):
                 if rect.collidepoint(mouse_pos):
-                    selected_element_index = i  # Actualizar selección con clic
+                    selected_element_index = i
 
-                    if i == 2:
-                        fondo_paused = screen.copy()
+                    if i == 0:  # REANUDAR PARTIDA
+                        guardar_volumenes(sliders)
+                        return "ATRAS"
+                    elif i == 3:
                         from AprendeControles import pantalla_controles
                         guardar_volumenes(sliders)
                         pantalla_controles(screen, bg_anim)
-                        menu_pausa(screen, bg_anim, volver_callback)
-                        return
-                    elif i == 3:
-                        fondo_paused = screen.copy()
+                    elif i == 4:
                         from GuiaJuego import pantalla_guia
                         guardar_volumenes(sliders)
                         pantalla_guia(screen, bg_anim)
-                        menu_pausa(screen, bg_anim, volver_callback)
-                        return
-                    elif i == 4:
+                    elif i == 5:
                         guardar_volumenes(sliders)
                         confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
-                        return
 
         if event.type == pygame.KEYDOWN:
             cambiar_a_teclado()
@@ -363,143 +301,94 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                 guardar_volumenes(sliders)
                 return "ATRAS"
             elif event.key == pygame.K_DOWN:
-                selected_element_index = (selected_element_index + 1) % 4
+                selected_element_index = (selected_element_index + 1) % len(casillas_rects)
             elif event.key == pygame.K_UP:
-                selected_element_index = (selected_element_index - 1) % 4
-            elif selected_element_index == 0:
+                selected_element_index = (selected_element_index - 1) % len(casillas_rects)
+            elif selected_element_index == 1:
                 if event.key == pygame.K_RIGHT:
                     sliders[0].value = min(1.0, sliders[0].value + 0.01)
                 elif event.key == pygame.K_LEFT:
                     sliders[0].value = max(0.0, sliders[0].value - 0.01)
-            elif selected_element_index == 1:
+            elif selected_element_index == 2:
                 global indice_modo_actual
                 if event.key == pygame.K_RIGHT:
                     indice_modo_actual = (indice_modo_actual + 1) % len(opciones_modo_pantalla)
                 elif event.key == pygame.K_LEFT:
                     indice_modo_actual = (indice_modo_actual - 1) % len(opciones_modo_pantalla)
-
-
             elif event.key == pygame.K_RETURN:
-                if selected_element_index == 2:
-                    # Acción: ir a controles
+                if selected_element_index == 0:
+                    guardar_volumenes(sliders)
+                    return "ATRAS"
+                elif selected_element_index == 3:
                     from AprendeControles import pantalla_controles
                     guardar_volumenes(sliders)
                     pantalla_controles(screen, bg_anim)
-                    menu_pausa(screen, bg_anim, volver_callback)
-                    return
-                elif selected_element_index == 3:
-                    # Acción: ir a guía del juego
+                elif selected_element_index == 4:
                     from GuiaJuego import pantalla_guia
                     guardar_volumenes(sliders)
                     pantalla_guia(screen, bg_anim)
-                    menu_pausa(screen, bg_anim, volver_callback)
-                    return
-                elif selected_element_index == 4:
-                    # Acción: cerrar el juego
+                elif selected_element_index == 5:
                     guardar_volumenes(sliders)
                     confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
-                    return
-
-            # Confirmar con botón A
-            if event.type == pygame.JOYBUTTONDOWN:
-                last_input_method = "gamepad"
-                if event.button == 0:  # A
-                    if selected_element_index == 0:
-                        pass  # No hace falta confirmar el slider
-                    elif selected_element_index == 1:
-                        # No hace nada al pulsar A en PANTALLA MODO
-                        pass
-                    elif selected_element_index == 2:
-                        from AprendeControles import pantalla_controles
-                        pantalla_controles(screen, bg_anim)
-                        menu_pausa(screen, bg_anim, volver_callback)
-                    elif selected_element_index == 3:
-                        fondo_paused = screen.copy()
-                        from GuiaJuego import pantalla_guia
-                        pantalla_guia(screen, bg_anim)
-                        menu_pausa(screen, bg_anim, volver_callback)
-                    elif selected_element_index == 4:
-                        confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
-
-        if event.type == pygame.JOYBUTTONDOWN and event.button == 1:
-            guardar_volumenes(sliders)
-            return "ATRAS"
 
         if event.type == pygame.JOYBUTTONDOWN:
             last_input_method = "gamepad"
             if event.button == 0:
                 if selected_element_index == 0:
-                    pass
-                elif selected_element_index == 1:
-                    pass
-                elif selected_element_index == 2:
-                    fondo_paused = screen.copy()
                     guardar_volumenes(sliders)
-                    from AprendeControles import pantalla_controles
-                    pantalla_controles(screen, bg_anim)
-                    menu_pausa(screen, bg_anim, volver_callback)
+                    return "ATRAS"
                 elif selected_element_index == 3:
+                    from AprendeControles import pantalla_controles
                     guardar_volumenes(sliders)
-                    from GuiaJuego import pantalla_guia
-                    pantalla_guia(screen, bg_anim)
-                    menu_pausa(screen, bg_anim, volver_callback)
+                    pantalla_controles(screen, bg_anim)
                 elif selected_element_index == 4:
+                    from GuiaJuego import pantalla_guia
+                    guardar_volumenes(sliders)
+                    pantalla_guia(screen, bg_anim)
+                elif selected_element_index == 5:
                     guardar_volumenes(sliders)
                     confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
+            elif event.button == 1:
+                guardar_volumenes(sliders)
+                return "ATRAS"
 
-        if event.type == pygame.JOYDEVICEADDED:
-            nuevo_mando = pygame.joystick.Joystick(event.device_index)
-            nuevo_mando.init()
-
-    # --------------------------------------------
-    # Movimiento con HAT (cruceta del mando)
-    # --------------------------------------------
+    # Movimiento con HAT del mando
     joys = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
     if joys:
-        joy = joys[0]  # Tomamos el primer mando conectado
+        joy = joys[0]
         hat_x, hat_y = joy.get_hat(0)
 
         global tiempo_ultimo_movimiento
         current_time = pygame.time.get_ticks()
-        delay = 200  # milisegundos
+        delay = 200
 
         if current_time - tiempo_ultimo_movimiento > delay:
             last_input_method = "gamepad"
-
-            # Movimiento vertical para navegar por las casillas
-            if hat_y == -1:  # Abajo
+            if hat_y == -1:
                 selected_element_index = min(selected_element_index + 1, len(casillas_rects) - 1)
                 tiempo_ultimo_movimiento = current_time
-            elif hat_y == 1:  # Arriba
+            elif hat_y == 1:
                 selected_element_index = max(selected_element_index - 1, 0)
                 tiempo_ultimo_movimiento = current_time
-
-            # Movimiento horizontal para cambiar opciones o valores
             elif hat_x == -1:
-                if selected_element_index == 0:  # Slider
+                if selected_element_index == 1:
                     sliders[0].value = max(0.0, sliders[0].value - 0.01)
-                elif selected_element_index == 1:  # Pantalla modo
+                elif selected_element_index == 2:
                     indice_modo_actual = (indice_modo_actual - 1) % len(opciones_modo_pantalla)
                 tiempo_ultimo_movimiento = current_time
-
             elif hat_x == 1:
-                if selected_element_index == 0:  # Slider
+                if selected_element_index == 1:
                     sliders[0].value = min(1.0, sliders[0].value + 0.01)
-                elif selected_element_index == 1:  # Pantalla modo
+                elif selected_element_index == 2:
                     indice_modo_actual = (indice_modo_actual + 1) % len(opciones_modo_pantalla)
                 tiempo_ultimo_movimiento = current_time
 
-    # movimiento con joystic mando
     global last_joystick_move_time
     current_time = pygame.time.get_ticks()
-
     for i in range(pygame.joystick.get_count()):
         joystick = pygame.joystick.Joystick(i)
         joystick.init()
-
-        # Movimiento arriba/abajo
-        y_axis = joystick.get_axis(1)  # Eje vertical
-
+        y_axis = joystick.get_axis(1)
         if abs(y_axis) > 0.5 and current_time - last_joystick_move_time > JOYSTICK_COOLDOWN:
             if y_axis > 0.5:
                 selected_element_index = (selected_element_index + 1) % len(casillas_rects)
@@ -507,26 +396,23 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                 selected_element_index = (selected_element_index - 1) % len(casillas_rects)
             last_joystick_move_time = current_time
 
-        # Movimiento izquierda/derecha
         x_axis = joystick.get_axis(0)
         if abs(x_axis) > 0.5 and current_time - last_joystick_move_time > JOYSTICK_COOLDOWN:
-            if selected_element_index == 0:
+            if selected_element_index == 1:
                 if x_axis > 0.5:
                     sliders[0].value = min(1.0, sliders[0].value + 0.01)
                 elif x_axis < -0.5:
                     sliders[0].value = max(0.0, sliders[0].value - 0.01)
-            elif selected_element_index == 1:
+            elif selected_element_index == 2:
                 if x_axis > 0.5:
                     indice_modo_actual = (indice_modo_actual + 1) % len(opciones_modo_pantalla)
                 elif x_axis < -0.5:
                     indice_modo_actual = (indice_modo_actual - 1) % len(opciones_modo_pantalla)
             last_joystick_move_time = current_time
 
-    # Interacción con sliders por ratón
     for slider in sliders:
         slider.update(mouse_pos, mouse_click)
 
-    # Actualizar volumen
     for slider in sliders:
         if slider.tipo_volumen == "GENERAL":
             pygame.mixer.music.set_volume(slider.value)
@@ -572,7 +458,7 @@ def menu_pausa(screen, bg_anim, volver_callback=None):
     for mando in mandos:
         mando.init()
 
-    boton_atras, rect_atras, fondo_gris, rect_fondo_gris = inicializar_componentes_ui(screen)
+    fondo_gris, rect_fondo_gris = inicializar_componentes_ui(screen)
     sliders = crear_sliders(rect_fondo_gris)
 
     # FORZAMOS ESTADO INICIAL
@@ -581,11 +467,11 @@ def menu_pausa(screen, bg_anim, volver_callback=None):
     hover_casillas = [False, False, False, False]
 
     while True:
-        resultado = manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback)
+        resultado = manejar_eventos(sliders, screen, bg_anim, volver_callback)
         if resultado == "ATRAS":
             return
 
-        dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_atras, sliders,
+        dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, sliders,
                    flecha_izquierda_img, flecha_derecha_img)
         pygame.display.flip()
         clock.tick(60)

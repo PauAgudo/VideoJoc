@@ -32,8 +32,8 @@ import os
 class Audio:
     def __init__(self):
         self.volume = 1.0
-        self.slider_pos = (285, 96)
-        self.slider_size = (300, 10)
+        self.slider_pos = (350, 150)
+        self.slider_size = (280, 10)
         self.slider_values = [1.0]
 
         self.efectos = {}
