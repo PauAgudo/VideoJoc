@@ -346,12 +346,10 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                         from AprendeControles import pantalla_controles
                         guardar_volumenes(sliders)
                         pantalla_controles(screen, bg_anim)
-                        return
                     elif i == 3:
                         from GuiaJuego import pantalla_guia
                         guardar_volumenes(sliders)
                         pantalla_guia(screen, bg_anim)
-                        return
                     elif i == 4:
                         guardar_volumenes(sliders)
                         confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
@@ -386,13 +384,11 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                     from AprendeControles import pantalla_controles
                     guardar_volumenes(sliders)
                     pantalla_controles(screen, bg_anim)
-                    return
                 elif selected_element_index == 3:
                     # Acción: ir a guía del juego
                     from GuiaJuego import pantalla_guia
                     guardar_volumenes(sliders)
                     pantalla_guia(screen, bg_anim)
-                    return
                 elif selected_element_index == 4:
                     # Acción: cerrar el juego
                     guardar_volumenes(sliders)
