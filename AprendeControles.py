@@ -3,11 +3,13 @@ import sys
 
 def pantalla_controles(screen, bg_anim):
     """
-    Pantalla temporal para comprobar si se carga correctamente.
+    Muestra la pantalla de guía del juego y vuelve al menú de pausa al salir.
     """
-    pygame.font.init()
-    font = pygame.font.Font(None, 60)  # Fuente grande
     clock = pygame.time.Clock()
+    font = pygame.font.SysFont(None, 40)
+
+    texto = font.render("Aprende los controles", True, (255, 255, 255))
+    texto_rect = texto.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
 
     running = True
     while running:
@@ -15,18 +17,18 @@ def pantalla_controles(screen, bg_anim):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
+
             elif event.type == pygame.JOYBUTTONDOWN:
-                if event.button == 1:  # Botón B
+                if event.button == 1:  # Botón B del mando
                     running = False
 
-        screen.fill((0, 0, 0))  # Fondo negro
-
-        # Texto centrado
-        texto = font.render("PANTALLA DE CONTROLES", True, (255, 255, 255))
-        texto_rect = texto.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
+        # PINTAR FONDO GUARDADO (de la partida pausada)
+        screen.fill(bg_anim)
+        # PINTAR TEXTO
         screen.blit(texto, texto_rect)
 
         pygame.display.flip()

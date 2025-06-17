@@ -38,7 +38,7 @@ TOP_OFFSET = 80  # Espacio para el contador y el HUD
 TILE_SIZE = 40
 GRID_COLS = 21
 GRID_ROWS = 17
-WIDTH = GRID_COLS * TILE_SIZE
+WIDTH = GRID_COLS * TILE_SIZE  # Ancho total de la pantalla
 HEIGHT = GRID_ROWS * TILE_SIZE + TOP_OFFSET
 
 CURSES = {
@@ -2450,14 +2450,14 @@ while running:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             jugador_controlador_id = "teclado"
             jugador_nombre = "J1"  # Ajusta esto según cómo determines qué jugador es el de teclado
-            resultado = menu_pausa(screen, jugador_controlador_id, jugador_nombre)
+            resultado = menu_pausa(screen, jugador_controlador_id)
             if resultado == "Salir de la partida":
                 running = False  # o lo que uses para volver al menú
             elif resultado == "Ajustar volumen":
                 from PantallaAudio import pantalla_audio
 
                 pantalla_audio(screen, bg_anim=None,
-                               volver_callback=lambda: menu_pausa(screen, jugador_controlador_id, jugador_nombre))
+                               volver_callback=lambda: menu_pausa(screen, jugador_controlador_id))
             elif resultado == "Guía de juego":
                 from GuiaJuego import pantalla_guia_juego
 
@@ -2468,14 +2468,14 @@ while running:
             instance_id = event.instance_id
             jugador_controlador_id = instance_id
             jugador_nombre = "J1"  # Debes mapear correctamente el nombre según ese instance_id
-            resultado = menu_pausa(screen, jugador_controlador_id, jugador_nombre)
+            resultado = menu_pausa(screen, jugador_controlador_id)
             if resultado == "Salir de la partida":
                 running = False
             elif resultado == "Ajustar volumen":
                 from PantallaAudio import pantalla_audio
 
                 pantalla_audio(screen, bg_anim=None,
-                               volver_callback=lambda: menu_pausa(screen, jugador_controlador_id, jugador_nombre))
+                               volver_callback=lambda: menu_pausa(screen, jugador_controlador_id))
             elif resultado == "Guía de juego":
                 from GuiaJuego import pantalla_guia_juego
 
