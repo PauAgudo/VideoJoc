@@ -27,9 +27,11 @@ def pantalla_guia(screen, bg_anim):
                     running = False
 
         # PINTAR FONDO GUARDADO (de la partida pausada)
-        screen.fill(bg_anim)
+        screen.fill((0, 0, 0))
         # PINTAR TEXTO
         screen.blit(texto, texto_rect)
 
         pygame.display.flip()
         clock.tick(60)
+
+    return
