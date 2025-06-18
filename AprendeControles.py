@@ -1,7 +1,7 @@
 import pygame
 import sys
 
-def pantalla_controles(screen, bg_anim):
+def pantalla_controles(screen):
     """
     Muestra la pantalla de guía del juego y vuelve al menú de pausa al salir.
     """
@@ -27,7 +27,7 @@ def pantalla_controles(screen, bg_anim):
                     running = False
 
         # PINTAR FONDO GUARDADO (de la partida pausada)
-        screen.fill((0,0,0))
+        screen.fill((0, 0, 0))
         # PINTAR TEXTO
         screen.blit(texto, texto_rect)
 

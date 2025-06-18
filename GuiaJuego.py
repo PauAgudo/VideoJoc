@@ -1,7 +1,7 @@
 import pygame
 import sys
 
-def pantalla_guia(screen, bg_anim):
+def pantalla_guia(screen):
     """
     Muestra la pantalla de guía del juego y vuelve al menú de pausa al salir.
     """

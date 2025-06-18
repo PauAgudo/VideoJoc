@@ -1,5 +1,6 @@
 import pygame
 import sys
+import math
 from Config import audio
 
 
@@ -27,6 +28,8 @@ tiempo_ultimo_movimiento = 0  # Para controlar el tiempo entre movimientos de ma
 JOYSTICK_COOLDOWN = 200  # milisegundos
 last_joystick_move_time = 0 # tiempo del último movimiento del joystick
 
+def volumen_log(valor_slider):
+    return math.pow(valor_slider, 2)  # Aplicar una curva cuadrática para suavizar el volumen y tener una mejor respuesta
 
 class SliderRect:
     def __init__(self, x, y, width, height, initial=1.0, tipo_volumen="GENERAL"):
@@ -79,8 +82,8 @@ def inicializar_componentes_ui(screen):
 
 
 def crear_sliders(rect_fondo_gris):
-    base_x, base_y = audio.slider_pos
-    ancho_slider, alto_slider = audio.slider_size
+    base_x, base_y = audio.slider_pos2
+    ancho_slider, alto_slider = audio.slider_size2
     sliders = []
 
     slider = SliderRect(
@@ -362,9 +365,9 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                 volver_callback(screen, bg_anim)
                 return "ATRAS"
             elif event.key == pygame.K_DOWN:
-                selected_element_index = (selected_element_index + 1) % 4
+                selected_element_index = (selected_element_index + 1) % 5
             elif event.key == pygame.K_UP:
-                selected_element_index = (selected_element_index - 1) % 4
+                selected_element_index = (selected_element_index - 1) % 5
             elif selected_element_index == 0:
                 if event.key == pygame.K_RIGHT:
                     sliders[0].value = min(1.0, sliders[0].value + 0.01)
@@ -519,7 +522,7 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
     # Actualizar volumen
     for slider in sliders:
         if slider.tipo_volumen == "GENERAL":
-            pygame.mixer.music.set_volume(slider.value)
+            pygame.mixer.music.set_volume(volumen_log(slider.value))
             audio.volume = slider.value
             audio.volume_effects = slider.value
             for efecto in audio.efectos.values():
@@ -530,10 +533,11 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
 def guardar_volumenes(sliders):
     for slider in sliders:
         if slider.tipo_volumen == "GENERAL":
+            volumen_esc = volumen_log(slider.value)
             audio.volume = slider.value
             audio.volume_effects = slider.value
             for efecto in audio.efectos.values():
-                efecto.set_volume(slider.value)
+                efecto.set_volume(volumen_esc)
     audio.save()
 
 
