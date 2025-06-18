@@ -258,7 +258,7 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, sliders,
 
 
 
-def manejar_eventos(sliders, screen, bg_anim, volver_callback):
+def manejar_eventos(sliders, screen, bg_anim):
     global selected_element_index, casillas_rects
     if 'casillas_rects' not in globals() or not casillas_rects:
         return
@@ -286,11 +286,15 @@ def manejar_eventos(sliders, screen, bg_anim, volver_callback):
                     elif i == 3:
                         from AprendeControles import pantalla_controles
                         guardar_volumenes(sliders)
-                        pantalla_controles(screen, bg_anim)
+                        fondo_pausa = screen.copy()  # Guardar el fondo antes de cambiar de pantalla
+                        pantalla_controles(screen)
+                        screen.blit(fondo_pausa, (0, 0))  # Restaurar el fondo
                     elif i == 4:
                         from GuiaJuego import pantalla_guia
                         guardar_volumenes(sliders)
-                        pantalla_guia(screen, bg_anim)
+                        fondo_pausa = screen.copy()  # Guardar el fondo antes de cambiar de pantalla
+                        pantalla_guia(screen)
+                        screen.blit(fondo_pausa, (0, 0))  # Restaurar el fondo
                     elif i == 5:
                         guardar_volumenes(sliders)
                         confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
@@ -322,11 +326,15 @@ def manejar_eventos(sliders, screen, bg_anim, volver_callback):
                 elif selected_element_index == 3:
                     from AprendeControles import pantalla_controles
                     guardar_volumenes(sliders)
-                    pantalla_controles(screen, bg_anim)
+                    fondo_pausa = screen.copy()  # Guardar el fondo antes de cambiar de pantalla
+                    pantalla_controles(screen)
+                    screen.blit(fondo_pausa, (0, 0))  # Restaurar el fondo
                 elif selected_element_index == 4:
                     from GuiaJuego import pantalla_guia
                     guardar_volumenes(sliders)
-                    pantalla_guia(screen, bg_anim)
+                    fondo_pausa = screen.copy()  # Guardar el fondo antes de cambiar de pantalla
+                    pantalla_guia(screen)
+                    screen.blit(fondo_pausa, (0, 0))  # Restaurar el fondo
                 elif selected_element_index == 5:
                     guardar_volumenes(sliders)
                     confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
@@ -340,11 +348,15 @@ def manejar_eventos(sliders, screen, bg_anim, volver_callback):
                 elif selected_element_index == 3:
                     from AprendeControles import pantalla_controles
                     guardar_volumenes(sliders)
-                    pantalla_controles(screen, bg_anim)
+                    fondo_pausa = screen.copy()  # Guardar el fondo antes de cambiar de pantalla
+                    pantalla_controles(screen)
+                    screen.blit(fondo_pausa, (0, 0))  # Restaurar el fondo
                 elif selected_element_index == 4:
                     from GuiaJuego import pantalla_guia
                     guardar_volumenes(sliders)
-                    pantalla_guia(screen, bg_anim)
+                    fondo_pausa = screen.copy()  # Guardar el fondo antes de cambiar de pantalla
+                    pantalla_guia(screen)
+                    screen.blit(fondo_pausa, (0, 0))  # Restaurar el fondo
                 elif selected_element_index == 5:
                     guardar_volumenes(sliders)
                     confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
@@ -434,7 +446,7 @@ def guardar_volumenes(sliders):
 
 
 
-def menu_pausa(screen, bg_anim, volver_callback=None):
+def menu_pausa(screen, bg_anim, fondo_pausa):
     global selected_element_index, last_input_method, hover_casillas, ultimo_hover_index
     selected_element_index = 0
     last_input_method = "keyboard"
@@ -467,10 +479,11 @@ def menu_pausa(screen, bg_anim, volver_callback=None):
     hover_casillas = [False, False, False, False]
 
     while True:
-        resultado = manejar_eventos(sliders, screen, bg_anim, volver_callback)
+        resultado = manejar_eventos(sliders, screen, bg_anim)
         if resultado == "ATRAS":
             return
 
+        screen.blit(fondo_pausa, (0,0))
         dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, sliders,
                    flecha_izquierda_img, flecha_derecha_img)
         pygame.display.flip()
@@ -549,8 +562,8 @@ def confirmar_salida(screen, bg_anim, fondo_anterior):
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 last_input_method = "mouse"
                 if si_rect.collidepoint(mouse_pos):
-                    pygame.quit()
-                    sys.exit()
+                    from PantallaConfigPartida import pantalla2_main
+                    pantalla2_main(screen, bg_anim)
                 elif no_rect.collidepoint(mouse_pos):
                     return
 
@@ -562,8 +575,8 @@ def confirmar_salida(screen, bg_anim, fondo_anterior):
                     seleccion = 1
                 elif event.key == pygame.K_RETURN:
                     if seleccion == 0:
-                        pygame.quit()
-                        sys.exit()
+                        from PantallaConfigPartida import pantalla2_main
+                        pantalla2_main(screen, bg_anim)
                     else:
                         return
 
@@ -589,8 +602,8 @@ def confirmar_salida(screen, bg_anim, fondo_anterior):
                 last_input_method = "gamepad"
                 if event.button == 0:  # Botón A
                     if seleccion == 0:
-                        pygame.quit()
-                        sys.exit()
+                        from PantallaConfigPartida import pantalla2_main
+                        pantalla2_main(screen, bg_anim)
                     else:
                         return
 

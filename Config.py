@@ -32,8 +32,10 @@ import os
 class Audio:
     def __init__(self):
         self.volume = 1.0
-        self.slider_pos = (350, 150)
-        self.slider_size = (280, 10)
+        self.slider_pos = (350, 150) # POSICIÓN DEL SLIDER MENU PAUSA
+        self.slider_pos2 = (300, 97) # POSICIÓN DEL SLIDER MENU AJUSTES
+        self.slider_size = (280, 10) # TAMAÑO DEL SLIDER MENU PAUSA
+        self.slider_size2 = (280, 10) # TAMAÑO DEL SLIDER MENU AJUSTES
         self.slider_values = [1.0]
 
         self.efectos = {}
