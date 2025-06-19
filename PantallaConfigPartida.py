@@ -2,8 +2,12 @@ import pygame
 import sys
 from PantallaPrincipal import background_screen
 from PantallaMapas import pantalla_mapas
-from PantallaAudio import pantalla_audio
+from PantallaAudio import pantalla_audio, GRIS_CLARO
 from Config import config
+
+BLANCO = (255, 255, 255)
+GRIS_OSCURO = (50, 50, 50)
+ROJO = (255, 0, 0)
 
 class ConfiguracionPartida:
     def run(self, screen, bg_anim):
@@ -190,14 +194,14 @@ class ConfiguracionPartida:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         config.__init__()
-                        background_screen(screen)
+                        confirmar_salida(screen, bg_anim, fondo_anterior= screen.copy())
                     if event.key == pygame.K_RETURN:
                         ir_a_pantalla_mapas()
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if atras_rect.collidepoint(mouse_pos):
                         config.__init__()
-                        background_screen(screen)
+                        confirmar_salida(screen, bg_anim, fondo_anterior= screen.copy())
 
                     if siguiente_rect.collidepoint(mouse_pos):
                         ir_a_pantalla_mapas()
@@ -270,9 +274,9 @@ class ConfiguracionPartida:
                     if event.button == 0:  # Botón A → siguiente pantalla
                         ir_a_pantalla_mapas()
 
-                    elif event.button == 1:  # Botón B → volver atrás
+                    elif event.button == 1:  # Botón B → confirmar salida
                         config.__init__()
-                        background_screen(screen)
+                        confirmar_salida(screen, bg_anim, fondo_anterior= screen.copy())
 
                     elif event.button == 7:  # Botón OPTIONS/Start → ajustes
                         pantalla_audio(screen, bg_anim, volver_callback=pantalla2_main)
@@ -380,3 +384,144 @@ class ConfiguracionPartida:
 
 def pantalla2_main(screen, bg_anim):
     ConfiguracionPartida().run(screen, bg_anim)
+
+def confirmar_salida(screen, bg_anim, fondo_anterior):
+    global last_input_method
+    clock = pygame.time.Clock()
+    seleccion = 0  # 0 = SI, 1 = NO
+    font = pygame.font.SysFont(None, 30)
+    running = True
+
+    while running:
+        mouse_pos = pygame.mouse.get_pos()
+
+        # Restaurar el fondo anterior
+        screen.blit(fondo_anterior, (0, 0))
+
+        # Capa translúcida suave
+        overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 40))  # Muy tenue
+        screen.blit(overlay, (0, 0))
+
+        # Cuadro central
+        ancho_ventana, alto_ventana = 400, 200
+        ventana_rect = pygame.Rect(
+            (screen.get_width() - ancho_ventana) // 2,
+            (screen.get_height() - alto_ventana) // 2,
+            ancho_ventana,
+            alto_ventana
+        )
+
+        pygame.draw.rect(screen, (50, 50, 50), ventana_rect, border_radius=12)
+        pygame.draw.rect(screen, BLANCO, ventana_rect, width=3, border_radius=12)
+
+        texto = font.render("¿Desea salir del juego?", True, BLANCO)
+        texto_rect = texto.get_rect(center=(ventana_rect.centerx, ventana_rect.top + 50))
+        screen.blit(texto, texto_rect)
+
+        # Botones SI y NO
+        boton_ancho = 100
+        boton_alto = 40
+        espacio = 50
+
+        si_rect = pygame.Rect(
+            ventana_rect.centerx - boton_ancho - espacio // 2,
+            ventana_rect.centery + 30,
+            boton_ancho,
+            boton_alto
+        )
+        no_rect = pygame.Rect(
+            ventana_rect.centerx + espacio // 2,
+            ventana_rect.centery + 30,
+            boton_ancho,
+            boton_alto
+        )
+
+        # Hover con ratón
+        hover_si = si_rect.collidepoint(mouse_pos)
+        hover_no = no_rect.collidepoint(mouse_pos)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            elif event.type == pygame.MOUSEMOTION:
+                last_input_method = "mouse"
+                if hover_si:
+                    seleccion = 0
+                elif hover_no:
+                    seleccion = 1
+
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                last_input_method = "mouse"
+                if si_rect.collidepoint(mouse_pos):
+                    pygame.quit()
+                    sys.exit()
+                elif no_rect.collidepoint(mouse_pos):
+                    return
+
+            elif event.type == pygame.KEYDOWN:
+                last_input_method = "keyboard"
+                if event.key in [pygame.K_LEFT, pygame.K_a]:
+                    seleccion = 0
+                elif event.key in [pygame.K_RIGHT, pygame.K_d]:
+                    seleccion = 1
+                elif event.key == pygame.K_RETURN:
+                    if seleccion == 0:
+                        pygame.quit()
+                        sys.exit()
+                    else:
+                        return
+
+            elif event.type == pygame.JOYHATMOTION:
+                last_input_method = "gamepad"
+                hat_x, hat_y = event.value
+                if hat_x < 0:
+                    seleccion = 0
+                elif hat_x > 0:
+                    seleccion = 1
+
+            elif event.type == pygame.JOYAXISMOTION:
+                last_input_method = "gamepad"
+                axis_x = event.axis
+                axis_value = event.value
+                if axis_x == 0:
+                    if axis_value < -0.5:
+                        seleccion = 0
+                    elif axis_value > 0.5:
+                        seleccion = 1
+
+            elif event.type == pygame.JOYBUTTONDOWN:
+                last_input_method = "gamepad"
+                if event.button == 0:  # Botón A
+                    if seleccion == 0:
+                        pygame.quit()
+                        sys.exit()
+                    else:
+                        return
+
+        # Pintar botones con hover y selección
+        for i, rect in enumerate([si_rect, no_rect]):
+            if i == 0:
+                hover = hover_si
+                texto_btn = "SI"
+            else:
+                hover = hover_no
+                texto_btn = "NO"
+
+            if seleccion == i:
+                color_fondo = (220, 255, 220)  # mismo color para teclado o ratón
+            else:
+                color_fondo = GRIS_OSCURO
+
+            pygame.draw.rect(screen, color_fondo, rect, border_radius=6)
+            pygame.draw.rect(screen, BLANCO, rect, width=2, border_radius=6)
+
+            label = font.render(texto_btn, True, ROJO)
+            label_rect = label.get_rect(center=rect.center)
+            screen.blit(label, label_rect)
+
+        pygame.display.flip()
+        clock.tick(60)
+
