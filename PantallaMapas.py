@@ -147,6 +147,22 @@ def pantalla_mapas(screen, bg_anim):
                     from PantallaAudio import pantalla_audio
                     pantalla_audio(screen, bg_anim, volver_callback=pantalla_mapas)
 
+                # CLIC SOBRE MAPA
+                for idx, (mini, big, rect, name_surf) in enumerate(mapas):
+                    if rect.collidepoint(mouse_pos):
+                        if idx == selected_index and current_time - last_click_time <= double_click_delay:
+                            # Doble clic sobre el mapa ya seleccionado → avanzar pantalla
+                            from PantallaPersonajes import pantalla_personajes
+                            pantalla_personajes(screen, bg_anim)
+                            return
+                        else:
+                            # Selección normal de mapa
+                            selected_index = idx
+                            config.selected_map = idx + 1
+                            last_click_time = current_time
+                        break  # Salimos del bucle después de encontrar un mapa
+
+
             elif event.type == pygame.JOYBUTTONDOWN:
                 if event.button == 0:  # A → següent pantalla
                     from PantallaPersonajes import pantalla_personajes
@@ -164,20 +180,6 @@ def pantalla_mapas(screen, bg_anim):
 
 
 
-                # CLIC SOBRE MAPA
-                for idx, (mini, big, rect, name_surf) in enumerate(mapas):
-                    if rect.collidepoint(mouse_pos):
-                        if idx == selected_index and current_time - last_click_time <= double_click_delay:
-                            # Doble clic sobre el mapa ya seleccionado → avanzar pantalla
-                            from PantallaPersonajes import pantalla_personajes
-                            pantalla_personajes(screen, bg_anim)
-                            return
-                        else:
-                            # Selección normal de mapa
-                            selected_index = idx
-                            config.selected_map = idx + 1
-                            last_click_time = current_time
-                        break  # Salimos del bucle después de encontrar un mapa
 
         # Dibujar fondo y marco
         bg_anim.update()

@@ -2829,7 +2829,6 @@ while running:
         if ghost_sound_channel.get_busy():
             ghost_sound_channel.stop()
 
-
     elapsed = time.time() - start_time
     remaining_time = TOTAL_TIME - elapsed
     if remaining_time < 0:

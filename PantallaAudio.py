@@ -71,7 +71,7 @@ def inicializar_componentes_ui(screen):
     except pygame.error:
         print("Error al cargar la imagen: siguiente.png")
         sys.exit(1)
-    rect_atras = boton_atras_rotate.get_rect(topleft=(25, 25))
+    rect_atras = boton_atras_rotate.get_rect(bottomleft=(30, screen.get_height() - 25))
 
     ancho = 750
     alto = 450
@@ -348,11 +348,11 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                     if i == 2:
                         from AprendeControles import pantalla_controles
                         guardar_volumenes(sliders)
-                        pantalla_controles(screen, bg_anim)
+                        pantalla_controles(screen)
                     elif i == 3:
                         from GuiaJuego import pantalla_guia
                         guardar_volumenes(sliders)
-                        pantalla_guia(screen, bg_anim)
+                        pantalla_guia(screen)
                     elif i == 4:
                         guardar_volumenes(sliders)
                         confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
@@ -386,12 +386,12 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                     # Acción: ir a controles
                     from AprendeControles import pantalla_controles
                     guardar_volumenes(sliders)
-                    pantalla_controles(screen, bg_anim)
+                    pantalla_controles(screen)
                 elif selected_element_index == 3:
                     # Acción: ir a guía del juego
                     from GuiaJuego import pantalla_guia
                     guardar_volumenes(sliders)
-                    pantalla_guia(screen, bg_anim)
+                    pantalla_guia(screen)
                 elif selected_element_index == 4:
                     # Acción: cerrar el juego
                     guardar_volumenes(sliders)
@@ -409,10 +409,10 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                         pass
                     elif selected_element_index == 2:
                         from AprendeControles import pantalla_controles
-                        pantalla_controles(screen, bg_anim)
+                        pantalla_controles(screen)
                     elif selected_element_index == 3:
                         from GuiaJuego import pantalla_guia
-                        pantalla_guia(screen, bg_anim)
+                        pantalla_guia(screen)
                     elif selected_element_index == 4:
                         confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
 
@@ -431,11 +431,11 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                 elif selected_element_index == 2:
                     guardar_volumenes(sliders)
                     from AprendeControles import pantalla_controles
-                    pantalla_controles(screen, bg_anim)
+                    pantalla_controles(screen)
                 elif selected_element_index == 3:
                     guardar_volumenes(sliders)
                     from GuiaJuego import pantalla_guia
-                    pantalla_guia(screen, bg_anim)
+                    pantalla_guia(screen)
                 elif selected_element_index == 4:
                     guardar_volumenes(sliders)
                     confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
