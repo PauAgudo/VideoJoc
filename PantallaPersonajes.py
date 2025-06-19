@@ -141,6 +141,10 @@ def pantalla_personajes(screen, bg_anim):
 
     mostrar_mensaje_j1 = False
 
+    THRESHOLD = 0.6
+    DEADZONE = 0.3
+    joystick_ready = {}
+
     running = True
     while running:
         mouse_pos = pygame.mouse.get_pos()
@@ -306,6 +310,22 @@ def pantalla_personajes(screen, bg_anim):
                         jugador["indice"] = (jugador.get("indice", 0) - 1) % len(personajes_disponibles)
                     elif x == 1:
                         jugador["indice"] = (jugador.get("indice", 0) + 1) % len(personajes_disponibles)
+
+            if event.type == pygame.JOYAXISMOTION:
+                if event.axis == 0:  # Eje horizontal del joystick izquierdo
+                    joy_id = getattr(event, "instance_id", event.joy)
+                    jugador = gestor_jugadores.get_jugador_por_joy(joy_id)
+
+                    if jugador and not temporizador_listos.get(joy_id):
+                        # Solo ejecutar si el jugador no está marcado como listo
+                        if abs(event.value) > THRESHOLD and joystick_ready.get(joy_id, True):
+                            if event.value > 0:
+                                jugador["indice"] = (jugador.get("indice", 0) + 1) % len(personajes_disponibles)
+                            else:
+                                jugador["indice"] = (jugador.get("indice", 0) - 1) % len(personajes_disponibles)
+                            joystick_ready[joy_id] = False
+                        elif abs(event.value) < DEADZONE:
+                            joystick_ready[joy_id] = True  # Rearme
 
             if event.type == pygame.JOYDEVICEREMOVED:
                 joy_id = event.instance_id
