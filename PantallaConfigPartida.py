@@ -1,5 +1,7 @@
 import pygame
 import sys
+
+from ConfiguraciónMandos import gestor_jugadores
 from PantallaPrincipal import background_screen
 from PantallaMapas import pantalla_mapas
 from PantallaAudio import pantalla_audio, GRIS_CLARO
@@ -9,8 +11,9 @@ BLANCO = (255, 255, 255)
 GRIS_OSCURO = (50, 50, 50)
 ROJO = (255, 0, 0)
 
+
 class ConfiguracionPartida:
-    def run(self, screen, bg_anim):
+    def run(self, screen, bg_anim, jugador_controlador_id):
         clock = pygame.time.Clock()
         pygame.display.set_caption("Configuración de Partida")
 
@@ -33,6 +36,15 @@ class ConfiguracionPartida:
         siguiente_rect = siguiente.get_rect(bottomright=(screen.get_width() - 25, screen.get_height() - 25))
         audio = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/settings.png"), (50, 40))
         audio_rect = audio.get_rect(topleft=(25, 25))
+
+        # ACLARACIÓN VISUAL
+        # Cargar imágenes (esto al inicio del archivo o en __init__)
+        imagen_boton_b = pygame.image.load("Media/Menu/Botones/boton_B.jpg").convert_alpha()
+        imagen_tecla_escape = pygame.image.load("Media/Menu/Botones/escape.jpg").convert_alpha()
+
+        # Redimensionar si es necesario
+        imagen_boton_b = pygame.transform.scale(imagen_boton_b, (40, 40))
+        imagen_tecla_escape = pygame.transform.scale(imagen_tecla_escape, (40, 40))
 
         # Tiras
         tira_activa_idx = 0  # Índice de la tira activa
@@ -70,8 +82,10 @@ class ConfiguracionPartida:
         botones = {k: {"imagen": tiras[k], "rect": tiras[k].get_rect(topleft=posiciones[k])} for k in keys}
 
         # Flechas
-        izquierda = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_configuracion_partida/izquierda.png"), (30, 30))
-        derecha = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_configuracion_partida/derecha.png"), (30, 30))
+        izquierda = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_configuracion_partida/izquierda.png"),
+                                           (30, 30))
+        derecha = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_configuracion_partida/derecha.png"),
+                                         (30, 30))
         flechas_pos = {k: {"izquierda": (520, posiciones[k][1]), "derecha": (680, posiciones[k][1])} for k in keys}
 
         font = pygame.font.SysFont(None, 23)
@@ -95,6 +109,9 @@ class ConfiguracionPartida:
         mando_delay = 200  # ms
         last_input_time = pygame.time.get_ticks()
 
+        # === CAMBIO 1: Inicializar variable de estado ===
+        last_input_type = "teclado"  # Por defecto empezamos con teclado
+
         running = True
         while running:
             mouse_pos = pygame.mouse.get_pos()
@@ -103,6 +120,12 @@ class ConfiguracionPartida:
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+
+                # === CAMBIO 2: Actualizar la variable de estado con cada evento ===
+                if event.type in [pygame.JOYAXISMOTION, pygame.JOYHATMOTION, pygame.JOYBUTTONDOWN]:
+                    last_input_type = "mando"
+                elif event.type in [pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN]:
+                    last_input_type = "teclado"
 
                 # Entrada por joystick o cruceta
                 tiempo_actual = pygame.time.get_ticks()
@@ -113,13 +136,16 @@ class ConfiguracionPartida:
                     eje_x = joystick.get_axis(0)
 
                     if eje_y < -0.5:  # Joystick arriba
+                        last_input_type = "mando"
                         tira_activa_idx = (tira_activa_idx - 1) % len(keys)
                         last_input_time = tiempo_actual
                     elif eje_y > 0.5:  # Joystick abajo
+                        last_input_type = "mando"
                         tira_activa_idx = (tira_activa_idx + 1) % len(keys)
                         last_input_time = tiempo_actual
 
                     elif eje_x < -0.5:  # Joystick izquierda
+                        last_input_type = "mando"
                         key = keys[tira_activa_idx]
                         if key == "sets" and current_set_index > 0:
                             current_set_index -= 1
@@ -134,6 +160,7 @@ class ConfiguracionPartida:
                         last_input_time = tiempo_actual
 
                     elif eje_x > 0.5:  # Joystick derecha
+                        last_input_type = "mando"
                         key = keys[tira_activa_idx]
                         if key == "sets" and current_set_index < len(config.set_options) - 1:
                             current_set_index += 1
@@ -190,22 +217,23 @@ class ConfiguracionPartida:
                                     current_ultimas_index[key] += 1
                                 last_input_time = tiempo_actual
 
-
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         config.__init__()
-                        confirmar_salida(screen, bg_anim, fondo_anterior= screen.copy())
+                        confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
                     if event.key == pygame.K_RETURN:
                         ir_a_pantalla_mapas()
+
+                    if event.key == pygame.K_s:
+                        pantalla_audio(screen, bg_anim, volver_callback=pantalla2_main)
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if atras_rect.collidepoint(mouse_pos):
                         config.__init__()
-                        confirmar_salida(screen, bg_anim, fondo_anterior= screen.copy())
+                        confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
 
                     if siguiente_rect.collidepoint(mouse_pos):
                         ir_a_pantalla_mapas()
-
 
                     if audio_rect.collidepoint(mouse_pos):
                         pantalla_audio(screen, bg_anim, volver_callback=pantalla2_main)
@@ -234,7 +262,8 @@ class ConfiguracionPartida:
                                     current_level_index += 1
                                 elif key == "pos_inicial" and current_position_index < len(config.position_options) - 1:
                                     current_position_index += 1
-                                elif key in current_ultimas_index and current_ultimas_index[key] < len(config.ultimas_opciones) - 1:
+                                elif key in current_ultimas_index and current_ultimas_index[key] < len(
+                                        config.ultimas_opciones) - 1:
                                     current_ultimas_index[key] += 1
 
                 elif event.type == pygame.KEYDOWN:
@@ -276,7 +305,7 @@ class ConfiguracionPartida:
 
                     elif event.button == 1:  # Botón B → confirmar salida
                         config.__init__()
-                        confirmar_salida(screen, bg_anim, fondo_anterior= screen.copy())
+                        confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
 
                     elif event.button == 7:  # Botón OPTIONS/Start → ajustes
                         pantalla_audio(screen, bg_anim, volver_callback=pantalla2_main)
@@ -318,10 +347,13 @@ class ConfiguracionPartida:
                 # Mostrar valor actual
                 if key == "sets":
                     v = config.set_options[current_set_index]
-                    screen.blit(pygame.transform.scale(pygame.image.load(f"Media/Menu/Pantalla_configuracion_partida/{v}.png"), (30, 30)),
-                                (600 - (shift_amount if hov else 0), posiciones[key][1]))
+                    screen.blit(
+                        pygame.transform.scale(pygame.image.load(f"Media/Menu/Pantalla_configuracion_partida/{v}.png"),
+                                               (30, 30)),
+                        (600 - (shift_amount if hov else 0), posiciones[key][1]))
                 if key == "minutos":
-                    screen.blit(pygame.transform.scale(pygame.image.load(f"Media/Menu/Pantalla_configuracion_partida/{current_minute}.png"), (30, 30)),
+                    screen.blit(pygame.transform.scale(
+                        pygame.image.load(f"Media/Menu/Pantalla_configuracion_partida/{current_minute}.png"), (30, 30)),
                                 (600 - (shift_amount if hov else 0), posiciones[key][1]))
                 if key == "nivel_COM":
                     txt = config.level_options[current_level_index]
@@ -354,13 +386,15 @@ class ConfiguracionPartida:
                     left_rect = izquierda.get_rect(topleft=left_pos)
                     right_rect = derecha.get_rect(topleft=right_pos)
                     if left_rect.collidepoint(mouse_pos):
-                        iz_hover = pygame.transform.scale(izquierda, (int(left_rect.width * 1.1), int(left_rect.height * 1.1)))
+                        iz_hover = pygame.transform.scale(izquierda,
+                                                          (int(left_rect.width * 1.1), int(left_rect.height * 1.1)))
                         iz_rect_h = iz_hover.get_rect(center=left_rect.center)
                         screen.blit(iz_hover, iz_rect_h)
                     else:
                         screen.blit(izquierda, left_rect)
                     if right_rect.collidepoint(mouse_pos):
-                        dr_hover = pygame.transform.scale(derecha, (int(right_rect.width * 1.1), int(right_rect.height * 1.1)))
+                        dr_hover = pygame.transform.scale(derecha,
+                                                          (int(right_rect.width * 1.1), int(right_rect.height * 1.1)))
                         dr_rect_h = dr_hover.get_rect(center=right_rect.center)
                         screen.blit(dr_hover, dr_rect_h)
                     else:
@@ -373,6 +407,17 @@ class ConfiguracionPartida:
                 else:
                     screen.blit(img, rc)
 
+            # === CAMBIO 3: Lógica de imagen simplificada ===
+            # Ahora la imagen depende del último tipo de input, no de un parámetro fijo
+            if last_input_type == "mando":
+                imagen = imagen_boton_b
+            else:
+                imagen = imagen_tecla_escape
+
+            pos_x = atras_rect.right + 10
+            pos_y = atras_rect.centery - imagen.get_height() // 2
+            screen.blit(imagen, (pos_x, pos_y))
+
             # Título
             font2 = pygame.font.Font(None, 36)
             title_surf = font2.render("CONFIGURACIÓN DE PARTIDA", True, (255, 255, 255))
@@ -382,8 +427,10 @@ class ConfiguracionPartida:
             pygame.display.flip()
             clock.tick(60)
 
+
 def pantalla2_main(screen, bg_anim):
-    ConfiguracionPartida().run(screen, bg_anim)
+    ConfiguracionPartida().run(screen, bg_anim, jugador_controlador_id="teclado")
+
 
 def confirmar_salida(screen, bg_anim, fondo_anterior):
     global last_input_method
@@ -524,4 +571,3 @@ def confirmar_salida(screen, bg_anim, fondo_anterior):
 
         pygame.display.flip()
         clock.tick(60)
-
