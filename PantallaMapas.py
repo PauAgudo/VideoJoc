@@ -38,6 +38,23 @@ def pantalla_mapas(screen, bg_anim):
     marco = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_mapas/Mapselect.png"), (750, 450))
     marco_rect = marco.get_rect(midright=(screen.get_width(), screen.get_height() // 2))
 
+    # ACLARACIÓN VISUAL
+    # Cargar imágenes (esto al inicio del archivo o en __init__)
+    imagen_boton_b = pygame.image.load("Media/Menu/Botones/boton_B.png").convert_alpha()
+    imagen_tecla_escape = pygame.image.load("Media/Menu/Botones/escape.png").convert_alpha()
+    imagen_boton_options = pygame.image.load("Media/Menu/Botones/options.png").convert_alpha()
+    imagen_boton_a = pygame.image.load("Media/Menu/Botones/boton_A.png").convert_alpha()
+    imagen_tecla_s = pygame.image.load("Media/Menu/Botones/tecla_s.png").convert_alpha()
+    imagen_tecla_enter = pygame.image.load("Media/Menu/Botones/enter.png").convert_alpha()
+
+    # Redimensionar si es necesario
+    imagen_boton_b = pygame.transform.scale(imagen_boton_b, (40, 40))
+    imagen_boton_a = pygame.transform.scale(imagen_boton_a, (40, 40))
+    imagen_boton_options = pygame.transform.scale(imagen_boton_options, (40, 40))
+    imagen_tecla_escape = pygame.transform.scale(imagen_tecla_escape, (40, 40))
+    imagen_tecla_s = pygame.transform.scale(imagen_tecla_s, (40, 40))
+    imagen_tecla_enter = pygame.transform.scale(imagen_tecla_enter, (50, 40))
+
     # Nombres de los mapas
     map_names = ["CLASSIC VINTAGE", "SOBEK OASIS", "GREEN VALLEY"]
     font = pygame.font.Font(None, 26)
@@ -72,6 +89,8 @@ def pantalla_mapas(screen, bg_anim):
     THRESHOLD = 0.6  # Cuándo actúa el eje
     DEADZONE = 0.3  # Cuándo se rearma
 
+    last_input_type = "teclado"  # Último tipo de input usado
+
     running = True
     while running:
         mouse_pos = pygame.mouse.get_pos()
@@ -81,6 +100,12 @@ def pantalla_mapas(screen, bg_anim):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+
+            # --------- DETECCIÓN DE TIPO DE INPUT ------------
+            if event.type in [pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.MOUSEMOTION]:
+                last_input_type = "teclado"
+            elif event.type in [pygame.JOYBUTTONDOWN, pygame.JOYAXISMOTION, pygame.JOYHATMOTION]:
+                last_input_type = "mando"
 
             if event.type == pygame.JOYDEVICEADDED:
                 nuevo = pygame.joystick.Joystick(event.device_index)
@@ -209,6 +234,35 @@ def pantalla_mapas(screen, bg_anim):
                 screen.blit(pygame.transform.scale(img, (int(rc.width * 1.1), int(rc.height * 1.1))), rc)
             else:
                 screen.blit(img, rc)
+
+        # Lógica de imagen simplificada
+        # Ahora la imagen depende del último tipo de input, no de un parámetro fijo
+        if last_input_type == "mando":
+            imagen = imagen_boton_b
+        else:
+            imagen = imagen_tecla_escape
+
+        pos_x = atras_rect.right + 10
+        pos_y = atras_rect.centery - imagen.get_height() // 2
+        screen.blit(imagen, (pos_x, pos_y))
+
+        if last_input_type == "mando":
+            imagen = imagen_boton_a
+        else:
+            imagen = imagen_tecla_enter
+
+        pos_x = siguiente_rect.left - imagen.get_width() - 10
+        pos_y = siguiente_rect.centery - imagen.get_height() // 2
+        screen.blit(imagen, (pos_x, pos_y))
+
+        if last_input_type == "mando":
+            imagen = imagen_boton_options
+        else:
+            imagen = imagen_tecla_s
+
+        pos_x = audio_rect.right + 10
+        pos_y = audio_rect.centery - imagen.get_height() // 2
+        screen.blit(imagen, (pos_x, pos_y))
 
         # Mostrar título
         font = pygame.font.Font(None, 21)

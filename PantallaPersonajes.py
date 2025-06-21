@@ -2,8 +2,9 @@ import pygame
 import sys
 import math
 from ConfiguraciónMandos import gestor_jugadores  # INSTANCIA DETECCION TECLADO Y MANDO
+
 pygame.init()
-# AÑADE ESTA LÍNEA ANTES DE CARGAR mixer.Sound
+
 if not pygame.mixer.get_init():
     pygame.mixer.init()
 # Añadir justo tras los imports
@@ -110,6 +111,24 @@ def pantalla_personajes(screen, bg_anim):
     audio = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/settings.png"), (50, 40))
     audio_rect = audio.get_rect(topleft=(25, 25))
 
+    # ACLARACIÓN VISUAL
+    # Cargar imágenes (esto al inicio del archivo o en __init__)
+    imagen_boton_b = pygame.image.load("Media/Menu/Botones/boton_B.png").convert_alpha()
+    imagen_tecla_escape = pygame.image.load("Media/Menu/Botones/escape.png").convert_alpha()
+    imagen_boton_options = pygame.image.load("Media/Menu/Botones/options.png").convert_alpha()
+    imagen_boton_a = pygame.image.load("Media/Menu/Botones/boton_A.png").convert_alpha()
+    imagen_tecla_s = pygame.image.load("Media/Menu/Botones/tecla_s.png").convert_alpha()
+    imagen_tecla_enter = pygame.image.load("Media/Menu/Botones/enter.png").convert_alpha()
+
+    # Redimensionar si es necesario
+    imagen_boton_b = pygame.transform.scale(imagen_boton_b, (40, 40))
+    imagen_boton_a = pygame.transform.scale(imagen_boton_a, (40, 40))
+    imagen_boton_options = pygame.transform.scale(imagen_boton_options, (40, 40))
+    imagen_tecla_escape = pygame.transform.scale(imagen_tecla_escape, (40, 40))
+    imagen_tecla_s = pygame.transform.scale(imagen_tecla_s, (40, 40))
+    imagen_tecla_enter = pygame.transform.scale(imagen_tecla_enter, (50, 40))
+
+    # FONDO
     fondo = pygame.transform.scale(pygame.image.load("Media/Menu/fondobasico.png").convert_alpha(), (750, 450))
     fondo_rect = fondo.get_rect(midright=(screen.get_width(), screen.get_height() // 2))
 
@@ -145,6 +164,8 @@ def pantalla_personajes(screen, bg_anim):
     DEADZONE = 0.3
     joystick_ready = {}
 
+    last_input_type = "teclado"
+
     running = True
     while running:
         mouse_pos = pygame.mouse.get_pos()
@@ -152,6 +173,12 @@ def pantalla_personajes(screen, bg_anim):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit(); sys.exit()
+
+            # --------- DETECCIÓN DE TIPO DE INPUT ------------
+            if event.type in [pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.MOUSEMOTION]:
+                last_input_type = "teclado"
+            elif event.type in [pygame.JOYBUTTONDOWN, pygame.JOYAXISMOTION, pygame.JOYHATMOTION]:
+                last_input_type = "mando"
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if atras_rect.collidepoint(mouse_pos):
@@ -368,6 +395,35 @@ def pantalla_personajes(screen, bg_anim):
                 screen.blit(hover, rect_hover)
             else:
                 screen.blit(img, rect)
+
+        # Lógica de imagen simplificada
+        # Ahora la imagen depende del último tipo de input, no de un parámetro fijo
+        if last_input_type == "mando":
+            imagen = imagen_boton_b
+        else:
+            imagen = imagen_tecla_escape
+
+        pos_x = atras_rect.right + 10
+        pos_y = atras_rect.centery - imagen.get_height() // 2
+        screen.blit(imagen, (pos_x, pos_y))
+
+        if last_input_type == "mando":
+            imagen = imagen_boton_a
+        else:
+            imagen = imagen_tecla_enter
+
+        pos_x = siguiente_rect.left - imagen.get_width() - 10
+        pos_y = siguiente_rect.centery - imagen.get_height() // 2
+        screen.blit(imagen, (pos_x, pos_y))
+
+        if last_input_type == "mando":
+            imagen = imagen_boton_options
+        else:
+            imagen = imagen_tecla_s
+
+        pos_x = audio_rect.right + 10
+        pos_y = audio_rect.centery - imagen.get_height() // 2
+        screen.blit(imagen, (pos_x, pos_y))
 
         font2 = pygame.font.Font(None, 36)
         title_surf = font2.render("PERSONAJES Y JUGADORES", True, (255, 255, 255))
