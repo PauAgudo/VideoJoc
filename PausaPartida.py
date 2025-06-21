@@ -1,7 +1,7 @@
 import pygame
 import sys
 from Config import audio
-
+from PantallaPrincipal import background_screen
 
 # Constantes para los colores
 AZUL = (0, 0, 255)
@@ -129,8 +129,8 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, sliders,
 
     slider_bg_rect = pygame.Rect(
         rect_fondo_gris.centerx - 265,
-        casilla_reanudar_rect.bottom + 20,
-        ancho_slider + 250, 35  # tamaño ajustable
+        casilla_reanudar_rect.bottom + 40,
+        ancho_slider + 250, 40  # tamaño ajustable
     )
 
     slider.rect.width = ancho_slider
@@ -138,7 +138,7 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, sliders,
     slider.rect.center = (slider_bg_rect.centerx + 65, slider_bg_rect.centery)  # 30px a la derecha DENTRO de la casilla
 
     # Casilla modo pantalla
-    casilla_modo_rect = pygame.Rect(slider_bg_rect.left, slider_bg_rect.bottom + 30, slider_bg_rect.width, 35)
+    casilla_modo_rect = pygame.Rect(slider_bg_rect.left, slider_bg_rect.bottom + 40, slider_bg_rect.width, 40)
 
     # Casillas aprende/guia/salir
     casilla_ancho = 250
@@ -204,7 +204,7 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, sliders,
 
     etiqueta_surf = etiqueta_font.render("VOLUMEN DEL JUEGO", True, BLANCO)
     etiqueta_bg_rect = pygame.Rect(
-        slider_bg_rect.left + 15, slider_bg_rect.top + 8,
+        slider_bg_rect.left + 15, slider_bg_rect.top + 12,
         etiqueta_surf.get_width() + 10, etiqueta_surf.get_height() + 4
     )
     pygame.draw.rect(screen, GRIS_OSCURO, etiqueta_bg_rect, border_radius=6)
@@ -221,7 +221,7 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, sliders,
     # Casilla modo pantalla
     etiqueta_modo_surf = etiqueta_font.render("PANTALLA MODO", True, BLANCO)
     etiqueta_modo_bg = pygame.Rect(
-        casilla_modo_rect.left + 15, casilla_modo_rect.top + 8,
+        casilla_modo_rect.left + 15, casilla_modo_rect.top + 12,
         etiqueta_modo_surf.get_width() + 10, etiqueta_modo_surf.get_height() + 4
     )
     pygame.draw.rect(screen, GRIS_OSCURO, etiqueta_modo_bg, border_radius=6)
@@ -244,8 +244,33 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, sliders,
     rect_flecha_izq.center = (x_flecha_izq, centro_y)
     rect_flecha_der.center = (x_flecha_der, centro_y)
 
-    screen.blit(pygame.transform.scale(flecha_izquierda_img, (flecha_size, flecha_size)), rect_flecha_izq)
-    screen.blit(pygame.transform.scale(flecha_derecha_img, (flecha_size, flecha_size)), rect_flecha_der)
+    # Comprobar si el ratón está sobre alguna de las flechas
+    hover_izq = rect_flecha_izq.collidepoint(mouse_pos)
+    hover_der = rect_flecha_der.collidepoint(mouse_pos)
+
+    # Tamaño normal y aumentado
+    tam_normal = flecha_size
+    tam_hover = int(flecha_size * 1.25)
+
+     # Dibujar flecha izquierda
+    if hover_izq:
+        img_izq = pygame.transform.scale(flecha_izquierda_img, (tam_hover, tam_hover))
+        rect_izq = img_izq.get_rect(center=rect_flecha_izq.center)
+    else:
+        img_izq = pygame.transform.scale(flecha_izquierda_img, (tam_normal, tam_normal))
+        rect_izq = rect_flecha_izq
+
+    screen.blit(img_izq, rect_izq)
+
+     # Dibujar flecha derecha
+    if hover_der:
+        img_der = pygame.transform.scale(flecha_derecha_img, (tam_hover, tam_hover))
+        rect_der = img_der.get_rect(center=rect_flecha_der.center)
+    else:
+        img_der = pygame.transform.scale(flecha_derecha_img, (tam_normal, tam_normal))
+        rect_der = rect_flecha_der
+
+    screen.blit(img_der, rect_der)
     screen.blit(texto_valor, texto_valor.get_rect(center=(x_valor, centro_y)))
 
     # Textos de casillas inferiores
@@ -459,10 +484,13 @@ def menu_pausa(screen, bg_anim, fondo_pausa):
     flecha_izquierda_img = pygame.image.load("Media/Menu/Pantalla_configuracion_partida/izquierda.png").convert_alpha()
     flecha_derecha_img = pygame.image.load("Media/Menu/Pantalla_configuracion_partida/derecha.png").convert_alpha()
 
-    if bg_anim is None:
+    # Si bg_anim es None o no tiene métodos update/draw, sustituir por un dummy
+    if not hasattr(bg_anim, 'update') or not hasattr(bg_anim, 'draw'):
         class DummyBG:
             def update(self): pass
+
             def draw(self, s): pass
+
         bg_anim = DummyBG()
 
     pygame.joystick.init()
@@ -562,8 +590,12 @@ def confirmar_salida(screen, bg_anim, fondo_anterior):
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 last_input_method = "mouse"
                 if si_rect.collidepoint(mouse_pos):
+                    from EstadoPartida import reiniciar_estado
+                    reiniciar_estado()
+                    from PantallaPrincipal import background_screen
                     from PantallaConfigPartida import pantalla2_main
-                    pantalla2_main(screen, bg_anim)
+                    pantalla2_main(screen, background_screen(screen))
+                    return
                 elif no_rect.collidepoint(mouse_pos):
                     return
 
@@ -575,8 +607,12 @@ def confirmar_salida(screen, bg_anim, fondo_anterior):
                     seleccion = 1
                 elif event.key == pygame.K_RETURN:
                     if seleccion == 0:
+                        from EstadoPartida import reiniciar_estado
+                        reiniciar_estado()
+                        from PantallaPrincipal import background_screen
                         from PantallaConfigPartida import pantalla2_main
-                        pantalla2_main(screen, bg_anim)
+                        pantalla2_main(screen, background_screen(screen))
+                        return
                     else:
                         return
 
@@ -602,8 +638,12 @@ def confirmar_salida(screen, bg_anim, fondo_anterior):
                 last_input_method = "gamepad"
                 if event.button == 0:  # Botón A
                     if seleccion == 0:
+                        from EstadoPartida import reiniciar_estado
+                        reiniciar_estado()
+                        from PantallaPrincipal import background_screen
                         from PantallaConfigPartida import pantalla2_main
-                        pantalla2_main(screen, bg_anim)
+                        pantalla2_main(screen, background_screen(screen))
+                        return
                     else:
                         return
 

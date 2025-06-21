@@ -17,7 +17,6 @@ pygame.mixer.init()
 # Inicialización de mandos
 pygame.joystick.init()
 
-
 def get_joystick_by_instance_id(instance_id: int):
     for i in range(pygame.joystick.get_count()):
         joy = pygame.joystick.Joystick(i)
