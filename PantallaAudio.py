@@ -18,7 +18,7 @@ ROJO_HOVER = (255, 200, 200)
 # Solo un tipo de volumen
 TIPOS_DE_VOLUMEN = ["GENERAL"]
 
-last_input_method = "mouse"  # Puede ser "mouse" o "keyboard"
+last_input_method = "keyboard"
 selected_element_index = 0  # Índice del elemento seleccionado (0 para slider, 1 para casilla1, etc.)
 hover_casillas = [False] * 5  # Lista para controlar el hover de las casillas
 ultimo_index_hover = 0  # Índice del último hover para evitar cambios innecesarios
@@ -78,6 +78,7 @@ def inicializar_componentes_ui(screen):
     fondo_gris = pygame.Surface((ancho, alto), pygame.SRCALPHA)
     rect_fondo_gris = fondo_gris.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
 
+
     return boton_atras_rotate, rect_atras, fondo_gris, rect_fondo_gris
 
 
@@ -118,7 +119,7 @@ def cambiar_a_raton():
 
 
 def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_atras, sliders,
-               flecha_izquierda_img, flecha_derecha_img):
+               flecha_izquierda_img, flecha_derecha_img, imagen_boton_b, imagen_escape):
     global hover_casillas, casillas_rects, last_input_method, ultimo_hover_index, indice_modo_actual
 
     font_titulo = pygame.font.SysFont(None, 30)
@@ -311,11 +312,20 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_a
     else:
         screen.blit(boton_atras, rect_atras)
 
+        # --------- IMAGEN DE AYUDA SEGÚN INPUT ---------
+        if last_input_method == "gamepad":
+            imagen_ayuda = imagen_boton_b
+        else:
+            imagen_ayuda = imagen_escape
+
+        pos_x = rect_atras.right + 10  # 10 píxeles de separación a la derecha
+        pos_y = rect_atras.centery - imagen_ayuda.get_height() // 2
+        screen.blit(imagen_ayuda, (pos_x, pos_y))
 
 
 def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
     global selected_element_index
-    global casillas_rects
+    global casillas_rects, last_input_method
     if 'casillas_rects' not in globals() or not casillas_rects:
         return
     mouse_pos = pygame.mouse.get_pos()
@@ -325,6 +335,14 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+
+        # --------- DETECCIÓN DE TIPO DE INPUT ------------
+        if event.type in [pygame.KEYDOWN, pygame.KEYUP]:
+            last_input_method = "keyboard"
+        elif event.type in [pygame.MOUSEBUTTONDOWN, pygame.MOUSEMOTION]:
+            last_input_method = "mouse"
+        elif event.type in [pygame.JOYBUTTONDOWN, pygame.JOYAXISMOTION, pygame.JOYHATMOTION]:
+            last_input_method = "gamepad"
 
         if event.type == pygame.MOUSEMOTION:
             cambiar_a_raton()
@@ -336,6 +354,7 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                 break
 
         if event.type == pygame.MOUSEBUTTONDOWN:
+            last_input_method = "mouse"
             cambiar_a_raton()
             if rect_atras.collidepoint(mouse_pos):
                 guardar_volumenes(sliders)
@@ -417,6 +436,7 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                         confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
 
         if event.type == pygame.JOYBUTTONDOWN and event.button == 1:
+            last_input_method = "gamepad"
             guardar_volumenes(sliders)
             volver_callback(screen, bg_anim)
             return "ATRAS"
@@ -545,7 +565,6 @@ def guardar_volumenes(sliders):
 def pantalla_audio(screen, bg_anim, volver_callback):
     global selected_element_index, last_input_method, hover_casillas, ultimo_hover_index
     selected_element_index = 0
-    last_input_method = "keyboard"
     hover_casillas = [False] * 4
     ultimo_hover_index = 0
 
@@ -554,6 +573,9 @@ def pantalla_audio(screen, bg_anim, volver_callback):
 
     flecha_izquierda_img = pygame.image.load("Media/Menu/Pantalla_configuracion_partida/izquierda.png").convert_alpha()
     flecha_derecha_img = pygame.image.load("Media/Menu/Pantalla_configuracion_partida/derecha.png").convert_alpha()
+
+    imagen_boton_b = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/boton_B.png").convert_alpha(), (40, 40))
+    imagen_escape = pygame.transform.scale(pygame.image.load("Media/Menu/Botones/escape.png").convert_alpha(), (40, 40))
 
     if bg_anim is None:
         class DummyBG:
@@ -580,7 +602,7 @@ def pantalla_audio(screen, bg_anim, volver_callback):
             return
 
         dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, boton_atras, rect_atras, sliders,
-                   flecha_izquierda_img, flecha_derecha_img)
+                   flecha_izquierda_img, flecha_derecha_img, imagen_boton_b, imagen_escape)
         pygame.display.flip()
         clock.tick(60)
 
