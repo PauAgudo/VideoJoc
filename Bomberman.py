@@ -134,6 +134,7 @@ MAYOR_EXPLOSION_IMG = load_image("mayor_explosion.png", (40, 40),
 # Poderes
 PUSH_BOMB_IMG = load_image("patada.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Poderes"))
 PUÑO_IMG = load_image("puño.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Poderes"))
+ESCUDO_IMG = load_image("escudo.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Poderes"))
 
 # Maldiciones
 CALAVERA_IMG = load_image("calavera.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Maldiciones"))
@@ -414,6 +415,17 @@ def draw_HUD(screen, player, pos, color):
     text = "Golpear bombas: Sí" if player.hit_bomb_available else "Golpear bombas: No"
     screen.blit(font.render(text, True, color), (x, y))
     y += line_height
+    if player.escudo_available:
+        current_time = time.time()
+        if current_time < player.escudo_cooldown_end_time:
+            remaining_cooldown = player.escudo_cooldown_end_time - current_time
+            text = f"Escudo: No ({max(0, int(remaining_cooldown)) + 1}s)"
+        else:
+            text = "Escudo: Sí"
+    else:
+        text = "Escudo: No"
+    screen.blit(font.render(text, True, color), (x, y))
+    y += line_height
     if getattr(player, 'active_curse', None) and getattr(player, 'curse_ends_at', None):
         meta = CURSES[player.active_curse]
         # Solo mostrar temporales
@@ -609,6 +621,8 @@ class PowerUp:
             img = PUSH_BOMB_IMG
         elif self.type == "golpear_bombas":
             img = PUÑO_IMG
+        elif self.type == "escudo":
+            img = ESCUDO_IMG
         elif self.type == "reset":
             img = CALAVERA_IMG
         elif self.type in CURSES:
@@ -771,6 +785,12 @@ class Player:
         self.invulnerable_until = 0
         self.invulnerable_duration = 3.0  # 3 segundos
         self.invulnerable_flash_timer = 0
+        self.escudo_available = False
+        self.escudo_active = False
+        self.escudo_activation_time = 0
+        self.escudo_duration = 10.0
+        self.escudo_cooldown_end_time = 0
+        self.escudo_cooldown_duration = 30.0
 
     def get_center_coords(self):
         return (self.x + self.sprite_size / 2, self.y + self.sprite_size / 2)
@@ -870,6 +890,19 @@ class Player:
             self.y = desired_y
             return True
         return False
+
+    def activate_escudo(self):
+        current_time = time.time()
+        if (self.escudo_available and
+                not self.escudo_active and
+                current_time >= self.escudo_cooldown_end_time):
+            self.escudo_active = True
+            self.escudo_activation_time = current_time
+
+    def update_escudo(self):
+        if self.escudo_active and time.time() > self.escudo_activation_time + self.escudo_duration:
+            self.escudo_active = False
+            self.escudo_cooldown_end_time = time.time() + self.escudo_cooldown_duration
 
     def move_in_small_steps(self, dx, dy, grid, bombs):
         steps_int = int(self.speed)
@@ -1048,6 +1081,10 @@ class Player:
         self.hit_bomb_available = False
         self.display_speed = 1  # Mostramos la velocidad del fantasma
         self.pending_speed_boosts = 0
+        # Resetear estado del escudo
+        self.escudo_available = False
+        self.escudo_active = False
+        self.escudo_cooldown_end_time = 0
 
         # 3. Aplicar propiedades de fantasma
         self.speed = 1  # Velocidad reducida
@@ -1071,6 +1108,11 @@ class Player:
         self.push_bomb_available = False
         self.hit_bomb_available = False
         self.active_curse = None  # Limpiar cualquier maldición residual
+
+        # Resetear estado del escudo
+        self.escudo_available = False
+        self.escudo_active = False
+        self.escudo_cooldown_end_time = 0
 
         # Mover al jugador a su posición de inicio de partida
         self.x = self.initial_tile_x * TILE_SIZE - 40
@@ -1179,6 +1221,49 @@ class Player:
                     self.y + self.sprite_draw_offset_y + TOP_OFFSET + altura_offset
                 )
                 screen.blit(mark_img, mark_rect)
+                # Efecto visual del Escudo si está activo
+                if self.escudo_active:
+                    if not hasattr(Player, 'escudo_frames'):
+                        import os
+                        from PIL import Image
+                        escudo_path = os.path.join(os.path.dirname(__file__), ASSETS_DIR, "Gadgets", "Efectos_visuales",
+                                                   "escudo.gif")
+                        try:
+                            pil_image = Image.open(escudo_path)
+                            frames = []
+                            while True:
+                                frame = pil_image.convert("RGBA")
+                                pygame_frame = pygame.image.fromstring(frame.tobytes(), frame.size, frame.mode)
+                                frames.append(pygame_frame)
+                                pil_image.seek(pil_image.tell() + 1)
+                        except EOFError:
+                            pass
+                        except (FileNotFoundError, ImportError):
+                            frames = []
+                        Player.escudo_frames = frames
+                        Player.escudo_frame_count = len(frames) if frames else 1
+                        Player.escudo_frame_duration = 100  # ms por frame
+
+                    if Player.escudo_frames:
+                        current_time_ms = pygame.time.get_ticks()
+                        frame_index = (current_time_ms // Player.escudo_frame_duration) % Player.escudo_frame_count
+                        escudo_image = Player.escudo_frames[frame_index]
+
+                        # Escalar GIF al tamaño del jugador y mantener relación de aspecto
+                        new_size = int(self.sprite_size)
+                        escudo_image_scaled = pygame.transform.smoothscale(escudo_image, (new_size, new_size))
+
+                        # Aplicar opacidad del 30%
+                        escudo_overlay = escudo_image_scaled.copy()
+                        escudo_overlay.set_alpha(int(255 * 0.30))
+
+                        # Centrar el GIF en el jugador
+                        escudo_rect = escudo_overlay.get_rect()
+                        escudo_rect.center = (
+                            self.x + self.sprite_size // 2,
+                            self.y + self.sprite_draw_offset_y + TOP_OFFSET + self.sprite_size // 2
+                        )
+                        screen.blit(escudo_overlay, escudo_rect)
 
         # 3) Aura por delante (solo si hay maldición activa)
         if self.active_curse and CURSES[self.active_curse]["duration"] is not None:
@@ -2144,11 +2229,9 @@ def generate_grid_and_powerups():
                     elif r < 0.45:
                         powerups.append(PowerUp(x, y, "reset"))
                     elif r < 0.5:
-                        # Dividimos aleatoriamente entre "push_bomb" y el nuevo "golpear_bombas"
-                        if random.random() < 0.5:
-                            powerups.append(PowerUp(x, y, "push_bomb"))
-                        else:
-                            powerups.append(PowerUp(x, y, "golpear_bombas"))
+                        # Dividimos aleatoriamente entre "push_bomb", "golpear_bombas" y "escudo"
+                        power_choice = random.choice(["push_bomb", "golpear_bombas", "escudo"])
+                        powerups.append(PowerUp(x, y, power_choice))
     if grid[1][1] != 2:
         grid[1][1] = 0
     if grid[1][2] != 2:
@@ -2321,6 +2404,9 @@ while running:
         # Eventos de teclado
         elif event.type == pygame.KEYDOWN:
             for player in players:
+                # Activar escudo con la tecla 'o' para el jugador de teclado
+                if "up" in player.controls and event.key == pygame.K_o:
+                    player.activate_escudo()
                 player.update_curse()
                 if 'bomb' in player.controls and event.key == player.controls['bomb']:
                     player.place_bomb(bombs, powerups)
@@ -2389,6 +2475,10 @@ while running:
                                 if not b.hit_bouncing and not b.sliding:
                                     b.hit_by_player(dx, dy, grid, bombs, powerups)
                                 break
+                    # Botón X (2): activar escudo
+                    elif event.button == 2:
+                        player.activate_escudo()
+
             for player in players:
                 player.update_curse()
                 if isinstance(player.controls, dict) and 'bomb' in player.controls and event.type == player.controls[
@@ -2554,6 +2644,7 @@ while running:
         player.update_passable(bombs)
         player.check_static_push(grid, bombs, players, powerups)
         player.update_curse()
+        player.update_escudo()
 
     for player in players:
         if player.curse == "auto_bomb":
@@ -2678,6 +2769,11 @@ while running:
                             break
                         elif p.type == "golpear_bombas":
                             player.hit_bomb_available = True
+                            COGER_HABILIDAD_SOUND.play()
+                            to_remove.append(p)
+                            break
+                        elif p.type == "escudo":
+                            player.escudo_available = True
                             COGER_HABILIDAD_SOUND.play()
                             to_remove.append(p)
                             break
@@ -2857,8 +2953,8 @@ while running:
     # 2. Comprobar cada jugador contra las casillas mortales.
     if mortal_tiles_with_owner:
         for player in players[:]:
-            # Ignorar si el jugador ya es fantasma o invulnerable
-            if player.is_ghost or player.is_invulnerable:
+            # Ignorar si el jugador ya es fantasma, invulnerable o tiene el escudo activo
+            if player.is_ghost or player.is_invulnerable or player.escudo_active:
                 continue
 
             player_hitbox = player.get_hitbox()
