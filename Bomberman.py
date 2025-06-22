@@ -34,13 +34,12 @@ TILE_SIZE = 40
 GRID_COLS = 21
 GRID_ROWS = 17
 
-# Ancho del área de juego (el mapa)
-GAME_WIDTH = GRID_COLS * TILE_SIZE
+# --- MODIFICACIÓN DE DIMENSIONES ---
+# Se añade espacio a los lados para los marcadores de sets.
+SCOREBOARD_AREA_WIDTH = 150  # Ancho del área en cada lado para los marcadores.
+GRID_WIDTH = GRID_COLS * TILE_SIZE  # Ancho de la cuadrícula del juego.
+WIDTH = GRID_WIDTH + 2 * SCOREBOARD_AREA_WIDTH  # Ancho total de la ventana.
 HEIGHT = GRID_ROWS * TILE_SIZE + TOP_OFFSET
-
-# --- CONSTANTES PARA MARCADORES ---
-SIDEBAR_WIDTH = 150  # Ancho para cada barra lateral de marcadores
-WIDTH = GAME_WIDTH + (2 * SIDEBAR_WIDTH) # Ancho total de la nueva ventana
 
 CURSES = {
     "reset": {"duration": None, "shows_in_hud": False, "clears_previous": False,
@@ -124,71 +123,6 @@ def cargar_mapa():  # FUNCION CARGAR MAPA SEGUN SELECCION
 
     return SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG
 
-# CARGAR MARCADORES PARA CADA JUGADOR
-def cargar_marcadores(sets_a_ganar, num_jugadores):
-
-    print(f"[MARCADORES] Cargando imágenes para una partida a {sets_a_ganar} sets.")
-    marcadores_cargados = {}
-    for i in range(1, num_jugadores + 1):
-        marcadores_cargados[i] = []
-        # La ruta depende de la cantidad de sets a ganar
-        ruta_base = os.path.join(ASSETS_DIR, "Marcadores", f"Jugador {i}", f"{sets_a_ganar} set")
-
-        # Load de todas las imágenes para esa configuración (de 0 a sets_a_ganar)
-        for j in range(sets_a_ganar + 1):
-            ruta_img = os.path.join(ruta_base, f"{j}.png")
-            try:
-                img = pygame.image.load(ruta_img).convert_alpha()
-                # Reescalar manteniendo la proporción a un ancho de 120px
-                ancho_original, alto_original = img.get_size()
-                nuevo_alto = int(alto_original * (120 / ancho_original))
-                img_escalada = pygame.transform.scale(img, (120, nuevo_alto))
-                marcadores_cargados[i].append(img_escalada)
-            except FileNotFoundError:
-                print(f"ADVERTENCIA: No se encontró la imagen del marcador: {ruta_img}")
-                # Añadimos un marcador de error para que el juego no se detenga
-                marcador_error = pygame.Surface((120, 120))
-                marcador_error.fill(RED)
-                marcadores_cargados[i].append(marcador_error)
-
-    return marcadores_cargados
-
-def draw_marcadores(screen, players, marcadores_cargados, set_positions):
-    # Recorremos la lista de jugadores usando su índice para máxima seguridad.
-    for i in range(len(players)):
-        # Obtenemos el objeto 'player' explícitamente usando el índice.
-        player = players[i]
-
-        if not isinstance(player, Player):
-            print(f"Error Crítico en draw_marcadores: El elemento en el índice {i} no es un objeto Player.")
-            continue # Saltamos este elemento para evitar que el juego se cierre.
-
-        # Ahora podemos usar 'player' con total seguridad.
-        if player.is_eliminated:
-            continue
-
-        # Obtenemos el marcador correcto según los sets ganados
-        sets_ganados = player.sets_won
-        jugador_id = player.player_index + 1
-
-        if jugador_id in marcadores_cargados and sets_ganados < len(marcadores_cargados[jugador_id]):
-            img_marcador = marcadores_cargados[jugador_id][sets_ganados]
-        else:
-            continue
-
-        # Determinamos la posición del marcador
-        pos_inicio_jugador = set_positions[i]
-        tile_x, tile_y = pos_inicio_jugador
-
-        y_centro_marcador = (tile_y * TILE_SIZE) + (TILE_SIZE // 2) + TOP_OFFSET
-
-        if tile_x < GRID_COLS / 2:
-            x_centro_marcador = SIDEBAR_WIDTH // 2
-        else:
-            x_centro_marcador = GAME_WIDTH + SIDEBAR_WIDTH + (SIDEBAR_WIDTH // 2)
-
-        rect_marcador = img_marcador.get_rect(center=(x_centro_marcador, y_centro_marcador))
-        screen.blit(img_marcador, rect_marcador)
 
 # Habilidades
 SPEED_IMG = load_image("mas_velocidad.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Habilidades"))
@@ -421,21 +355,21 @@ def update_powerups(powerups, dt):
         powerups.remove(r)
 
 
-def draw_powerups(screen, powerups):
+def draw_powerups(surface, powerups):
     # Dibujamos los powerups (maldiciones) después de las explosiones para que se vean por encima
     for p in powerups:
-        p.draw(screen)
+        p.draw(surface)
 
 
 # ------------------------------------------------------------------------------------
 # Función HUD combinada: Bonus y Curse
 # ------------------------------------------------------------------------------------
-def draw_HUD(screen, player, pos, color):
+def draw_HUD(surface, player, pos, color):
     x, y = pos
     line_height = 20
     # Mostrar puntuación de sets ganados
     score_text = f"Sets: {player.sets_won}"
-    screen.blit(font.render(score_text, True, color), (x, y))
+    surface.blit(font.render(score_text, True, color), (x, y))
     y += line_height + 5  # Añadimos un pequeño espacio extra
 
     # --- > INICIO DE LA MODIFICACIÓN <---
@@ -457,13 +391,13 @@ def draw_HUD(screen, player, pos, color):
         # Si es un jugador vivo, mostrar el límite de bombas normal
         text = f"Bombas: x{player.bomb_limit}"
 
-    screen.blit(font.render(text, True, color), (x, y))
+    surface.blit(font.render(text, True, color), (x, y))
     y += line_height
     # --- > FIN DE LA MODIFICACIÓN <---
 
     # El resto de la función se mantiene como la tenías
     text = f"Rango x{player.bomb_range}"
-    screen.blit(font.render(text, True, color), (x, y))
+    surface.blit(font.render(text, True, color), (x, y))
     y += line_height
 
     # Lógica para la velocidad
@@ -476,13 +410,13 @@ def draw_HUD(screen, player, pos, color):
     else:
         text = f"Velocidad x{player.display_speed}"
 
-    screen.blit(font.render(text, True, color), (x, y))
+    surface.blit(font.render(text, True, color), (x, y))
     y += line_height
     text = "Empujar bomba: Sí" if player.push_bomb_available else "Empujar bomba: No"
-    screen.blit(font.render(text, True, color), (x, y))
+    surface.blit(font.render(text, True, color), (x, y))
     y += line_height
     text = "Golpear bombas: Sí" if player.hit_bomb_available else "Golpear bombas: No"
-    screen.blit(font.render(text, True, color), (x, y))
+    surface.blit(font.render(text, True, color), (x, y))
     y += line_height
     if player.escudo_available:
         current_time = time.time()
@@ -493,7 +427,7 @@ def draw_HUD(screen, player, pos, color):
             text = "Escudo: Sí"
     else:
         text = "Escudo: No"
-    screen.blit(font.render(text, True, color), (x, y))
+    surface.blit(font.render(text, True, color), (x, y))
     y += line_height
     if getattr(player, 'active_curse', None) and getattr(player, 'curse_ends_at', None):
         meta = CURSES[player.active_curse]
@@ -507,7 +441,7 @@ def draw_HUD(screen, player, pos, color):
         text = "No curse"
 
     # Este bloque if/else estaba duplicado en tu código, lo he dejado en una sola versión
-    screen.blit(font.render(text, True, color), (x, y))
+    surface.blit(font.render(text, True, color), (x, y))
 
 
 # ------------------------------------------------------------------------------------
@@ -529,23 +463,73 @@ def load_timer_images():
 timer_digits, timer_separador, timer_marco, DIGIT_SIZE, SEPARADOR_SIZE, MARCO_SIZE = load_timer_images()
 
 
-def draw_timer(screen, remaining_time):
+def draw_timer(surface, remaining_time):
     remaining = int(remaining_time)
     minutes = remaining // 60
     seconds = remaining % 60
     time_str = f"{minutes:02d}{seconds:02d}"
     timer_width = 4 * DIGIT_SIZE[0] + SEPARADOR_SIZE[0]
     marco_width = MARCO_SIZE[0]
-    marco_x = (WIDTH - marco_width) // 2
+    marco_x = (GRID_WIDTH - marco_width) // 2
     marco_y = 10
-    screen.blit(timer_marco, (marco_x, marco_y))
+    surface.blit(timer_marco, (marco_x, marco_y))
     timer_x = marco_x + (marco_width - timer_width) // 2
     timer_y = marco_y + (MARCO_SIZE[1] - DIGIT_SIZE[1]) // 2
-    screen.blit(timer_digits[time_str[0]], (timer_x, timer_y))
-    screen.blit(timer_digits[time_str[1]], (timer_x + DIGIT_SIZE[0], timer_y))
-    screen.blit(timer_separador, (timer_x + 2 * DIGIT_SIZE[0], timer_y))
-    screen.blit(timer_digits[time_str[2]], (timer_x + 2 * DIGIT_SIZE[0] + SEPARADOR_SIZE[0], timer_y))
-    screen.blit(timer_digits[time_str[3]], (timer_x + 3 * DIGIT_SIZE[0] + SEPARADOR_SIZE[0], timer_y))
+    surface.blit(timer_digits[time_str[0]], (timer_x, timer_y))
+    surface.blit(timer_digits[time_str[1]], (timer_x + DIGIT_SIZE[0], timer_y))
+    surface.blit(timer_separador, (timer_x + 2 * DIGIT_SIZE[0], timer_y))
+    surface.blit(timer_digits[time_str[2]], (timer_x + 2 * DIGIT_SIZE[0] + SEPARADOR_SIZE[0], timer_y))
+    surface.blit(timer_digits[time_str[3]], (timer_x + 3 * DIGIT_SIZE[0] + SEPARADOR_SIZE[0], timer_y))
+
+# ------------------------------------------------------------------------------------
+# NUEVA FUNCIÓN: Dibujar los marcadores de sets
+# ------------------------------------------------------------------------------------
+def draw_scoreboards(surface, players, scoreboard_images, set_positions, total_width, total_height):
+    if not scoreboard_images:
+        return
+
+    # Determinar un buen tamaño para las imágenes del marcador, manteniendo la proporción.
+    sample_img = None
+    for p_idx in scoreboard_images:
+        if scoreboard_images[p_idx]:
+            sample_img = next(iter(scoreboard_images[p_idx].values()))
+            break
+    if not sample_img: return
+
+    w, h = sample_img.get_size()
+    SCOREBOARD_IMG_WIDTH = 120
+    SCOREBOARD_IMG_SIZE = (SCOREBOARD_IMG_WIDTH, int(SCOREBOARD_IMG_WIDTH * h / w))
+
+    margin = 15
+    pos_tl = (margin, TOP_OFFSET + margin)
+    pos_tr = (total_width - SCOREBOARD_IMG_SIZE[0] - margin, TOP_OFFSET + margin)
+    pos_bl = (margin, total_height - SCOREBOARD_IMG_SIZE[1] - margin)
+    pos_br = (total_width - SCOREBOARD_IMG_SIZE[0] - margin, total_height - SCOREBOARD_IMG_SIZE[1] - margin)
+
+    spawn_tl = (1, 1)
+    spawn_br = (GRID_COLS - 2, GRID_ROWS - 2)
+    spawn_bl = (1, GRID_ROWS - 2)
+    spawn_tr = (GRID_COLS - 2, 1)
+
+    for player in players:
+        if player.player_index < len(set_positions):
+            player_start_pos = set_positions[player.player_index]
+            target_pos = None
+
+            if player_start_pos == spawn_tl:
+                target_pos = pos_tl
+            elif player_start_pos == spawn_br:
+                target_pos = pos_br
+            elif player_start_pos == spawn_bl:
+                target_pos = pos_bl
+            elif player_start_pos == spawn_tr:
+                target_pos = pos_tr
+
+            if target_pos:
+                if player.player_index in scoreboard_images and player.sets_won in scoreboard_images[player.player_index]:
+                    img = scoreboard_images[player.player_index][player.sets_won]
+                    scaled_img = pygame.transform.scale(img, SCOREBOARD_IMG_SIZE)
+                    surface.blit(scaled_img, target_pos)
 
 
 # ------------------------------------------------------------------------------------
@@ -618,7 +602,7 @@ class PowerUp:
                 self.x, self.y = fx, fy
                 self.bouncing = False
 
-    def draw(self, screen):
+    def draw(self, surface):
         if not self.visible or self.vanished:
             return
 
@@ -641,7 +625,7 @@ class PowerUp:
             dx_px = px2 - px1
             dy_px = py2 - py1
 
-            map_w = WIDTH
+            map_w = GRID_WIDTH
             map_h = HEIGHT - TOP_OFFSET
             half_w = map_w // 2
             half_h = map_h // 2
@@ -665,7 +649,7 @@ class PowerUp:
                     interp_y += HEIGHT if py2 > py1 else -HEIGHT
 
             img = pygame.transform.scale(CALAVERA_IMG, (ability_size, ability_size))
-            screen.blit(img, (interp_x - ability_size // 2, interp_y - ability_size // 2))
+            surface.blit(img, (interp_x - ability_size // 2, interp_y - ability_size // 2))
             return
 
         # Dibujo estático/flotante
@@ -703,7 +687,7 @@ class PowerUp:
                 img = CALAVERA_IMG
 
         scaled_img = pygame.transform.scale(img, (ability_size, ability_size))
-        screen.blit(scaled_img, (top_left_x, top_left_y))
+        surface.blit(scaled_img, (top_left_x, top_left_y))
 
     def start_disappear(self):
         self.disappearing = True
@@ -1200,7 +1184,7 @@ class Player:
         self.invulnerable_until = time.time() + self.invulnerable_duration
         self.invulnerable_flash_timer = time.time()  # Inicia el temporizador para el parpadeo
 
-    def draw(self, screen):
+    def draw(self, surface):
         # SI ES FANTASMA, DIBUJA EL GIF CON TRANSPARENCIA
         if self.is_ghost:
             if not self.ghost_anim_frames:
@@ -1219,7 +1203,7 @@ class Player:
             # Aplicamos el offset a las coordenadas de dibujado
             draw_x = self.x + offset_x
             draw_y = self.y + offset_y + self.sprite_draw_offset_y + TOP_OFFSET
-            screen.blit(sprite, (draw_x, draw_y))
+            surface.blit(sprite, (draw_x, draw_y))
             return
         # --- PARPADEO DEL GANADOR DEL SET ---
         if self.is_set_winner:
@@ -1227,7 +1211,7 @@ class Player:
             if int((time.time() - self.set_winner_start_time) / flash_interval) % 2 == 0:
                 flash_surf = pygame.Surface((self.sprite_size, self.sprite_size), pygame.SRCALPHA)
                 flash_surf.fill((255, 255, 255, 150))  # Blanco semitransparente
-                screen.blit(flash_surf, (self.x, self.y + self.sprite_draw_offset_y + TOP_OFFSET))
+                surface.blit(flash_surf, (self.x, self.y + self.sprite_draw_offset_y + TOP_OFFSET))
         # SI ES UN JUGADOR VIVO, COMPROBAR INVULNERABILIDAD Y DIBUJAR NORMAL
 
         # 1) Aura por detrás (solo si hay maldición activa)
@@ -1267,7 +1251,7 @@ class Player:
                 self.x + self.sprite_size // 2,
                 self.y + self.sprite_draw_offset_y + TOP_OFFSET + self.sprite_size // 2 - 10
             )
-            screen.blit(aura_behind, aura_rect_behind)
+            surface.blit(aura_behind, aura_rect_behind)
 
         # --- INICIO DE LA MODIFICACIÓN ---
 
@@ -1311,13 +1295,13 @@ class Player:
                     self.x + self.sprite_size // 2,
                     self.y + self.sprite_draw_offset_y + TOP_OFFSET + self.sprite_size // 2
                 )
-                screen.blit(escudo_behind, escudo_rect_behind)
+                surface.blit(escudo_behind, escudo_rect_behind)
 
         # 2) Dibujo del jugador (sprite según dirección y personaje)
         if hasattr(self, "animaciones") and self.current_direction in self.animaciones:
             image_list = self.animaciones[self.current_direction]
             sprite = image_list[self.anim_frame % len(image_list)]
-            screen.blit(sprite, (self.x, self.y + self.sprite_draw_offset_y + TOP_OFFSET))
+            surface.blit(sprite, (self.x, self.y + self.sprite_draw_offset_y + TOP_OFFSET))
             # Dibujar la marca del jugador encima del sprite, tocando la cabeza
             if hasattr(self, "player_index") and 0 <= self.player_index < len(PLAYER_MARKS):
                 mark_img = PLAYER_MARKS[self.player_index]
@@ -1327,7 +1311,7 @@ class Player:
                     self.x + self.sprite_size // 2,
                     self.y + self.sprite_draw_offset_y + TOP_OFFSET + altura_offset
                 )
-                screen.blit(mark_img, mark_rect)
+                surface.blit(mark_img, mark_rect)
 
         # 3) Aura por delante (solo si hay maldición activa)
         if self.active_curse and CURSES[self.active_curse]["duration"] is not None:
@@ -1338,7 +1322,7 @@ class Player:
                 self.x + self.sprite_size // 2,
                 self.y + self.sprite_draw_offset_y + TOP_OFFSET + self.sprite_size // 2 - 10
             )
-            screen.blit(aura_front, aura_rect_front)
+            surface.blit(aura_front, aura_rect_front)
 
         # DIBUJO DEL ESCUDO (DELANTE)
         if self.escudo_active and hasattr(Player, 'escudo_frames') and Player.escudo_frames:
@@ -1356,7 +1340,7 @@ class Player:
                 self.x + self.sprite_size // 2,
                 self.y + self.sprite_draw_offset_y + TOP_OFFSET + self.sprite_size // 2
             )
-            screen.blit(escudo_overlay, escudo_rect_front)
+            surface.blit(escudo_overlay, escudo_rect_front)
 
         # --- FIN DE LA MODIFICACIÓN ---
 
@@ -1365,7 +1349,7 @@ class Player:
             flash_surf = pygame.Surface((self.sprite_size, self.sprite_size))
             flash_surf.fill(WHITE)
             flash_surf.set_alpha(180)
-            screen.blit(flash_surf, (self.x, self.y + self.sprite_draw_offset_y + TOP_OFFSET))
+            surface.blit(flash_surf, (self.x, self.y + self.sprite_draw_offset_y + TOP_OFFSET))
             if time.time() - self.flash_timer >= 0.4:
                 self.flash_timer = time.time()
                 self.flash_count -= 1
@@ -1515,6 +1499,8 @@ class Player:
 
     def reset_for_new_set(self, init_tile_x, init_tile_y):
         """ Reinicia el estado del jugador para un nuevo set. """
+        self.initial_tile_x = init_tile_x
+        self.initial_tile_y = init_tile_y
         self.x = init_tile_x * TILE_SIZE - 40
         self.y = init_tile_y * TILE_SIZE - 40
         self.is_ghost = False
@@ -1726,7 +1712,7 @@ class Bomb:
             if self.sliding:
                 break
 
-    def draw(self, screen):
+    def draw(self, surface):
         self.update_push_slide()  # ← IMPORTANTE: actualiza animación de empuje continuo
         draw_x = self.pos_x
         draw_y = self.pos_y
@@ -1748,7 +1734,7 @@ class Bomb:
         )
         px = draw_x + (TILE_SIZE - bomb_image_scaled.get_width()) // 2
         py = draw_y + (TILE_SIZE - bomb_image_scaled.get_height()) // 2 + TOP_OFFSET
-        screen.blit(bomb_image_scaled, (px, py))
+        surface.blit(bomb_image_scaled, (px, py))
 
     def explode(self, grid, players, bombs, powerups):
         if self.hit_bouncing:
@@ -1941,7 +1927,7 @@ class Bomb:
                             if dy != 0: dy = 1 if dy > 0 else -1
 
                             # Inicia un nuevo rebote de una sola casilla
-                            self.hit_by_player(dx, dy, grid, bombs, powerups, bounce_length=1)
+                            self.hit_by_player(dx, dy, grid, bombs, powerups, players, bounce_length=1)
                             return  # Salimos para que la nueva animación de rebote tome el control
                         else:
                             # Si es una habilidad, desaparecer inmediatamente
@@ -2115,7 +2101,7 @@ class Explosion:
             if self.current_frame >= len(self.frames):
                 self.finished = True
 
-    def draw(self, screen):
+    def draw(self, surface):
         if not self.finished:
             px = self.tile_x * TILE_SIZE
             py = self.tile_y * TILE_SIZE + TOP_OFFSET
@@ -2139,7 +2125,7 @@ class Explosion:
             if self.explosion_type in ("extreme", "lateral") and self.rotation_angle != 0:
                 frame_image = pygame.transform.rotate(frame_image, -self.rotation_angle)
 
-            screen.blit(frame_image, (px, py))
+            surface.blit(frame_image, (px, py))
 
 # ------------------------------------------------------------------------------------
 # Clase Lapida
@@ -2174,11 +2160,11 @@ class Lapida:
     def is_finished(self):
         return self.alpha <= 0
 
-    def draw(self, screen):
+    def draw(self, surface):
         if self.alpha > 0:
             temp_image = self.image.copy()
             temp_image.set_alpha(self.alpha)
-            screen.blit(temp_image, (self.tile_x * TILE_SIZE, self.tile_y * TILE_SIZE + TOP_OFFSET))
+            surface.blit(temp_image, (self.tile_x * TILE_SIZE, self.tile_y * TILE_SIZE + TOP_OFFSET))
 
     def start_slow_fade(self):
         self.state = "fading"
@@ -2236,9 +2222,9 @@ class DroppedAbility:
             new_y = start_after_growth[1] + (self.target_pos[1] - start_after_growth[1]) * (t ** 2)
             self.current_pos = (new_x, new_y)
 
-    def draw(self, screen):
+    def draw(self, surface):
         rect = self.image.get_rect(center=self.current_pos)
-        screen.blit(self.image, rect)
+        surface.blit(self.image, rect)
 
 
 # ------------------------------------------------------------------------------------
@@ -2419,16 +2405,16 @@ def generate_grid_and_powerups():
     return grid, powerups
 
 
-def draw_grid(screen, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG):
+def draw_grid(surface, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG):
     current_time = time.time()
     # Dibujar el suelo en todas las casillas de forma alternada
     for y in range(GRID_ROWS):
         for x in range(GRID_COLS):
             rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE + TOP_OFFSET, TILE_SIZE, TILE_SIZE)
             if (x + y) % 2 == 0:
-                screen.blit(SUELO1, rect)
+                surface.blit(SUELO1, rect)
             else:
-                screen.blit(SUELO2, rect)
+                surface.blit(SUELO2, rect)
     # Dibujar los elementos del grid por encima
     for y in range(GRID_ROWS):
         for x in range(GRID_COLS):
@@ -2441,34 +2427,34 @@ def draw_grid(screen, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG):
                         temp.fill((255, 165, 0), special_flags=pygame.BLEND_RGB_MULT)
                         alpha = int(255 * (1 - (elapsed / EXPLOSION_DURATION)))
                         temp.set_alpha(alpha)
-                        screen.blit(temp, rect)
+                        surface.blit(temp, rect)
                     else:
                         grid[y][x] = 0
                         del exploding_blocks[(x, y)]
                         # No se dibuja nada, ya se ve el suelo debajo
                 else:
-                    screen.blit(BRICK, rect)
+                    surface.blit(BRICK, rect)
             elif grid[y][x] == 2:
-                screen.blit(STONE, rect)
+                surface.blit(STONE, rect)
             elif grid[y][x] == 3:
-                screen.blit(LIMIT_IMG, rect)
+                surface.blit(LIMIT_IMG, rect)
 
 
-def draw_grid_lines(screen):
-    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+def draw_grid_lines(surface):
+    overlay = pygame.Surface((GRID_WIDTH, HEIGHT), pygame.SRCALPHA)
     line_color = (0, 0, 0, 80)
     for row in range(GRID_ROWS + 1):
         start = (0, row * TILE_SIZE + TOP_OFFSET)
-        end = (WIDTH, row * TILE_SIZE + TOP_OFFSET)
+        end = (GRID_WIDTH, row * TILE_SIZE + TOP_OFFSET)
         pygame.draw.line(overlay, line_color, start, end, 1)
     for col in range(GRID_COLS + 1):
         start = (col * TILE_SIZE, TOP_OFFSET)
         end = (col * TILE_SIZE, GRID_ROWS * TILE_SIZE + TOP_OFFSET)
         pygame.draw.line(overlay, line_color, start, end, 1)
-    screen.blit(overlay, (0, 0))
+    surface.blit(overlay, (0, 0))
 
 
-def draw_curse_info(screen, player, color, pos):
+def draw_curse_info(surface, player, color, pos):
     x, y = pos
     if getattr(player, 'active_curse', None) and getattr(player, 'curse_ends_at', None):
         duration = CURSES[player.active_curse]['duration']
@@ -2479,7 +2465,7 @@ def draw_curse_info(screen, player, color, pos):
             text = "No curse"
     else:
         text = "No curse"
-    screen.blit(font.render(text, True, color), (x, y))
+    surface.blit(font.render(text, True, color), (x, y))
 
 
 # CONDICION POSICION FIJA O ALEATORIA
@@ -2498,14 +2484,14 @@ def obtener_posiciones_aleatorias(num_players):
 # Obtener el modo desde la configuración
 modo_posicion = config.current_position_index  # 0 = fija, 1 = aleatoria
 
+
 # ------------------------------------------------------------------------------------
 # Bucle principal
 # ------------------------------------------------------------------------------------
 def iniciar_partida(screen):
 
-    # pantalla partida y superficie para marcadores
+    # dimensiones de pantalla partida
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    game_surface = pygame.Surface((GAME_WIDTH, HEIGHT))
 
     # cargamos la musica de fondo
     MUSIC_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "musica_fondo", "juego.mp3")
@@ -2544,6 +2530,21 @@ def iniciar_partida(screen):
         nuevo_jugador.ghost_anim_frames = cargar_animacion_fantasma(idx)
         players.append(nuevo_jugador)
 
+    # --- Carga de imágenes de marcadores ---
+    scoreboard_images = {}
+    sets_to_win_value = config.set_options[config.current_set_index]
+    for p_idx in range(len(gestor_jugadores.todos())):
+        scoreboard_images[p_idx] = {}
+        folder_path = os.path.join(ASSETS_DIR, "Marcadores", f"Jugador {p_idx + 1}", f"{sets_to_win_value} set")
+        if os.path.isdir(folder_path):
+            for i in range(sets_to_win_value + 2):
+                img_path = os.path.join(folder_path, f"{i}.png")
+                if os.path.isfile(img_path):
+                    try:
+                        scoreboard_images[p_idx][i] = pygame.image.load(img_path).convert_alpha()
+                    except pygame.error as e:
+                        print(f"Error al cargar la imagen del marcador {img_path}: {e}")
+
     # Declaramos como globales las variables de estado para que sean accesibles desde todos los métodos
     global grid, powerups, bombs, explosions, lapidas, lapida_por_colocar, exploding_blocks, dropped_abilities
 
@@ -2551,7 +2552,6 @@ def iniciar_partida(screen):
     sets_to_win = config.set_options[config.current_set_index]
     usar_fantasmas = config.current_ultimas_index.get("Fantasmas", 0) == 0
     SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG = cargar_mapa()
-    marcadores = cargar_marcadores(sets_to_win, len(players))
 
     for p in players:
         p.sets_won = 0
@@ -2785,39 +2785,41 @@ def iniciar_partida(screen):
 
             # --- DIBUJADO ---
             screen.fill(BLACK)
+
+            game_surface = pygame.Surface((GRID_WIDTH, HEIGHT))
             game_surface.fill(BLACK)
-            draw_grid(screen, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG)
+
+            draw_grid(game_surface, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG)
             for lapida in lapidas:
-                lapida.draw(screen)
-            for p in powerups: p.draw(screen)
-            for b in bombs: b.draw(screen)
-            for da in dropped_abilities: da.draw(screen)
+                lapida.draw(game_surface)
+            for p in powerups: p.draw(game_surface)
+            for b in bombs: b.draw(game_surface)
+            for da in dropped_abilities: da.draw(game_surface)
 
             drawable_players = [set_winner] if set_end_sequence_start_time and set_winner else players
             sorted_players = sorted([p for p in drawable_players if not p.is_ghost], key=lambda p: p.y)
             for p in sorted_players:
                 if p.is_eliminated: continue
-                p.draw(screen)
+                p.draw(game_surface)
             for explosion in explosions[:]:
                 explosion.update()
                 if explosion.finished:
                     explosions.remove(explosion)
                 else:
-                    explosion.draw(screen)
+                    explosion.draw(game_surface)
             for p in drawable_players:
-                if p.is_ghost: p.draw(screen)
+                if p.is_ghost: p.draw(game_surface)
 
             for i in range(len(gestor_jugadores.todos())):
                 player_info = next((p for p in players if p.player_index == i), None)
-                if player_info:
-                    x_hud = 10 + i * 220
-                    draw_HUD(screen, player_info, (x_hud, 5), color_pool[i % len(color_pool)])
+                x_hud = 10 + i * 220
+                if player_info: draw_HUD(game_surface, player_info, (x_hud, 5), color_pool[i % len(color_pool)])
 
-            draw_timer(screen, max(0, TOTAL_TIME - (time.time() - start_time)))
+            draw_timer(game_surface, max(0, TOTAL_TIME - (time.time() - start_time)))
 
-            screen.blit(game_surface, (SIDEBAR_WIDTH, 0))
+            screen.blit(game_surface, (SCOREBOARD_AREA_WIDTH, 0))
 
-            draw_marcadores(screen, marcadores, sets_to_win, players)
+            draw_scoreboards(screen, players, scoreboard_images, set_positions, WIDTH, HEIGHT)
 
             pygame.display.flip()
 
