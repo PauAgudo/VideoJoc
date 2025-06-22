@@ -1296,22 +1296,35 @@ class Player:
                     self.y + self.sprite_draw_offset_y + TOP_OFFSET + self.sprite_size // 2
                 )
                 surface.blit(escudo_behind, escudo_rect_behind)
-
+            if self.is_invulnerable:
+                # Hacemos que la visibilidad alterne cada 0.1 segundos
+                if int(time.time() * 10) % 2 == 0:
+                    # En los ciclos pares, "saltamos" el dibujo del jugador para crear el parpadeo.
+                    # Para ello, simplemente no dibujamos nada y salimos
+                    # Sin embargo, para que se vean otros efectos como el escudo, es mejor
+                    # simplemente no dibujar el sprite del jugador. Lo gestionaremos abajo.
+                    pass
         # 2) Dibujo del jugador (sprite según dirección y personaje)
         if hasattr(self, "animaciones") and self.current_direction in self.animaciones:
-            image_list = self.animaciones[self.current_direction]
-            sprite = image_list[self.anim_frame % len(image_list)]
-            surface.blit(sprite, (self.x, self.y + self.sprite_draw_offset_y + TOP_OFFSET))
-            # Dibujar la marca del jugador encima del sprite, tocando la cabeza
-            if hasattr(self, "player_index") and 0 <= self.player_index < len(PLAYER_MARKS):
-                mark_img = PLAYER_MARKS[self.player_index]
-                mark_rect = mark_img.get_rect()
-                altura_offset = +25  # puedes ajustar este valor (positivos bajan, negativos suben)
-                mark_rect.midbottom = (
-                    self.x + self.sprite_size // 2,
-                    self.y + self.sprite_draw_offset_y + TOP_OFFSET + altura_offset
-                )
-                surface.blit(mark_img, mark_rect)
+            debe_dibujarse = True
+            if self.is_invulnerable:
+                if int(time.time() * 10) % 2 != 0:  # Solo se dibuja en los ciclos pares del tiempo
+                    debe_dibujarse = False
+
+            if debe_dibujarse:
+                image_list = self.animaciones[self.current_direction]
+                sprite = image_list[self.anim_frame % len(image_list)]
+                surface.blit(sprite, (self.x, self.y + self.sprite_draw_offset_y + TOP_OFFSET))
+                # Dibujar la marca del jugador encima del sprite, tocando la cabeza
+                if hasattr(self, "player_index") and 0 <= self.player_index < len(PLAYER_MARKS):
+                    mark_img = PLAYER_MARKS[self.player_index]
+                    mark_rect = mark_img.get_rect()
+                    altura_offset = +25  # puedes ajustar este valor (positivos bajan, negativos suben)
+                    mark_rect.midbottom = (
+                        self.x + self.sprite_size // 2,
+                        self.y + self.sprite_draw_offset_y + TOP_OFFSET + altura_offset
+                    )
+                    surface.blit(mark_img, mark_rect)
 
         # 3) Aura por delante (solo si hay maldición activa)
         if self.active_curse and CURSES[self.active_curse]["duration"] is not None:
@@ -2498,7 +2511,16 @@ def iniciar_partida(screen):
     pygame.mixer.music.load(MUSIC_PATH)
     pygame.mixer.music.set_volume(audio.volume)
     pygame.mixer.music.play(-1)
-
+    try:
+        DATE_PRISA_IMG = pygame.image.load(
+            os.path.join(ASSETS_DIR, "Textos", "date prisa.png")).convert_alpha()
+        DATE_PRISA_SOUND = pygame.mixer.Sound(
+            os.path.join(ASSETS_DIR, "Sonidos_juego", "Partida", "date prisa.mp3"))
+        DATE_PRISA_SOUND.set_volume(0.5)  # Ajusta el volumen si es necesario
+    except pygame.error as e:
+        print(f"Error al cargar recursos 'Date Prisa': {e}")
+        DATE_PRISA_IMG = None
+        DATE_PRISA_SOUND = None
     global players
     # Creamos la lista de jugadores
     players = []
@@ -2578,13 +2600,28 @@ def iniciar_partida(screen):
         TOTAL_TIME = config.current_minute * 60
         set_winner = None
         set_end_sequence_start_time = None
+        hurry_up_mode_activated = False
+        date_prisa_anim_start_time = None
         clock = pygame.time.Clock()
 
         # --- BUCLE DEL SET ---
         set_running = True
         while set_running:
             dt = clock.tick(60) / 1000.0
+            remaining_time = max(0, TOTAL_TIME - (time.time() - start_time))
+            if remaining_time <= 60 and not hurry_up_mode_activated:
+                hurry_up_mode_activated = True
+                date_prisa_anim_start_time = time.time()  # Inicia la animación del texto
 
+                # Reproducir sonido
+                if DATE_PRISA_SOUND:
+                    DATE_PRISA_SOUND.play()
+
+                # Eliminar a todos los fantasmas existentes
+                for player in players:
+                    if player.is_ghost:
+                        player.eliminate()
+                        print(f"El fantasma del jugador {player.player_index + 1} ha desaparecido.")
             # --- MANEJO DE EVENTOS ---
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -2728,14 +2765,16 @@ def iniciar_partida(screen):
                 check_pickup(players, powerups, lapidas)
             mortal_tiles_with_owner = {(e.tile_x, e.tile_y): e.owner for e in explosions if not e.finished}
             if mortal_tiles_with_owner and not set_end_sequence_start_time:
+
+                muertes_en_frame = []  # Lista para registrar las muertes de este fotograma
+
+                # 1. Detectar todas las muertes en este frame
                 for player in players[:]:
-                    if player.is_ghost or player.is_invulnerable or player.escudo_active:
+                    if player.is_ghost or player.is_invulnerable or player.escudo_active or player.is_eliminated:
                         continue
 
                     player_hitbox = player.get_hitbox()
-                    player_hitbox_area = player_hitbox.width * player_hitbox.height
-                    if player_hitbox_area == 0:
-                        continue
+                    if player_hitbox.width * player_hitbox.height == 0: continue
 
                     total_overlap_area = 0
                     killer = None
@@ -2745,39 +2784,115 @@ def iniciar_partida(screen):
                     min_tile_y = player_hitbox.top // TILE_SIZE
                     max_tile_y = (player_hitbox.bottom - 1) // TILE_SIZE
 
-                    for tile_x in range(min_tile_x, max_tile_x + 1):
-                        for tile_y in range(min_tile_y, max_tile_y + 1):
-                            if (tile_x, tile_y) in mortal_tiles_with_owner:
-                                # Coordenadas del juego (SIN TOP_OFFSET)
-                                mortal_tile_rect = pygame.Rect(tile_x * TILE_SIZE, tile_y * TILE_SIZE, TILE_SIZE,
-                                                               TILE_SIZE)
-                                overlap_rect = player_hitbox.clip(mortal_tile_rect)
+                    for tx in range(min_tile_x, max_tile_x + 1):
+                        for ty in range(min_tile_y, max_tile_y + 1):
+                            if (tx, ty) in mortal_tiles_with_owner:
+                                mortal_rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                                overlap_rect = player_hitbox.clip(mortal_rect)
                                 total_overlap_area += overlap_rect.width * overlap_rect.height
-                                if mortal_tiles_with_owner[(tile_x, tile_y)] is not None:
-                                    killer = mortal_tiles_with_owner[(tile_x, tile_y)]
+                                if mortal_tiles_with_owner[(tx, ty)] is not None:
+                                    killer = mortal_tiles_with_owner[(tx, ty)]
 
-                    if (total_overlap_area / player_hitbox_area) >= 0.15:
+                    # Si el área de solapamiento es suficiente, registramos la muerte
+                    if (total_overlap_area / (player_hitbox.width * player_hitbox.height)) >= 0.15:
+                        muertes_en_frame.append({'player': player, 'killer': killer})
+
+                # 2. Procesar las muertes registradas
+                if muertes_en_frame:
+                    jugadores_vivos_antes = [p for p in players if not p.is_ghost and not p.is_eliminated]
+                    num_vivos_antes = len(jugadores_vivos_antes)
+                    num_muertes = len(muertes_en_frame)
+
+                    # --- CONDICIÓN 1: VICTORIA DEL FANTASMA ---
+                    # Si mueren los 2 últimos jugadores vivos a la vez por el mismo fantasma
+                    killer_fantasma = muertes_en_frame[0]['killer']
+                    if (num_vivos_antes == 2 and num_muertes == 2 and
+                            killer_fantasma and killer_fantasma.is_ghost and
+                            muertes_en_frame[1]['killer'] == killer_fantasma):
+
                         MUERTE_SOUND.play()
-                        if killer and killer.is_ghost:
-                            killer.resurrect()
-                            player.become_ghost()
-                        else:
-                            if usar_fantasmas:
-                                player.become_ghost()
+
+                        # El fantasma resucita y se convierte en el ganador del set
+                        killer_fantasma.resurrect()
+                        set_winner = killer_fantasma
+                        set_winner.sets_won += 1
+                        set_winner.is_set_winner = True
+                        set_winner.set_winner_start_time = time.time()
+
+                        # Los otros dos jugadores son eliminados directamente (no se hacen fantasmas)
+                        for muerte in muertes_en_frame:
+                            muerte['player'].eliminate()
+
+                        set_end_sequence_start_time = time.time()
+
+                    # --- CONDICIÓN 2: EMPATE ---
+                    # Si mueren todos los jugadores vivos simultáneamente por bombas NO de fantasma
+                    elif num_vivos_antes == num_muertes and num_muertes > 1:
+                        # Comprobamos si alguna muerte fue causada por un fantasma
+                        muerte_por_fantasma = any(m['killer'] and m['killer'].is_ghost for m in muertes_en_frame)
+
+                        if not muerte_por_fantasma:
+                            print("¡EMPATE! La ronda no cuenta.")
+                            MUERTE_SOUND.play()
+                            # Marcamos a los jugadores como eliminados para esta ronda
+                            for muerte in muertes_en_frame:
+                                # Si los fantasmas están activos Y NO estamos en modo prisa, se convierten en fantasma
+                                if usar_fantasmas and not hurry_up_mode_activated:
+                                    muerte['player'].become_ghost()
+                                else:
+                                    muerte['player'].eliminate()
+                            # No hay ganador, simplemente terminamos el set
+                            set_winner = None
+                            set_end_sequence_start_time = time.time()
+
+                    # --- CONDICIÓN 3: MUERTES NORMALES ---
+                    else:
+                        for muerte in muertes_en_frame:
+                            player_muerto = muerte['player']
+                            killer = muerte['killer']
+
+                            MUERTE_SOUND.play()
+
+                            if killer and killer.is_ghost:
+                                # El fantasma mata a alguien, resucita
+                                killer.resurrect()
+                                # El jugador muerto solo se vuelve fantasma si NO estamos en modo prisa
+                                if usar_fantasmas and not hurry_up_mode_activated:
+                                    player_muerto.become_ghost()
+                                else:
+                                    player_muerto.eliminate()
                             else:
-                                player.eliminate()
+                                # Muerte normal
+                                if usar_fantasmas and not hurry_up_mode_activated:
+                                    player_muerto.become_ghost()
+                                else:
+                                    player_muerto.eliminate()
 
-                        if lapida_por_colocar is None:
-                            lapida_por_colocar = player.get_center_tile()
+                            if lapida_por_colocar is None:
+                                lapida_por_colocar = player_muerto.get_center_tile()
 
-                        generar_poderes_al_morir(grid, bombs, powerups, players)
-                        break
-
+                            generar_poderes_al_morir(grid, bombs, powerups, players)
             if not set_end_sequence_start_time:
                 alive_players = [p for p in players if not p.is_ghost and not p.is_eliminated]
+
+                # Condición 1: Queda 1 o 0 jugadores vivos
                 if len(alive_players) <= 1:
                     set_end_sequence_start_time = time.time()
                     if len(alive_players) == 1:
+                        set_winner = alive_players[0]
+                        set_winner.sets_won += 1
+                        set_winner.is_set_winner = True
+                        set_winner.set_winner_start_time = time.time()
+
+                # Condición 2: El tiempo se ha agotado
+                elif remaining_time <= 0:
+                    set_end_sequence_start_time = time.time()
+                    # Si al agotarse el tiempo hay más de 1 jugador, es empate y nadie gana el set.
+                    if len(alive_players) > 1:
+                        print("¡TIEMPO AGOTADO! EMPATE. La ronda no cuenta.")
+                        set_winner = None
+                    # Si solo queda uno, ese es el ganador (caso cubierto arriba, pero por seguridad)
+                    elif len(alive_players) == 1:
                         set_winner = alive_players[0]
                         set_winner.sets_won += 1
                         set_winner.is_set_winner = True
@@ -2808,19 +2923,49 @@ def iniciar_partida(screen):
                 else:
                     explosion.draw(game_surface)
             for p in drawable_players:
-                if p.is_ghost: p.draw(game_surface)
+                if p.is_ghost and not p.is_eliminated: p.draw(game_surface)
 
             for i in range(len(gestor_jugadores.todos())):
                 player_info = next((p for p in players if p.player_index == i), None)
                 x_hud = 10 + i * 220
                 if player_info: draw_HUD(game_surface, player_info, (x_hud, 5), color_pool[i % len(color_pool)])
 
-            draw_timer(game_surface, max(0, TOTAL_TIME - (time.time() - start_time)))
+            draw_timer(game_surface, remaining_time)
 
             screen.blit(game_surface, (SCOREBOARD_AREA_WIDTH, 0))
 
             draw_scoreboards(screen, players, scoreboard_images, set_positions, WIDTH, HEIGHT)
+            if date_prisa_anim_start_time and DATE_PRISA_IMG:
+                anim_duration = 3.0  # 3 segundos en total
+                elapsed = time.time() - date_prisa_anim_start_time
 
+                if elapsed < anim_duration:
+                    # --- > INICIO DE LA MODIFICACIÓN <---
+                    # 1. Escalar la imagen a la mitad de su tamaño original
+                    new_width = DATE_PRISA_IMG.get_width() // 2
+                    new_height = DATE_PRISA_IMG.get_height() // 2
+                    scaled_img = pygame.transform.scale(DATE_PRISA_IMG, (new_width, new_height))
+                    # --- > FIN DE LA MODIFICACIÓN <---
+
+                    # Animación: 0.25s para aparecer, 2.5s visible, 0.25s para desaparecer
+                    fade_in_time = 0.25
+                    fade_out_time = 0.25
+
+                    alpha = 255 * 0.8  # Opacidad máxima del 80%
+
+                    if elapsed < fade_in_time:
+                        alpha *= (elapsed / fade_in_time)
+                    elif elapsed > anim_duration - fade_out_time:
+                        alpha *= (anim_duration - elapsed) / fade_out_time
+
+                    temp_img = scaled_img.copy()  # Usamos la imagen escalada
+                    temp_img.set_alpha(int(max(0, alpha)))
+
+                    # Centrar la imagen en el área de juego (esto ya funcionaba bien)
+                    img_rect = temp_img.get_rect(center=(WIDTH / 2, HEIGHT / 2))
+                    screen.blit(temp_img, img_rect)
+                else:
+                    date_prisa_anim_start_time = None  # Termina la animación
             pygame.display.flip()
 
             if set_end_sequence_start_time and (time.time() - set_end_sequence_start_time > 3.0):
