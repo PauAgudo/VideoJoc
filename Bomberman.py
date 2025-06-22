@@ -29,11 +29,6 @@ def get_joystick_by_instance_id(instance_id: int):
 BASE_DIR = os.path.dirname(__file__)
 ASSETS_DIR = os.path.join(BASE_DIR, "Media")
 
-MUSIC_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "musica_fondo", "juego.mp3")
-pygame.mixer.music.load(MUSIC_PATH)
-pygame.mixer.music.set_volume(audio.volume)
-pygame.mixer.music.play(-1)
-
 TOP_OFFSET = 80  # Espacio para el contador y el HUD
 TILE_SIZE = 40
 GRID_COLS = 21
@@ -88,7 +83,6 @@ def respawn_all_abilities_with_animation():
         new_pu.start_spawn_animation()
 
 
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Bomberman - Maldiciones Rebotando")
 
 WHITE = (255, 255, 255)
@@ -368,6 +362,10 @@ def draw_powerups(screen, powerups):
 def draw_HUD(screen, player, pos, color):
     x, y = pos
     line_height = 20
+    # Mostrar puntuación de sets ganados
+    score_text = f"Sets: {player.sets_won}"
+    screen.blit(font.render(score_text, True, color), (x, y))
+    y += line_height + 5  # Añadimos un pequeño espacio extra
 
     # --- > INICIO DE LA MODIFICACIÓN <---
     # Lógica para mostrar el estado de las bombas
@@ -791,6 +789,10 @@ class Player:
         self.escudo_duration = 10.0
         self.escudo_cooldown_end_time = 0
         self.escudo_cooldown_duration = 30.0
+        self.sets_won = 0
+        self.is_set_winner = False
+        self.set_winner_start_time = 0.0
+        self.is_eliminated = False
 
     def get_center_coords(self):
         return (self.x + self.sprite_size / 2, self.y + self.sprite_size / 2)
@@ -943,7 +945,7 @@ class Player:
             if self.check_collision(grid, bombs):
                 self.x, self.y = old_x, old_y
 
-    def move_up(self, grid, bombs):
+    def move_up(self, grid, bombs, powerups, lapidas):
         self.current_direction = "up"
         if self.is_compressed_vertically(grid, bombs):
             return
@@ -953,9 +955,9 @@ class Player:
             new_tile = self.get_center_tile()  # ③ lee casilla nueva
             # ④ si auto_bomb active y cambias de casilla, coloca bomba forzada
             if self.auto_bombing and new_tile != old_tile:
-                self.place_bomb(bombs, powerups, forced=True)
+                self.place_bomb(bombs, powerups, grid, lapidas, forced=True)
 
-    def move_down(self, grid, bombs):
+    def move_down(self, grid, bombs, powerups, lapidas):
         self.current_direction = "down"
         if self.is_compressed_vertically(grid, bombs):
             return
@@ -964,9 +966,9 @@ class Player:
             self.move_in_small_steps(0, 1, grid, bombs)
             new_tile = self.get_center_tile()
             if self.auto_bombing and new_tile != old_tile:
-                self.place_bomb(bombs, powerups, forced=True)
+                self.place_bomb(bombs, powerups, grid, lapidas, forced=True)
 
-    def move_left(self, grid, bombs):
+    def move_left(self, grid, bombs, powerups, lapidas):
         self.current_direction = "left"
         if self.is_compressed_horizontally(grid, bombs):
             return
@@ -975,9 +977,9 @@ class Player:
             self.move_in_small_steps(-1, 0, grid, bombs)
             new_tile = self.get_center_tile()
             if self.auto_bombing and new_tile != old_tile:
-                self.place_bomb(bombs, powerups, forced=True)
+                self.place_bomb(bombs, powerups, grid, lapidas, forced=True)
 
-    def move_right(self, grid, bombs):
+    def move_right(self, grid, bombs, powerups, lapidas):
         self.current_direction = "right"
         if self.is_compressed_horizontally(grid, bombs):
             return
@@ -986,7 +988,7 @@ class Player:
             self.move_in_small_steps(1, 0, grid, bombs)
             new_tile = self.get_center_tile()
             if self.auto_bombing and new_tile != old_tile:
-                self.place_bomb(bombs, powerups, forced=True)
+                self.place_bomb(bombs, powerups, grid, lapidas, forced=True)
 
     def update_passable(self, bombs):
         for bomb in bombs:
@@ -1092,6 +1094,10 @@ class Player:
         # El jugador no se mueve, se queda en la casilla donde murió.
         # Su posición (self.x, self.y) ya es la correcta.
 
+    def eliminate(self):
+        print(f"¡El jugador {self.player_index + 1} ha sido eliminado de la ronda!")
+        self.is_eliminated = True
+
     def resurrect(self):
         """
         Devuelve al fantasma a la vida en su posición inicial.
@@ -1141,32 +1147,17 @@ class Player:
             offset_y = (self.sprite_size - sprite.get_height()) // 2
             # Aplicamos el offset a las coordenadas de dibujado
             draw_x = self.x + offset_x
-            draw_y = self.y + self.sprite_draw_offset_y + TOP_OFFSET
+            draw_y = self.y + offset_y + self.sprite_draw_offset_y + TOP_OFFSET
             screen.blit(sprite, (draw_x, draw_y))
             return
-
-        # SI ES UN JUGADOR VIVO, COMPROBAR INVULNERABILIDAD Y DIBUJAR NORMAL
-        if self.is_invulnerable:
-            # Lógica de parpadeo blanco
+        # --- PARPADEO DEL GANADOR DEL SET ---
+        if self.is_set_winner:
             flash_interval = 0.1  # segundos
-            if time.time() > self.invulnerable_flash_timer:
-                self.invulnerable_flash_timer = time.time() + flash_interval
-
-            # Dibuja el jugador normal y luego un recuadro blanco parpadeante encima
-            # Esta condición hace que parpadee
-            if int((self.invulnerable_flash_timer - time.time()) / flash_interval * 10) % 2 == 0:
-                # El código de dibujo del jugador normal va aquí (copiado de más abajo)
-                if hasattr(self, "animaciones") and self.current_direction in self.animaciones:
-                    image_list = self.animaciones[self.current_direction]
-                    player_sprite = image_list[self.anim_frame % len(image_list)]
-                    screen.blit(player_sprite, (self.x, self.y + self.sprite_draw_offset_y + TOP_OFFSET))
-
-                # Superponemos el efecto de parpadeo
-                flash_surf = pygame.Surface((self.sprite_size, self.sprite_size))
-                flash_surf.fill(WHITE)
-                flash_surf.set_alpha(150)
+            if int((time.time() - self.set_winner_start_time) / flash_interval) % 2 == 0:
+                flash_surf = pygame.Surface((self.sprite_size, self.sprite_size), pygame.SRCALPHA)
+                flash_surf.fill((255, 255, 255, 150))  # Blanco semitransparente
                 screen.blit(flash_surf, (self.x, self.y + self.sprite_draw_offset_y + TOP_OFFSET))
-                return
+        # SI ES UN JUGADOR VIVO, COMPROBAR INVULNERABILIDAD Y DIBUJAR NORMAL
 
         # 1) Aura por detrás (solo si hay maldición activa)
         if self.active_curse and CURSES[self.active_curse]["duration"] is not None:
@@ -1310,7 +1301,7 @@ class Player:
                 if self.flash_count <= 0:
                     self.flashing = False
 
-    def place_bomb(self, bombs, powerups, forced=False):
+    def place_bomb(self, bombs, powerups, grid, lapidas, forced=False):
         # SI ES FANTASMA, APLICA REGLAS ESPECIALES
         if self.is_ghost:
             current_time = time.time()
@@ -1451,6 +1442,36 @@ class Player:
                     b.try_start_push(dx, dy, grid, bombs, players, powerups)
                 break
 
+    def reset_for_new_set(self, init_tile_x, init_tile_y):
+        """ Reinicia el estado del jugador para un nuevo set. """
+        self.x = init_tile_x * TILE_SIZE - 40
+        self.y = init_tile_y * TILE_SIZE - 40
+        self.is_ghost = False
+        self.is_eliminated = False
+        self.is_set_winner = False
+
+        self.is_invulnerable = True
+        self.invulnerable_until = time.time() + self.invulnerable_duration
+        self.invulnerable_flash_timer = time.time()
+
+        self.bomb_range = 1
+        self.bomb_limit = 1
+        self.speed = self.base_speed
+        self.display_speed = 1
+        self.push_bomb_available = False
+        self.hit_bomb_available = False
+        self.escudo_available = False
+        self.escudo_active = False
+        self.pending_speed_boosts = 0
+
+        if self.active_curse:
+            self._clear_curse_effects(self.active_curse)
+        self.active_curse = None
+        self.curse_ends_at = None
+        self.controls = self.original_controls.copy()
+
+        self.current_direction = "right"
+        self.anim_frame = 0
 #--------------------------------------------------------------------------------
 # Función para cargar animaciones de un personaje según su nombre
 def cargar_animaciones_personaje(nombre_personaje):
@@ -1524,36 +1545,6 @@ nombres_por_indice = {
     9: "Guerrero Negro",
     10: "Calvo"
 }
-
-# Creamos la lista de jugadores
-players = []
-color_pool = [RED, BLUE, (0, 255, 0), (255, 255, 0)]  # Colores para 4 jugadores
-
-for idx, jugador in enumerate(gestor_jugadores.todos()):
-    if idx >= len(posiciones_iniciales):
-        break  # Solo se admiten hasta 4 jugadores actualmente
-
-    tipo = jugador.get("tipo")
-    personaje_idx = jugador.get("indice", 0)
-    tile_x, tile_y = posiciones_iniciales[idx]
-    color = color_pool[idx % len(color_pool)]
-
-    if tipo == "teclado":
-        controls = controles_teclado
-    elif tipo == "mando":
-        controls = {"instance_id": jugador["instance_id"]}
-
-    else:
-        continue  # No válido
-
-    nombre_personaje = nombres_por_indice.get(personaje_idx, "red")
-    animaciones = cargar_animaciones_personaje(nombre_personaje)
-
-    nuevo_jugador = Player(tile_x, tile_y, color, controls)
-    nuevo_jugador.animaciones = animaciones
-    nuevo_jugador.player_index = idx
-    nuevo_jugador.ghost_anim_frames = cargar_animacion_fantasma(idx)
-    players.append(nuevo_jugador)
 
 
 # ------------------------------------------------------------------------------------
@@ -1666,8 +1657,6 @@ class Bomb:
 
     def draw(self, screen):
         self.update_push_slide()  # ← IMPORTANTE: actualiza animación de empuje continuo
-
-        self.update_hit_bounce(grid, players, bombs, powerups)
         draw_x = self.pos_x
         draw_y = self.pos_y
         if self.chain_triggered:
@@ -1748,7 +1737,7 @@ class Bomb:
 
         return explosions
 
-    def hit_by_player(self, dx, dy, grid, bombs, powerups, bounce_length=3):
+    def hit_by_player(self, dx, dy, grid, bombs, powerups, players, bounce_length=3):
         import math
 
         # Obtén la celda de partida y su centro en píxeles
@@ -1769,7 +1758,7 @@ class Bomb:
         path_tiles.append(intended_tile)
 
         # Función para determinar si una celda está libre:
-        def cell_free(tile):
+        def cell_free(tile, bombs, powerups):
             tx, ty = tile
             # Si es un muro o bloque inamovible:
             if grid[ty][tx] in (1, 2, 3):
@@ -1786,9 +1775,9 @@ class Bomb:
             return True
 
         # Si la casilla destino del salto de 3 casillas no está libre, encadena saltos de 1 celda
-        if not cell_free(intended_tile):
+        if not cell_free(intended_tile, bombs, powerups):
             current = intended_tile
-            while not cell_free(current):
+            while not cell_free(current, bombs, powerups):
                 next_tile = ((current[0] + dx) % GRID_COLS, (current[1] + dy) % GRID_ROWS)
                 path_tiles.append(next_tile)
                 current = next_tile
@@ -2146,13 +2135,14 @@ class DroppedAbility:
         self.completed = False
         self.dropped = False
 
-    def update(self, dt):
+
+    def update(self, dt, grid, powerups):
         self.elapsed += dt
         if self.elapsed >= self.duration:
             self.current_pos = self.target_pos
             self.completed = True
             if not self.dropped:
-                available = get_available_free_cells(game_grid, powerups)
+                available = get_available_free_cells(grid, powerups)
                 if self.target_cell not in available:
                     if available:
                         self.target_cell = random.choice(available)
@@ -2217,6 +2207,69 @@ dropped_abilities = []
 # ------------------------------------------------------------------------------------
 # Función generate_grid_and_powerups
 # ------------------------------------------------------------------------------------
+# REEMPLAZA TU FUNCIÓN 'check_pickup' con esta versión:
+def check_pickup(players, powerups, lapidas):
+    powerups_to_remove = []
+
+    for p in powerups:
+        if not (p.visible and not p.disappearing and not p.bouncing):
+            continue
+
+        # Coordenadas del juego (SIN TOP_OFFSET)
+        powerup_rect = pygame.Rect(p.x * TILE_SIZE, p.y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+
+        for player in players:
+            if player.is_ghost or not player.can_pick_abilities:
+                continue
+
+            player_hitbox = player.get_hitbox()
+
+            if player_hitbox.colliderect(powerup_rect):
+                if p.type in CURSES:
+                    COGER_MALDICION_SOUND.play()
+                    curse_to_apply = random.choice(list(CURSES.keys()))
+                    player.apply_curse(curse_to_apply)
+                else:
+                    COGER_HABILIDAD_SOUND.play()
+                    if p.type == "speed":
+                        # Lógica de velocidad corregida (como en tu original)
+                        player.base_speed += 1.0
+                        player.speed = player.base_speed
+                        player.display_speed += 1
+                    elif p.type == "more_bomb":
+                        player.bomb_limit += 1
+                    elif p.type == "major_explosion":
+                        player.bomb_range += 1
+                    elif p.type == "push_bomb":
+                        player.push_bomb_available = True
+                    elif p.type == "golpear_bombas":
+                        player.hit_bomb_available = True
+                    elif p.type == "escudo":
+                        player.escudo_available = True
+
+                powerups_to_remove.append(p)
+                break
+
+    for item in powerups_to_remove:
+        if item in powerups:
+            powerups.remove(item)
+
+    for lapida in lapidas:
+        if lapida.state != "active":
+            continue
+
+        lapida_rect = pygame.Rect(lapida.tile_x * TILE_SIZE, lapida.tile_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+
+        for player in players:
+            if player.is_ghost:
+                continue
+            if player.get_hitbox().colliderect(lapida_rect):
+                COGER_MALDICION_SOUND.play()
+                curse_name = random.choice(list(CURSES.keys()))
+                player.apply_curse(curse_name)
+                lapida.start_slow_fade()
+                break
+
 def generate_grid_and_powerups():
     grid = [[0 for _ in range(GRID_COLS)] for _ in range(GRID_ROWS)]
     powerups = []
@@ -2345,6 +2398,7 @@ def draw_grid_lines(screen):
 
 
 def draw_curse_info(screen, player, color, pos):
+    x, y = pos
     if getattr(player, 'active_curse', None) and getattr(player, 'curse_ends_at', None):
         duration = CURSES[player.active_curse]['duration']
         if duration is not None:
@@ -2376,681 +2430,343 @@ modo_posicion = config.current_position_index  # 0 = fija, 1 = aleatoria
 # ------------------------------------------------------------------------------------
 # Bucle principal
 # ------------------------------------------------------------------------------------
-TOTAL_TIME = config.current_minute * 60
-usar_fantasmas = config.current_ultimas_index.get("Fantasmas", 0) == 0
-start_time = time.time()
-grid, powerups = generate_grid_and_powerups()
-game_grid = grid
+def iniciar_partida(screen):
 
-if modo_posicion == 0:
-    posiciones = posiciones_iniciales[:len(players)]
-else:
-    posiciones = obtener_posiciones_aleatorias(len(players))
+    # dimensiones de pantalla partida
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
-# Colocar a cada jugador en su posición y guardar su posición inicial para reapariciones
-for i, jugador in enumerate(players):
-    x, y = posiciones[i]
-    jugador.initial_tile_x = x
-    jugador.initial_tile_y = y
-    jugador.x = x * TILE_SIZE - 40
-    jugador.y = y * TILE_SIZE - 40
-    jugador.player_index = i
-bombs = []
-explosions = []
-dropped_abilities = []
-lapidas = []
-lapida_por_colocar = None
+    # cargamos la musica de fondo
+    MUSIC_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "musica_fondo", "juego.mp3")
+    pygame.mixer.music.load(MUSIC_PATH)
+    pygame.mixer.music.set_volume(audio.volume)
+    pygame.mixer.music.play(-1)
 
-SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG = cargar_mapa()
+    global players
+    # Creamos la lista de jugadores
+    players = []
+    color_pool = [RED, BLUE, (0, 255, 0), (255, 255, 0)]  # Colores para 4 jugadores
 
-running = True
-clock = pygame.time.Clock()
-ghost_sound_channel = pygame.mixer.Channel(5)
-last_ghost_sound_time = 0
-ghost_sound_interval = 20  # segundos
+    for idx, jugador in enumerate(gestor_jugadores.todos()):
+        if idx >= len(posiciones_iniciales):
+            break  # Solo se admiten hasta 4 jugadores actualmente
 
-while running:
-    screen.fill(BLACK)
-    draw_grid(screen, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG)
-    draw_grid_lines(screen)
-    for lapida in lapidas:
-        lapida.draw(screen)
-    for player in players:
-        if player.auto_bombing:
-            player.place_bomb(bombs, powerups, forced=True)
+        tipo = jugador.get("tipo")
+        personaje_idx = jugador.get("indice", 0)
+        tile_x, tile_y = posiciones_iniciales[idx]
+        color = color_pool[idx % len(color_pool)]
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+        if tipo == "teclado":
+            controls = controles_teclado
+        elif tipo == "mando":
+            controls = {"instance_id": jugador["instance_id"]}
 
-        # Eventos de teclado
-        elif event.type == pygame.KEYDOWN:
-            for player in players:
-                # Activar escudo con la tecla 'o' para el jugador de teclado
-                if "up" in player.controls and event.key == pygame.K_o:
-                    player.activate_escudo()
-                player.update_curse()
-                if 'bomb' in player.controls and event.key == player.controls['bomb']:
-                    player.place_bomb(bombs, powerups)
-                elif 'hit' in player.controls and event.key == player.controls['hit']:
-                    if player.hit_bomb_available:
-                        dx, dy = 0, 0
-                        if player.current_direction == "up":
-                            dy = -1
-                        elif player.current_direction == "down":
-                            dy = 1
-                        elif player.current_direction == "left":
-                            dx = -1
-                        elif player.current_direction == "right":
-                            dx = 1
-                        if player.invert_controls:
-                            dx, dy = -dx, -dy
-                        if dx > 0:
-                            player.move_right(grid, bombs)
-                        elif dx < 0:
-                            player.move_left(grid, bombs)
-                        if dy > 0:
-                            player.move_down(grid, bombs)
-                        elif dy < 0:
-                            player.move_up(grid, bombs)
-                        front_tile_x = player.get_center_tile()[0] + dx
-                        front_tile_y = player.get_center_tile()[1] + dy
-                        for b in bombs:
-                            if b.tile_x == front_tile_x and b.tile_y == front_tile_y:
-                                if not b.hit_bouncing and not b.sliding:
-                                    b.hit_by_player(dx, dy, grid, bombs, powerups)
-                                break
-
-        # Eventos de mando
-        elif event.type == pygame.JOYBUTTONDOWN:
-            for player in players:
-                if 'instance_id' in player.controls and getattr(event, "instance_id", event.joy) == player.controls[
-                    'instance_id']:
-                    # Botón A (0): colocar bomba
-                    if event.button == 0:
-                        player.place_bomb(bombs, powerups)
-                    # Botón B (1): golpear bomba
-                    elif event.button == 1 and player.hit_bomb_available:
-                        dx, dy = 0, 0
-                        if player.current_direction == "up":
-                            dy = -1
-                        elif player.current_direction == "down":
-                            dy = 1
-                        elif player.current_direction == "left":
-                            dx = -1
-                        elif player.current_direction == "right":
-                            dx = 1
-                        if player.invert_controls:
-                            dx, dy = -dx, -dy
-                        if dx > 0:
-                            player.move_right(grid, bombs)
-                        elif dx < 0:
-                            player.move_left(grid, bombs)
-                        if dy > 0:
-                            player.move_down(grid, bombs)
-                        elif dy < 0:
-                            player.move_up(grid, bombs)
-                        front_tile_x = player.get_center_tile()[0] + dx
-                        front_tile_y = player.get_center_tile()[1] + dy
-                        for b in bombs:
-                            if b.tile_x == front_tile_x and b.tile_y == front_tile_y:
-                                if not b.hit_bouncing and not b.sliding:
-                                    b.hit_by_player(dx, dy, grid, bombs, powerups)
-                                break
-                    # Botón X (2): activar escudo
-                    elif event.button == 2:
-                        player.activate_escudo()
-
-            for player in players:
-                player.update_curse()
-                if isinstance(player.controls, dict) and 'bomb' in player.controls and event.type == player.controls[
-                    'bomb']:
-                    player.place_bomb(bombs, powerups)
-                elif 'hit' in player.controls and event.type == player.controls['hit']:
-                    if player.hit_bomb_available:
-                        dx, dy = 0, 0
-                        if player.current_direction == "up":
-                            dy = -1
-                        elif player.current_direction == "down":
-                            dy = 1
-                        elif player.current_direction == "left":
-                            dx = -1
-                        elif player.current_direction == "right":
-                            dx = 1
-                        if player.invert_controls:
-                            dx, dy = -dx, -dy
-                        if dx > 0:
-                            player.move_right(grid, bombs)
-                        elif dx < 0:
-                            player.move_left(grid, bombs)
-                        if dy > 0:
-                            player.move_down(grid, bombs)
-                        elif dy < 0:
-                            player.move_up(grid, bombs)
-                        front_tile_x = player.get_center_tile()[0] + dx
-                        front_tile_y = player.get_center_tile()[1] + dy
-                        for b in bombs:
-                            if b.tile_x == front_tile_x and b.tile_y == front_tile_y:
-                                if not b.hit_bouncing and not b.sliding:
-                                    b.hit_by_player(dx, dy, grid, bombs, powerups)
-                                break
-
-        # DESCONEXION Y RECONEXIÓN DE MANDOS
-        elif event.type == pygame.JOYDEVICEREMOVED:
-            lost_id = event.instance_id
-            for player in players:
-                if player.controls.get("instance_id") == lost_id:
-                    player.controls["active"] = False
-                    break
-
-        elif event.type == pygame.JOYDEVICEADDED:
-            new_joy = pygame.joystick.Joystick(event.device_index)
-            new_joy.init()
-
-            new_guid = new_joy.get_guid()
-            new_instance_id = new_joy.get_instance_id()
-
-            # ¿Hay algún jugador «desconectado» con este mismo GUID?
-            for player in players:
-                c = player.controls
-                if c.get("guid") == new_guid and not c.get("active", True):
-                    c["instance_id"] = new_instance_id
-                    c["id"] = event.device_index
-                    c["active"] = True
-                    print(f"Reasignado mando → jugador {players.index(player) + 1}")
-                    break
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            fondo_pausa = screen.copy()
-            jugador_controlador_id = "teclado"
-            jugador_nombre = "J1"  # Ajusta esto según cómo determines qué jugador es el de teclado
-            resultado = menu_pausa(screen, jugador_controlador_id, fondo_pausa)
-            if resultado == "Salir de la partida":
-                running = False  # o lo que uses para volver al menú
-            elif resultado == "Ajustar volumen":
-                from PantallaAudio import pantalla_audio
-
-                pantalla_audio(screen, bg_anim=None,
-                               volver_callback=lambda: menu_pausa(screen, jugador_controlador_id, fondo_pausa))
-            elif resultado == "Guía de juego":
-                from GuiaJuego import pantalla_guia_juego
-
-                pantalla_guia_juego(screen, jugador_controlador_id)
-
-            # Mando pausa (BOTÓN START / OPTIONS)
-        if event.type == pygame.JOYBUTTONDOWN and event.button == 7:  # START / OPTIONS
-            fondo_pausa = screen.copy()
-            instance_id = event.instance_id
-            jugador_controlador_id = instance_id
-            jugador_nombre = "J1"  # Debes mapear correctamente el nombre según ese instance_id
-            resultado = menu_pausa(screen, jugador_controlador_id, fondo_pausa)
-            if resultado == "Salir de la partida":
-                running = False
-            elif resultado == "Ajustar volumen":
-                from PantallaAudio import pantalla_audio
-
-                pantalla_audio(screen, bg_anim=None,
-                               volver_callback=lambda: menu_pausa(screen, jugador_controlador_id, fondo_pausa))
-            elif resultado == "Guía de juego":
-                from GuiaJuego import pantalla_guia_juego
-
-                pantalla_guia_juego(screen, jugador_controlador_id)
-    keys = pygame.key.get_pressed()
-    for player in players:
-        if player.is_invulnerable and time.time() > player.invulnerable_until:
-            player.is_invulnerable = False
-        if 'up' in player.controls:
-            # Jugador de teclado
-            if player.curse == "inverted":
-                if keys[player.controls['up']]:
-                    player.move_down(grid, bombs)
-                elif keys[player.controls['down']]:
-                    player.move_up(grid, bombs)
-                elif keys[player.controls['left']]:
-                    player.move_right(grid, bombs)
-                elif keys[player.controls['right']]:
-                    player.move_left(grid, bombs)
-            else:
-                if keys[player.controls['up']]:
-                    player.move_up(grid, bombs)
-                elif keys[player.controls['down']]:
-                    player.move_down(grid, bombs)
-                elif keys[player.controls['left']]:
-                    player.move_left(grid, bombs)
-                elif keys[player.controls['right']]:
-                    player.move_right(grid, bombs)
-
-        elif "instance_id" in player.controls and player.controls.get("active", True):
-            joy = get_joystick_by_instance_id(player.controls["instance_id"])
-            if joy is None:
-                player.controls["active"] = False
-                continue
-            # Lectura de entradas
-            dx = joy.get_axis(0)
-            dy = joy.get_axis(1)
-            hat_x, hat_y = joy.get_hat(0)  # ← cruzeta
-            # Inversión si tiene maldición
-            if player.curse == "inverted":
-                dx *= -1
-                dy *= -1
-                hat_x *= -1
-                hat_y *= -1
-            axis_threshold = 0.3
-            cruzeta_usada = False
-            # Movimiento con cruzeta (prioridad)
-            if hat_x == -1:
-                player.move_left(grid, bombs)
-                cruzeta_usada = True
-            elif hat_x == 1:
-                player.move_right(grid, bombs)
-                cruzeta_usada = True
-            elif hat_y == -1:
-                player.move_down(grid, bombs)
-                cruzeta_usada = True
-            elif hat_y == 1:
-                player.move_up(grid, bombs)
-                cruzeta_usada = True
-            # Si no hay entrada en la cruzeta, usar joystick
-            if not cruzeta_usada:
-                if abs(dx) > abs(dy):
-                    if dx > axis_threshold:
-                        player.move_right(grid, bombs)
-                    elif dx < -axis_threshold:
-                        player.move_left(grid, bombs)
-                else:
-                    if dy > axis_threshold:
-                        player.move_down(grid, bombs)
-                    elif dy < -axis_threshold:
-                        player.move_up(grid, bombs)
-
-        player.update_animation()
-        player.update_passable(bombs)
-        player.check_static_push(grid, bombs, players, powerups)
-        player.update_curse()
-        player.update_escudo()
-
-    for player in players:
-        if player.curse == "auto_bomb":
-            current_tile = player.get_center_tile()
-            current_bombs = [b for b in bombs if b.owner == player and not b.exploded]
-            if len(current_bombs) < player.bomb_limit:
-                bomb_exists = any(b for b in bombs if (b.tile_x, b.tile_y) == current_tile and not b.exploded)
-                if not bomb_exists:
-                    player.place_bomb(bombs, powerups, forced=True)
-            player.last_auto_bomb_tile = current_tile
-
-    current_time = time.time()
-    for i in range(len(players)):
-        for j in range(i + 1, len(players)):
-            p1 = players[i]
-            p2 = players[j]
-            cx1, cy1 = p1.get_center_coords()
-            cx2, cy2 = p2.get_center_coords()
-            dist = math.hypot(cx2 - cx1, cy2 - cy1)
-            if dist <= 10 and (current_time - p1.last_curse_exchange >= 3) and (
-                    current_time - p2.last_curse_exchange >= 3):
-                if p1.curse is not None and p2.curse is None:
-                    p2.curse = p1.curse
-                    p2.curse_start = p1.curse_start
-                    p1.curse = None
-                    p1.curse_start = None
-                elif p2.curse is not None and p1.curse is None:
-                    p1.curse = p2.curse
-                    p1.curse_start = p2.curse_start
-                    p2.curse = None
-                    p2.curse_start = None
-                else:
-                    p1.curse, p2.curse = p2.curse, p1.curse
-                    p1.curse_start, p2.curse_start = p2.curse_start, p1.curse_start
-                p1.last_curse_exchange = current_time
-                p2.last_curse_exchange = current_time
-
-    for bomb in bombs[:]:
-        if not bomb.exploded and (
-                (bomb.chain_triggered and time.time() - bomb.chain_trigger_time >= 0.75) or
-                (not bomb.chain_triggered and time.time() - bomb.plant_time >= bomb.timer)
-        ):
-            lista_de_explosiones = bomb.explode(grid, players, bombs, powerups)
-            # Simplemente añadimos esa lista a nuestra lista principal de explosiones
-            explosions.extend(lista_de_explosiones)
-
-    dt = clock.tick(60) / 1000.0  # ← define dt (a 60 FPS, en segundos)
-    update_powerups(powerups, dt)  # Actualiza los powerups
-    draw_powerups(screen, powerups)  # DIBUJA LOS POWERUPS PRIMERO
-    # Dibujar bombas y jugadores VIVOS según su Y
-    objetos_a_dibujar = []
-
-    for bomb in bombs:
-        bomb.draw(screen)  # Las bombas se dibujan primero
-
-    for player in players:
-        # Solo añadimos jugadores vivos a la lista de ordenación Y
-        if not player.is_ghost:
-            objetos_a_dibujar.append(("jugador", player.y + player.sprite_size, player))
-
-    # Ordenar solo a los jugadores vivos por coordenada Y
-    objetos_a_dibujar.sort(key=lambda x: x[1])
-
-    # Dibujar jugadores vivos en orden
-    for tipo, _, obj in objetos_a_dibujar:
-        obj.draw(screen)
-
-    # Dibujar explosiones
-    for explosion in explosions[:]:
-        explosion.update()
-        if explosion.finished:
-            explosions.remove(explosion)
         else:
-            explosion.draw(screen)
+            continue  # No válido
 
-    # DIBUJAR FANTASMAS AL FINAL PARA QUE SE VEAN POR ENCIMA DE
-    for player in players:
-        if player.is_ghost:
-            player.draw(screen)
+        nombre_personaje = nombres_por_indice.get(personaje_idx, "red")
+        animaciones = cargar_animaciones_personaje(nombre_personaje)
 
-    for explosion in explosions[:]:
-        explosion.update()
-        if explosion.finished:
-            explosions.remove(explosion)
+        nuevo_jugador = Player(tile_x, tile_y, color, controls)
+        nuevo_jugador.animaciones = animaciones
+        nuevo_jugador.player_index = idx
+        nuevo_jugador.ghost_anim_frames = cargar_animacion_fantasma(idx)
+        players.append(nuevo_jugador)
+
+    # Declaramos como globales las variables de estado para que sean accesibles desde todos los métodos
+    global grid, powerups, bombs, explosions, lapidas, lapida_por_colocar, exploding_blocks, dropped_abilities
+
+    # --- CONFIGURACIÓN DE LA PARTIDA ---
+    sets_to_win = config.set_options[config.current_set_index]
+    usar_fantasmas = config.current_ultimas_index.get("Fantasmas", 0) == 0
+    SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG = cargar_mapa()
+
+    for p in players:
+        p.sets_won = 0
+
+    # --- BUCLE DE LA PARTIDA (GESTIONA LOS SETS) ---
+    match_running = True
+    while match_running:
+        # --- REINICIO PARA UN NUEVO SET ---
+        grid, powerups = generate_grid_and_powerups()
+        bombs, explosions, lapidas, dropped_abilities = [], [], [], []
+        lapida_por_colocar = None
+        exploding_blocks = {}
+
+        if config.current_position_index == 1:
+            set_positions = obtener_posiciones_aleatorias(len(players))
         else:
-            explosion.draw(screen)
+            set_positions = posiciones_iniciales[:len(players)]
 
+        for i, player in enumerate(players):
+            x, y = set_positions[i]
+            player.reset_for_new_set(x, y)
 
-    def check_pickup(players, powerups):
+        start_time = time.time()
+        TOTAL_TIME = config.current_minute * 60
+        set_winner = None
+        set_end_sequence_start_time = None
+        clock = pygame.time.Clock()
 
-        global dropped_abilities
-        to_remove = []
-        for p in powerups:
-            if p.visible and not p.disappearing and not p.vanished:
-                for player in players:
-                    if player.is_ghost:
-                        continue
-                    if player.get_center_tile() == (p.x, p.y):
-                        if player.curse == "no_ability" and p.type != "calavera":
-                            continue
-                        if p.type == "calavera":
-                            # Elegir maldición y aplicarla
-                            curse_name = random.choice(list(CURSES.keys()))
-                            player.apply_curse(curse_name)
-                            # Reproducir sonido específico de maldición
-                            COGER_MALDICION_SOUND.play()  # asegúrate de cargar este Sound al inicio
-                            # Hacer desaparecer la calavera como powerup
-                            p.visible = False  # o p.vanished = True según tu implementación
-                            try:
-                                powerups.remove(p)
-                            except ValueError:
-                                pass
-                            dropped_abilities.append(p)
-                            to_remove.append(p)
-                            break
-                        elif p.type != "calavera" and not player.can_pick_abilities:
-                            continue
-                        elif p.type == "push_bomb":
-                            player.push_bomb_available = True
-                            COGER_HABILIDAD_SOUND.play()
-                            to_remove.append(p)
-                            break
-                        elif p.type == "golpear_bombas":
-                            player.hit_bomb_available = True
-                            COGER_HABILIDAD_SOUND.play()
-                            to_remove.append(p)
-                            break
-                        elif p.type == "escudo":
-                            player.escudo_available = True
-                            COGER_HABILIDAD_SOUND.play()
-                            to_remove.append(p)
-                            break
-                        elif p.type == "reset":
-                            default_speed = 1.0
-                            default_bomb_range = 1
-                            default_bomb_limit = 1
-                            dropped = []
-                            if player.base_speed > default_speed:
-                                bonus_units = int(round((player.base_speed - default_speed) / 0.5))
-                                for _ in range(bonus_units):
-                                    dropped.append(("speed", SPEED_IMG))
-                                player.base_speed = default_speed
+        # --- BUCLE DEL SET ---
+        set_running = True
+        while set_running:
+            dt = clock.tick(60) / 1000.0
+
+            # --- MANEJO DE EVENTOS ---
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    resultado = menu_pausa(screen, "teclado", screen.copy())
+                    if resultado == "Salir de la partida": return
+                if event.type == pygame.JOYBUTTONDOWN and event.button in (7,9):
+                    resultado = menu_pausa(screen, event.instance_id, screen.copy())
+                    if resultado == "Salir de la partida": return
+
+                if not set_end_sequence_start_time:
+                    if event.type == pygame.KEYDOWN:
+                        for player in players:
+                            if "up" in player.controls and event.key == pygame.K_o: player.activate_escudo()
+                            if 'bomb' in player.controls and event.key == player.controls['bomb']:
+                                player.place_bomb(bombs, powerups, grid, lapidas)
+                            elif 'hit' in player.controls and event.key == player.controls['hit']:
+                                if player.hit_bomb_available:
+                                    dx, dy = (0, -1) if player.current_direction == "up" else (
+                                    0, 1) if player.current_direction == "down" else (
+                                    -1, 0) if player.current_direction == "left" else (1, 0)
+                                    front_tile_x, front_tile_y = player.get_center_tile()[0] + dx, \
+                                                                 player.get_center_tile()[1] + dy
+                                    for b in bombs:
+                                        if b.tile_x == front_tile_x and b.tile_y == front_tile_y and not b.hit_bouncing and not b.sliding:
+                                            b.hit_by_player(dx, dy, grid, bombs, powerups, players)
+                                            break
+                    elif event.type == pygame.JOYBUTTONDOWN:
+                        for player in players:
+                            if 'instance_id' in player.controls and getattr(event, "instance_id", event.joy) == \
+                                    player.controls['instance_id']:
+                                if event.button == 0:
+                                    player.place_bomb(bombs, powerups, grid, lapidas)
+                                elif event.button == 1 and player.hit_bomb_available:
+                                    dx, dy = (0, -1) if player.current_direction == "up" else (
+                                    0, 1) if player.current_direction == "down" else (
+                                    -1, 0) if player.current_direction == "left" else (1, 0)
+                                    front_tile_x, front_tile_y = player.get_center_tile()[0] + dx, \
+                                                                 player.get_center_tile()[1] + dy
+                                    for b in bombs:
+                                        if b.tile_x == front_tile_x and b.tile_y == front_tile_y and not b.hit_bouncing and not b.sliding:
+                                            b.hit_by_player(dx, dy, grid, bombs, powerups, players)
+                                            break
+                                elif event.button == 2:
+                                    player.activate_escudo()
+
+            # --- ACTUALIZACIÓN DE ESTADO ---
+            keys = pygame.key.get_pressed()
+            player_list_to_update = [set_winner] if set_end_sequence_start_time and set_winner else players
+            for player in player_list_to_update:
+                if set_end_sequence_start_time and player != set_winner: continue
+                if player.is_eliminated: continue
+                if player.is_invulnerable and time.time() > player.invulnerable_until: player.is_invulnerable = False
+
+                if 'up' in player.controls:
+                    if keys[player.controls['up']]:
+                        player.move_up(grid, bombs, powerups, lapidas)
+                    elif keys[player.controls['down']]:
+                        player.move_down(grid, bombs, powerups, lapidas)
+                    elif keys[player.controls['left']]:
+                        player.move_left(grid, bombs, powerups, lapidas)
+                    elif keys[player.controls['right']]:
+                        player.move_right(grid, bombs, powerups, lapidas)
+                elif "instance_id" in player.controls and player.controls.get("active", True):
+                    joy = get_joystick_by_instance_id(player.controls["instance_id"])
+                    if joy:
+                        dx, dy, hat_x, hat_y = joy.get_axis(0), joy.get_axis(1), joy.get_hat(0)[0], joy.get_hat(0)[1]
+                        if hat_x == -1:
+                            player.move_left(grid, bombs, powerups, lapidas)
+                        elif hat_x == 1:
+                            player.move_right(grid, bombs, powerups, lapidas)
+                        elif hat_y == 1:
+                            player.move_up(grid, bombs, powerups, lapidas)
+                        elif hat_y == -1:
+                            player.move_down(grid, bombs, powerups, lapidas)
+                        elif abs(dx) > 0.3 or abs(dy) > 0.3:
+                            if abs(dx) > abs(dy):
+                                if dx > 0.3:
+                                    player.move_right(grid, bombs, powerups, lapidas)
+                                else:
+                                    player.move_left(grid, bombs, powerups, lapidas)
                             else:
-                                player.base_speed = default_speed
-                            if player.bomb_range > default_bomb_range:
-                                bonus_units = player.bomb_range - default_bomb_range
-                                for _ in range(bonus_units):
-                                    dropped.append(("major_explosion", MAYOR_EXPLOSION_IMG))
-                                player.bomb_range = default_bomb_range
-                            if player.bomb_limit > default_bomb_limit:
-                                bonus_units = player.bomb_limit - default_bomb_limit
-                                for _ in range(bonus_units):
-                                    dropped.append(("more_bomb", MORE_BOMB_IMG))
-                                player.bomb_limit = default_bomb_limit
-                            if player.push_bomb_available:
-                                dropped.append(("push_bomb", PUSH_BOMB_IMG))
-                                player.push_bomb_available = False
-                            free_cells = get_available_free_cells(game_grid, powerups)
-                            for ability_type, img in dropped:
-                                if free_cells:
-                                    target = random.choice(free_cells)
-                                    free_cells.remove(target)
+                                if dy > 0.3:
+                                    player.move_down(grid, bombs, powerups, lapidas)
                                 else:
-                                    target = find_free_cell_far_from(player, game_grid)
-                                dropped_abilities.append(
-                                    DroppedAbility(player.get_center_coords(), img, target, ability_type)
-                                )
-                            COGER_HABILIDAD_SOUND.play()
-                            to_remove.append(p)
-                            break
+                                    player.move_up(grid, bombs, powerups, lapidas)
+
+                player.update_animation()
+                if not set_end_sequence_start_time:
+                    player.update_passable(bombs)
+                    player.update_curse()
+                    player.update_escudo()
+
+            for bomb in bombs[:]:
+                bomb.update_push_slide()
+                bomb.update_hit_bounce(grid, players, bombs, powerups)
+                if not bomb.exploded and time.time() - bomb.plant_time >= bomb.timer and not bomb.timer_frozen:
+                    explosions.extend(bomb.explode(grid, players, bombs, powerups))
+
+            # --- INICIO DE LA LÓGICA DE GESTIÓN DE LÁPIDAS (VERSIÓN CORREGIDA Y COMPLETA) ---
+            # 1. Colocar la lápida pendiente cuando ya no haya explosiones
+            if lapida_por_colocar and not explosions:
+                pos = lapida_por_colocar
+                if not any(l.tile_x == pos[0] and l.tile_y == pos[1] for l in lapidas):
+                    lapidas.append(Lapida(pos[0], pos[1], LAPIDA_IMG))
+                lapida_por_colocar = None  # Reseteamos para la próxima muerte
+
+            # 2. Actualizar y eliminar lápidas según todas las condiciones
+            for lapida in lapidas[:]:
+                lapida.update()  # Esto se encarga de la desaparición por tiempo y al ser tocada
+
+                # Condición 1: La lápida ha terminado su animación de desvanecimiento
+                if lapida.is_finished():
+                    lapidas.remove(lapida)
+                    continue  # Pasamos a la siguiente lápida porque esta ya no existe
+
+                # Condición 2: Un objeto se ha colocado encima de la lápida
+                debe_ser_eliminada = False
+                # Si se coloca una bomba encima
+                if any(b.tile_x == lapida.tile_x and b.tile_y == lapida.tile_y for b in bombs):
+                    debe_ser_eliminada = True
+                # Si es alcanzada por una explosión
+                elif any(e.tile_x == lapida.tile_x and e.tile_y == lapida.tile_y for e in explosions):
+                    debe_ser_eliminada = True
+                # Si cae o se coloca un gadget visible encima
+                elif any(p.x == lapida.tile_x and p.y == lapida.tile_y and p.visible for p in powerups):
+                    debe_ser_eliminada = True
+
+                if debe_ser_eliminada:
+                    lapidas.remove(lapida)
+            # --- FIN DE LA LÓGICA DE GESTIÓN DE LÁPIDAS ---
+
+            for da in dropped_abilities[:]:
+                da.update(dt, grid, powerups)
+                if da.completed: dropped_abilities.remove(da)
+
+            update_powerups(powerups, dt)
+            if not set_end_sequence_start_time:
+                check_pickup(players, powerups, lapidas)
+            mortal_tiles_with_owner = {(e.tile_x, e.tile_y): e.owner for e in explosions if not e.finished}
+            if mortal_tiles_with_owner and not set_end_sequence_start_time:
+                for player in players[:]:
+                    if player.is_ghost or player.is_invulnerable or player.escudo_active:
+                        continue
+
+                    player_hitbox = player.get_hitbox()
+                    player_hitbox_area = player_hitbox.width * player_hitbox.height
+                    if player_hitbox_area == 0:
+                        continue
+
+                    total_overlap_area = 0
+                    killer = None
+
+                    min_tile_x = player_hitbox.left // TILE_SIZE
+                    max_tile_x = (player_hitbox.right - 1) // TILE_SIZE
+                    min_tile_y = player_hitbox.top // TILE_SIZE
+                    max_tile_y = (player_hitbox.bottom - 1) // TILE_SIZE
+
+                    for tile_x in range(min_tile_x, max_tile_x + 1):
+                        for tile_y in range(min_tile_y, max_tile_y + 1):
+                            if (tile_x, tile_y) in mortal_tiles_with_owner:
+                                # Coordenadas del juego (SIN TOP_OFFSET)
+                                mortal_tile_rect = pygame.Rect(tile_x * TILE_SIZE, tile_y * TILE_SIZE, TILE_SIZE,
+                                                               TILE_SIZE)
+                                overlap_rect = player_hitbox.clip(mortal_tile_rect)
+                                total_overlap_area += overlap_rect.width * overlap_rect.height
+                                if mortal_tiles_with_owner[(tile_x, tile_y)] is not None:
+                                    killer = mortal_tiles_with_owner[(tile_x, tile_y)]
+
+                    if (total_overlap_area / player_hitbox_area) >= 0.15:
+                        MUERTE_SOUND.play()
+                        if killer and killer.is_ghost:
+                            killer.resurrect()
+                            player.become_ghost()
                         else:
-                            if player.curse == "no_ability":
-                                continue
-                            if p.type == "major_explosion":
-                                player.bomb_range += 1
-                            if p.type == "speed":
-                                # Si hay maldición de velocidad activa, acumula; si no, aplícalo inmediatamente
-                                if player.active_curse in ("hyper_speed", "slow_speed"):
-                                    player.pending_speed_boosts += 1.0
-                                else:
-                                    player.base_speed += 1.0
-                                    player.speed = player.base_speed
-                                player.display_speed += 1
-                                # Reproducir sonido y eliminar power-up
-                                COGER_HABILIDAD_SOUND.play()
-                                p.start_disappear()
-                                to_remove.append(p)
-                                break
+                            if usar_fantasmas:
+                                player.become_ghost()
+                            else:
+                                player.eliminate()
 
-                            elif p.type == "more_bomb":
-                                player.bomb_limit += 1
-                            COGER_HABILIDAD_SOUND.play()
-                            p.start_disappear()
-                            to_remove.append(p)
-                            break
-        for r in to_remove:
-            if r in powerups:
-                powerups.remove(r)
+                        if lapida_por_colocar is None:
+                            lapida_por_colocar = player.get_center_tile()
 
-        for lapida in lapidas[:]:
-            if lapida.state == "active":
-                for player in players:
-                    # AÑADE ESTA CONDICIÓN:
-                    if player.is_ghost:
-                        continue  # Si es un fantasma, pasa al siguiente jugador
-
-                    if player.get_center_tile() == (lapida.tile_x, lapida.tile_y):
-                        COGER_MALDICION_SOUND.play()
-                        curse_name = random.choice(list(CURSES.keys()))
-                        player.apply_curse(curse_name)
-                        lapida.start_slow_fade()
+                        generar_poderes_al_morir(grid, bombs, powerups, players)
                         break
 
-    check_pickup(players, powerups)
+            if not set_end_sequence_start_time:
+                alive_players = [p for p in players if not p.is_ghost and not p.is_eliminated]
+                if len(alive_players) <= 1:
+                    set_end_sequence_start_time = time.time()
+                    if len(alive_players) == 1:
+                        set_winner = alive_players[0]
+                        set_winner.sets_won += 1
+                        set_winner.is_set_winner = True
+                        set_winner.set_winner_start_time = time.time()
 
-    # (Justo antes de la sección de dibujo de los elementos del juego)
+            # --- DIBUJADO ---
+            screen.fill(BLACK)
+            draw_grid(screen, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG)
+            for lapida in lapidas:
+                lapida.draw(screen)
+            for p in powerups: p.draw(screen)
+            for b in bombs: b.draw(screen)
+            for da in dropped_abilities: da.draw(screen)
 
-    # --- INICIO DE LA NUEVA LÓGICA DE GESTIÓN DE LÁPIDAS (VERSIÓN 2) ---
-
-    # 1. Colocar la lápida solo cuando no queden explosiones en pantalla
-    if lapida_por_colocar and not explosions:
-        pos = lapida_por_colocar
-        # Evitar poner una lápida encima de otra ya existente
-        if not any(l.tile_x == pos[0] and l.tile_y == pos[1] for l in lapidas):
-            lapidas.append(Lapida(pos[0], pos[1], LAPIDA_IMG))
-        lapida_por_colocar = None  # Reseteamos la variable para la próxima muerte
-
-    # 2. Actualizar y eliminar lápidas que han terminado su animación de desvanecimiento
-    for lapida in lapidas[:]:
-        lapida.update()
-        if lapida.is_finished():
-            lapidas.remove(lapida)
-
-    # 3. Eliminar lápidas si un objeto se coloca encima
-    for lapida in lapidas[:]:
-        debe_ser_eliminada = False
-        # Si se coloca una bomba
-        if any(b.tile_x == lapida.tile_x and b.tile_y == lapida.tile_y for b in bombs):
-            debe_ser_eliminada = True
-        # Si le alcanza una explosión
-        if any(e.tile_x == lapida.tile_x and e.tile_y == lapida.tile_y and not e.finished for e in explosions):
-            debe_ser_eliminada = True
-        # Si cae o se coloca un gadget
-        if any(p.x == lapida.tile_x and p.y == lapida.tile_y and p.visible for p in powerups):
-            debe_ser_eliminada = True
-
-        if debe_ser_eliminada:
-            lapidas.remove(lapida)
-
-    # --- FIN DE LA LÓGICA DE GESTIÓN DE LÁPIDAS ---
-
-    dt = clock.get_time() / 1000.0
-    for da in dropped_abilities[:]:
-        da.update(dt)
-        da.draw(screen)
-        if da.completed:
-            dropped_abilities.remove(da)
-
-    now = time.time()
-    to_remove = []
-    for pos, start_time_expl in exploding_blocks.items():
-        if now - start_time_expl >= EXPLOSION_DURATION:
-            x, y = pos
-            grid[y][x] = 0
-            to_remove.append(pos)
-    for pos in to_remove:
-        del exploding_blocks[pos]
-
-    # Reproducción global de sonido de fantasmas
-    hay_fantasmas = any(player.is_ghost for player in players)
-    current_time = time.time()
-
-    if hay_fantasmas:
-        if not ghost_sound_channel.get_busy() and current_time - last_ghost_sound_time >= ghost_sound_interval:
-            ghost_sound_channel.play(FANTASMA_SOUND)
-            last_ghost_sound_time = current_time
-    else:
-        if ghost_sound_channel.get_busy():
-            ghost_sound_channel.stop()
-
-    elapsed = time.time() - start_time
-    remaining_time = TOTAL_TIME - elapsed
-    if remaining_time < 0:
-        remaining_time = 0
-    draw_timer(screen, remaining_time)
-
-    # Mostrar HUD de todos los jugadores activos, ajustando colores
-    colores_por_jugador = [(0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0)]  # Verde, Rojo, Azul, Amarillo
-    GRIS = (128, 128, 128)
-    for i, player in enumerate(players):
-        x = 10 + i * 220
-        color = colores_por_jugador[i] if not getattr(player, "muerto", False) else GRIS
-        draw_HUD(screen, player, (x, 5), color)
-
-    # --- INICIO DE LA LÓGICA DE MUERTE POR EXPLOSIÓN (VERSIÓN FINAL) ---
-
-    # 1. Crear un diccionario de casillas mortales que guarda quién las causó.
-    mortal_tiles_with_owner = {}
-    for explosion in explosions:
-        if not explosion.finished and explosion.explosion_type in ["center", "extreme", "lateral"]:
-            tile_key = (explosion.tile_x, explosion.tile_y)
-            # Guardamos la casilla y el dueño de la bomba que causó la explosión
-            if tile_key not in mortal_tiles_with_owner:
-                mortal_tiles_with_owner[tile_key] = explosion.owner
-
-    # 2. Comprobar cada jugador contra las casillas mortales.
-    if mortal_tiles_with_owner:
-        for player in players[:]:
-            # Ignorar si el jugador ya es fantasma, invulnerable o tiene el escudo activo
-            if player.is_ghost or player.is_invulnerable or player.escudo_active:
-                continue
-
-            player_hitbox = player.get_hitbox()
-            player_hitbox_area = player_hitbox.width * player_hitbox.height
-
-            if player_hitbox_area == 0:
-                continue
-
-            total_overlap_area = 0
-            killer = None  # Variable para guardar quién mató al jugador
-
-            # Determinar el rango de casillas que el hitbox podría tocar
-            min_tile_x = player_hitbox.left // TILE_SIZE
-            max_tile_x = (player_hitbox.right - 1) // TILE_SIZE
-            min_tile_y = player_hitbox.top // TILE_SIZE
-            max_tile_y = (player_hitbox.bottom - 1) // TILE_SIZE
-
-            for tile_x in range(min_tile_x, max_tile_x + 1):
-                for tile_y in range(min_tile_y, max_tile_y + 1):
-                    tile_key = (tile_x, tile_y)
-                    if tile_key in mortal_tiles_with_owner:
-                        mortal_tile_rect = pygame.Rect(tile_x * TILE_SIZE, tile_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                        overlap_rect = player_hitbox.clip(mortal_tile_rect)
-                        total_overlap_area += overlap_rect.width * overlap_rect.height
-
-                        # Si encontramos al asesino, lo guardamos. Priorizamos un asesino real sobre None.
-                        if mortal_tiles_with_owner[tile_key] is not None:
-                            killer = mortal_tiles_with_owner[tile_key]
-
-            # 4. Si la superposición es suficiente, el jugador muere.
-            if (total_overlap_area / player_hitbox_area) >= 0.15:
-                MUERTE_SOUND.play()  # El sonido de muerte suena en cualquier caso
-
-                # --- LÓGICA DE INTERCAMBIO DE ROLES ---
-                if killer and killer.is_ghost:
-                    print(f"¡El FANTASMA {killer.player_index + 1} mató a {player.player_index + 1}!")
-
-                    # 1. El fantasma que mató resucita (el sonido de reaparición se reproduce dentro del MODO)
-                    killer.resurrect()
-
-                    # 2. El jugador asesinado se convierte en fantasma
-                    player.become_ghost()
-
-                    # 3. Generar gadgets (como en la muerte normal) y lápida
-                    if lapida_por_colocar is None:
-                        lapida_por_colocar = player.get_center_tile()
-                    generar_poderes_al_morir(grid, bombs, powerups, players)
-
-                # --- LÓGICA DE MUERTE NORMAL ---
+            drawable_players = [set_winner] if set_end_sequence_start_time and set_winner else players
+            sorted_players = sorted([p for p in drawable_players if not p.is_ghost], key=lambda p: p.y)
+            for p in sorted_players:
+                if p.is_eliminated: continue
+                p.draw(screen)
+            for explosion in explosions[:]:
+                explosion.update()
+                if explosion.finished:
+                    explosions.remove(explosion)
                 else:
-                    if killer:
-                        print(f"¡El jugador {killer.player_index + 1} mató a {player.player_index + 1}!")
-                    else:
-                        print(f"¡El jugador {player.player_index + 1} ha muerto!")
+                    explosion.draw(screen)
+            for p in drawable_players:
+                if p.is_ghost: p.draw(screen)
 
-                    if lapida_por_colocar is None:
-                        lapida_por_colocar = player.get_center_tile()
+            for i in range(len(gestor_jugadores.todos())):
+                player_info = next((p for p in players if p.player_index == i), None)
+                x_hud = 10 + i * 220
+                if player_info: draw_HUD(screen, player_info, (x_hud, 5), color_pool[i % len(color_pool)])
 
-                    if usar_fantasmas:
-                        print("Transformando en fantasma")
-                        player.become_ghost()
-                    else:
-                        print("Eliminando jugador completamente")
-                        players.remove(player)
+            draw_timer(screen, max(0, TOTAL_TIME - (time.time() - start_time)))
+            pygame.display.flip()
 
-                    generar_poderes_al_morir(grid, bombs, powerups, players)
+            if set_end_sequence_start_time and (time.time() - set_end_sequence_start_time > 3.0):
+                set_running = False
 
-                    generar_poderes_al_morir(grid, bombs, powerups, players)
+        # --- FIN DEL SET ---
+        if set_winner and set_winner.sets_won >= sets_to_win:
+            match_running = False
+        if not any(p for p in players):
+            match_running = False
 
-                # Rompemos el bucle para que un jugador no pueda morir dos veces en el mismo frame
-                break
+    # --- FIN DE LA PARTIDA ---
 
-    pygame.display.flip()
-    clock.tick(60)
+    from EstadoPartida import reiniciar_estado
+    reiniciar_estado()
+    # Importamos las funciones necesarias para volver al menú
+    from PantallaConfigPartida import pantalla2_main
+    from PantallaPrincipal import BackgroundAnimation
 
-pygame.quit()
-sys.exit()
+    # Definimos las dimensiones del menú (las mismas que en MainMenu.py)
+    MENU_WIDTH = 800
+    MENU_HEIGHT = 600
+
+    # ¡AQUÍ ESTÁ LA CORRECCIÓN CLAVE!
+    screen = pygame.display.set_mode((MENU_WIDTH, MENU_HEIGHT))
+
+    # Ahora creamos la animación de fondo con las dimensiones correctas del menú
+    bg_anim = BackgroundAnimation(screen.get_width(), screen.get_height())
+
+    # Y finalmente llamamos a la pantalla del menú de configuración con la pantalla ya corregida
+    pantalla2_main(screen, bg_anim)

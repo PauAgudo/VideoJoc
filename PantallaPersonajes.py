@@ -201,7 +201,7 @@ def pantalla_personajes(screen, bg_anim):
 
                     if total_listos >= 2:
                         if total_listos == total_conectados:
-                            from IniciarPartida import iniciar_partida
+                            from Bomberman import iniciar_partida
                             iniciar_partida(screen)
                             return
                         else:
@@ -227,7 +227,7 @@ def pantalla_personajes(screen, bg_anim):
                         total_conectados = len(gestor_jugadores.jugadores)
                         if len(listos) >= 2:
                             if len(listos) == total_conectados:
-                                from IniciarPartida import iniciar_partida
+                                from Bomberman import iniciar_partida
                                 iniciar_partida(screen)
                                 return
                             else:
@@ -298,7 +298,7 @@ def pantalla_personajes(screen, bg_anim):
                             if nombre in SONIDOS_PERSONAJE:
                                 SONIDOS_PERSONAJE[nombre].play()
 
-                elif event.button == 7:  # OPTIONS
+                elif event.button in (7, 9):  # OPTIONS
                     from PantallaAudio import pantalla_audio
                     pantalla_audio(screen, bg_anim, volver_callback=pantalla_personajes)
 
@@ -319,7 +319,7 @@ def pantalla_personajes(screen, bg_anim):
                         total_conectados = len(gestor_jugadores.jugadores)
                         if len(listos) >= 2:
                             if len(listos) == total_conectados:
-                                from IniciarPartida import iniciar_partida
+                                from Bomberman import iniciar_partida
                                 iniciar_partida(screen)
                                 return
                             else:

@@ -23,17 +23,12 @@ def reiniciar_estado():
     # 4. Detener la música del juego si está sonando y reproducir la música del menú
     pygame.mixer.music.stop()
     try:
-        # Asegúrate de que esta ruta sea correcta para la música del menú
         pygame.mixer.music.load("Media/Sonidos_juego/musica_fondo/menu.mp3")
         pygame.mixer.music.set_volume(audio.volume) # Usa el volumen global
         pygame.mixer.music.play(-1)
         print("[ESTADO] Música del menú iniciada.")
     except Exception as e:
         print(f"[ESTADO] Error al cargar o reproducir música del menú: {e}")
-
-    # Señal para detener la partida actual. Esto lo manejaremos de otra forma en Bomberman.py
-    # La importación dinámica de Bomberman no es la mejor práctica aquí,
-    # y será gestionada por el valor de retorno de menu_pausa.
 
     print("[ESTADO] Todos los datos han sido reseteados.")
     # No necesitamos devolver nada aquí, solo realiza el reinicio de datos.
