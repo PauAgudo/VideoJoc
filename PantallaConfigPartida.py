@@ -169,7 +169,7 @@ class ConfiguracionPartida:
                         key = keys[tira_activa_idx]
                         if key == "sets" and current_set_index > 0:
                             current_set_index -= 1
-                        elif key == "minutos" and current_minute > 1:
+                        elif key == "minutos" and current_minute > 2:
                             current_minute -= 1
                         elif key == "nivel_COM" and current_level_index > 0:
                             current_level_index -= 1
@@ -212,7 +212,7 @@ class ConfiguracionPartida:
                                 key = keys[tira_activa_idx]
                                 if key == "sets" and current_set_index > 0:
                                     current_set_index -= 1
-                                elif key == "minutos" and current_minute > 1:
+                                elif key == "minutos" and current_minute > 2:
                                     current_minute -= 1
                                 elif key == "nivel_COM" and current_level_index > 0:
                                     current_level_index -= 1
@@ -265,7 +265,7 @@ class ConfiguracionPartida:
                             if la.collidepoint(mouse_pos):
                                 if key == "sets" and current_set_index > 0:
                                     current_set_index -= 1
-                                elif key == "minutos" and current_minute > 1:
+                                elif key == "minutos" and current_minute > 2:
                                     current_minute -= 1
                                 elif key == "nivel_COM" and current_level_index > 0:
                                     current_level_index -= 1
@@ -296,7 +296,7 @@ class ConfiguracionPartida:
                         key = keys[tira_activa_idx]
                         if key == "sets" and current_set_index > 0:
                             current_set_index -= 1
-                        elif key == "minutos" and current_minute > 1:
+                        elif key == "minutos" and current_minute > 2:
                             current_minute -= 1
                         elif key == "nivel_COM" and current_level_index > 0:
                             current_level_index -= 1
