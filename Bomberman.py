@@ -2135,7 +2135,7 @@ class DroppedAbility:
         self.completed = False
         self.dropped = False
 
-    # REEMPLAZA TU MÉTODO 'update' ACTUAL CON ESTE:
+
     def update(self, dt, grid, powerups):
         self.elapsed += dt
         if self.elapsed >= self.duration:
