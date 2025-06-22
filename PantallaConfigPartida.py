@@ -315,7 +315,7 @@ class ConfiguracionPartida:
                         config.__init__()
                         confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
 
-                    elif event.button == 7:  # Botón OPTIONS/Start → ajustes
+                    elif event.button in (7, 9):  # Botón OPTIONS/Start → ajustes
                         pantalla_audio(screen, bg_anim, volver_callback=pantalla2_main)
 
                 elif event.type == pygame.JOYDEVICEADDED:

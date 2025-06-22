@@ -591,8 +591,13 @@ def confirmar_salida(screen, bg_anim, fondo_anterior):
                 if si_rect.collidepoint(mouse_pos):
                     from EstadoPartida import reiniciar_estado
                     reiniciar_estado()
-                    from MainMenu import main
-                    main()
+                    from PantallaConfigPartida import pantalla2_main
+                    from PantallaPrincipal import BackgroundAnimation
+                    MENU_WIDTH = 800
+                    MENU_HEIGHT = 600
+                    screen = pygame.display.set_mode((MENU_WIDTH, MENU_HEIGHT))
+                    bg_anim = BackgroundAnimation(screen.get_width(), screen.get_height())
+                    pantalla2_main(screen, bg_anim)
                     return
                 elif no_rect.collidepoint(mouse_pos):
                     return
@@ -607,8 +612,13 @@ def confirmar_salida(screen, bg_anim, fondo_anterior):
                     if seleccion == 0:
                         from EstadoPartida import reiniciar_estado
                         reiniciar_estado()
-                        from MainMenu import main
-                        main()
+                        from PantallaConfigPartida import pantalla2_main
+                        from PantallaPrincipal import BackgroundAnimation
+                        MENU_WIDTH = 800
+                        MENU_HEIGHT = 600
+                        screen = pygame.display.set_mode((MENU_WIDTH, MENU_HEIGHT))
+                        bg_anim = BackgroundAnimation(screen.get_width(), screen.get_height())
+                        pantalla2_main(screen, bg_anim)
                         return
                     else:
                         return
@@ -637,8 +647,13 @@ def confirmar_salida(screen, bg_anim, fondo_anterior):
                     if seleccion == 0:
                         from EstadoPartida import reiniciar_estado
                         reiniciar_estado()
-                        from MainMenu import main
-                        main()
+                        from PantallaConfigPartida import pantalla2_main
+                        from PantallaPrincipal import BackgroundAnimation
+                        MENU_WIDTH = 800
+                        MENU_HEIGHT = 600
+                        screen = pygame.display.set_mode((MENU_WIDTH, MENU_HEIGHT))
+                        bg_anim = BackgroundAnimation(screen.get_width(), screen.get_height())
+                        pantalla2_main(screen, bg_anim)
                         return
                     else:
                         return

@@ -199,7 +199,7 @@ def pantalla_mapas(screen, bg_anim):
                     pantalla2_main(screen, bg_anim)
                     return
 
-                elif event.button == 7:  # OPTIONS → pantalla audio
+                elif event.button in (7, 9):  # OPTIONS → pantalla audio
                     from PantallaAudio import pantalla_audio
                     pantalla_audio(screen, bg_anim, volver_callback=pantalla_mapas)
 
