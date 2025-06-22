@@ -70,23 +70,35 @@ class ConfiguracionPartida:
             "Bloques_final": "Media/Menu/Pantalla_configuracion_partida/tira_bloques.png"
         }
 
+        aumento_ancho_izquierda = 100  # Píxeles que crecerá la tira hacia la izquierda. ¡Puedes cambiar este número!
+        ancho_original = 550
+        nuevo_ancho_tira = ancho_original + aumento_ancho_izquierda
+
         # Carga cada imagen individual y la guarda en el diccionario tiras
+        nueva_altura_tira = 35
         tiras = {
-            k: pygame.transform.scale(pygame.image.load(tira_files[k]), (550, 30))
+            k: pygame.transform.scale(pygame.image.load(tira_files[k]), (nuevo_ancho_tira, nueva_altura_tira))
             for k in keys
         }
 
         # Desplazamiento vertical
         vertical_shift = 50
+
+        # MODIFICACIÓN: La coordenada X se mueve a la izquierda para compensar el aumento de ancho
+        nueva_posicion_x = 280 - aumento_ancho_izquierda
+
+        # Se mantiene el espaciado vertical de 45 píxeles
         posiciones = {
-            "sets": (280, 120 + vertical_shift),
-            "minutos": (280, 160 + vertical_shift),
-            "nivel_COM": (280, 200 + vertical_shift),
-            "pos_inicial": (280, 240 + vertical_shift),
-            "Fantasmas": (280, 280 + vertical_shift),
-            "Maldiciones": (280, 320 + vertical_shift),
-            "Bloques_final": (280, 360 + vertical_shift)
+            "sets":           (nueva_posicion_x, 90 + vertical_shift),
+            "minutos":        (nueva_posicion_x, 140 + vertical_shift),
+            "nivel_COM":      (nueva_posicion_x, 190 + vertical_shift),
+            "pos_inicial":    (nueva_posicion_x, 240 + vertical_shift),
+            "Fantasmas":      (nueva_posicion_x, 290 + vertical_shift),
+            "Maldiciones":    (nueva_posicion_x, 340 + vertical_shift),
+            "Bloques_final":  (nueva_posicion_x, 390 + vertical_shift)
         }
+
+
         botones = {k: {"imagen": tiras[k], "rect": tiras[k].get_rect(topleft=posiciones[k])} for k in keys}
 
         # Flechas
