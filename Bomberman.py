@@ -1300,7 +1300,7 @@ class Player:
                 # Hacemos que la visibilidad alterne cada 0.1 segundos
                 if int(time.time() * 10) % 2 == 0:
                     # En los ciclos pares, "saltamos" el dibujo del jugador para crear el parpadeo.
-                    # Para ello, simplemente no dibujamos nada y salimos del método draw.
+                    # Para ello, simplemente no dibujamos nada y salimos
                     # Sin embargo, para que se vean otros efectos como el escudo, es mejor
                     # simplemente no dibujar el sprite del jugador. Lo gestionaremos abajo.
                     pass
