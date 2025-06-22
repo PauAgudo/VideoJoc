@@ -22,6 +22,18 @@ class Config:
         # Configuración mapa
         self.selected_map = 1
 
+    def reset(self):
+        # Resetea todas las configuraciones a sus valores por defecto
+        self.current_set_index = 2
+        self.current_minute = 3
+        self.current_level_index = 1
+        self.current_position_index = 0
+        self.current_ultimas_index = {
+            "Fantasmas": 0,
+            "Maldiciones": 0,
+            "Bloques_final": 0
+        }
+        self.selected_map = 1
 config = Config()
 
 
@@ -87,6 +99,14 @@ audio.load()
 
 class Personajes:
     def __init__(self):
+        self.seleccion = {
+            "jugador_1": {"personaje": None},
+            "jugador_2": {"personaje": None},
+            "jugador_3": {"personaje": None},
+            "jugador_4": {"personaje": None},
+        }
+
+    def reset(self):
         self.seleccion = {
             "jugador_1": {"personaje": None},
             "jugador_2": {"personaje": None},

@@ -17,6 +17,7 @@ pygame.mixer.init()
 # Inicialización de mandos
 pygame.joystick.init()
 
+
 def get_joystick_by_instance_id(instance_id: int):
     for i in range(pygame.joystick.get_count()):
         joy = pygame.joystick.Joystick(i)
@@ -1140,7 +1141,7 @@ class Player:
             offset_y = (self.sprite_size - sprite.get_height()) // 2
             # Aplicamos el offset a las coordenadas de dibujado
             draw_x = self.x + offset_x
-            draw_y = self.y + offset_y + self.sprite_draw_offset_y + TOP_OFFSET
+            draw_y = self.y + self.sprite_draw_offset_y + TOP_OFFSET
             screen.blit(sprite, (draw_x, draw_y))
             return
 
@@ -1166,6 +1167,7 @@ class Player:
                 flash_surf.set_alpha(150)
                 screen.blit(flash_surf, (self.x, self.y + self.sprite_draw_offset_y + TOP_OFFSET))
                 return
+
         # 1) Aura por detrás (solo si hay maldición activa)
         if self.active_curse and CURSES[self.active_curse]["duration"] is not None:
             if not hasattr(Player, 'aura_frames'):
@@ -1205,6 +1207,50 @@ class Player:
             )
             screen.blit(aura_behind, aura_rect_behind)
 
+        # --- INICIO DE LA MODIFICACIÓN ---
+
+        # DIBUJO DEL ESCUDO (DETRÁS)
+        if self.escudo_active:
+            # Carga perezosa de los frames del GIF del escudo
+            if not hasattr(Player, 'escudo_frames'):
+                import os
+                from PIL import Image
+                escudo_path = os.path.join(os.path.dirname(__file__), ASSETS_DIR, "Gadgets", "Efectos_visuales",
+                                           "escudo.gif")
+                try:
+                    pil_image = Image.open(escudo_path)
+                    frames = []
+                    while True:
+                        frame = pil_image.convert("RGBA")
+                        pygame_frame = pygame.image.fromstring(frame.tobytes(), frame.size, frame.mode)
+                        frames.append(pygame_frame)
+                        pil_image.seek(pil_image.tell() + 1)
+                except EOFError:
+                    pass
+                except (FileNotFoundError, ImportError):
+                    frames = []
+                Player.escudo_frames = frames
+                Player.escudo_frame_count = len(frames) if frames else 1
+                Player.escudo_frame_duration = 100  # ms por frame
+
+            # Si los frames están cargados, dibujamos el GIF de detrás
+            if Player.escudo_frames:
+                current_time_ms = pygame.time.get_ticks()
+                frame_index = (current_time_ms // Player.escudo_frame_duration) % Player.escudo_frame_count
+                escudo_image = Player.escudo_frames[frame_index]
+                new_size = int(self.sprite_size)
+                escudo_image_scaled = pygame.transform.smoothscale(escudo_image, (new_size, new_size))
+
+                # Crear y dibujar la copia de DETRÁS con 50% de opacidad
+                escudo_behind = escudo_image_scaled.copy()
+                escudo_behind.set_alpha(int(255 * 0.50))  # 50% Opacidad
+                escudo_rect_behind = escudo_behind.get_rect()
+                escudo_rect_behind.center = (
+                    self.x + self.sprite_size // 2,
+                    self.y + self.sprite_draw_offset_y + TOP_OFFSET + self.sprite_size // 2
+                )
+                screen.blit(escudo_behind, escudo_rect_behind)
+
         # 2) Dibujo del jugador (sprite según dirección y personaje)
         if hasattr(self, "animaciones") and self.current_direction in self.animaciones:
             image_list = self.animaciones[self.current_direction]
@@ -1220,49 +1266,6 @@ class Player:
                     self.y + self.sprite_draw_offset_y + TOP_OFFSET + altura_offset
                 )
                 screen.blit(mark_img, mark_rect)
-                # Efecto visual del Escudo si está activo
-                if self.escudo_active:
-                    if not hasattr(Player, 'escudo_frames'):
-                        import os
-                        from PIL import Image
-                        escudo_path = os.path.join(os.path.dirname(__file__), ASSETS_DIR, "Gadgets", "Efectos_visuales",
-                                                   "escudo.gif")
-                        try:
-                            pil_image = Image.open(escudo_path)
-                            frames = []
-                            while True:
-                                frame = pil_image.convert("RGBA")
-                                pygame_frame = pygame.image.fromstring(frame.tobytes(), frame.size, frame.mode)
-                                frames.append(pygame_frame)
-                                pil_image.seek(pil_image.tell() + 1)
-                        except EOFError:
-                            pass
-                        except (FileNotFoundError, ImportError):
-                            frames = []
-                        Player.escudo_frames = frames
-                        Player.escudo_frame_count = len(frames) if frames else 1
-                        Player.escudo_frame_duration = 100  # ms por frame
-
-                    if Player.escudo_frames:
-                        current_time_ms = pygame.time.get_ticks()
-                        frame_index = (current_time_ms // Player.escudo_frame_duration) % Player.escudo_frame_count
-                        escudo_image = Player.escudo_frames[frame_index]
-
-                        # Escalar GIF al tamaño del jugador y mantener relación de aspecto
-                        new_size = int(self.sprite_size)
-                        escudo_image_scaled = pygame.transform.smoothscale(escudo_image, (new_size, new_size))
-
-                        # Aplicar opacidad del 30%
-                        escudo_overlay = escudo_image_scaled.copy()
-                        escudo_overlay.set_alpha(int(255 * 0.30))
-
-                        # Centrar el GIF en el jugador
-                        escudo_rect = escudo_overlay.get_rect()
-                        escudo_rect.center = (
-                            self.x + self.sprite_size // 2,
-                            self.y + self.sprite_draw_offset_y + TOP_OFFSET + self.sprite_size // 2
-                        )
-                        screen.blit(escudo_overlay, escudo_rect)
 
         # 3) Aura por delante (solo si hay maldición activa)
         if self.active_curse and CURSES[self.active_curse]["duration"] is not None:
@@ -1274,6 +1277,26 @@ class Player:
                 self.y + self.sprite_draw_offset_y + TOP_OFFSET + self.sprite_size // 2 - 10
             )
             screen.blit(aura_front, aura_rect_front)
+
+        # DIBUJO DEL ESCUDO (DELANTE)
+        if self.escudo_active and hasattr(Player, 'escudo_frames') and Player.escudo_frames:
+            current_time_ms = pygame.time.get_ticks()
+            frame_index = (current_time_ms // Player.escudo_frame_duration) % Player.escudo_frame_count
+            escudo_image = Player.escudo_frames[frame_index]
+            new_size = int(self.sprite_size)
+            escudo_image_scaled = pygame.transform.smoothscale(escudo_image, (new_size, new_size))
+
+            # Crear y dibujar la copia de DELANTE con 30% de opacidad
+            escudo_overlay = escudo_image_scaled.copy()
+            escudo_overlay.set_alpha(int(255 * 0.30))  # 30% Opacidad
+            escudo_rect_front = escudo_overlay.get_rect()
+            escudo_rect_front.center = (
+                self.x + self.sprite_size // 2,
+                self.y + self.sprite_draw_offset_y + TOP_OFFSET + self.sprite_size // 2
+            )
+            screen.blit(escudo_overlay, escudo_rect_front)
+
+        # --- FIN DE LA MODIFICACIÓN ---
 
         # 4) Efecto de parpadeo al expirar la maldición
         if self.flashing:

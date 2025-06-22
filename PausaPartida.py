@@ -1,7 +1,6 @@
 import pygame
 import sys
 from Config import audio
-from PantallaPrincipal import background_screen
 
 # Constantes para los colores
 AZUL = (0, 0, 255)
@@ -592,9 +591,8 @@ def confirmar_salida(screen, bg_anim, fondo_anterior):
                 if si_rect.collidepoint(mouse_pos):
                     from EstadoPartida import reiniciar_estado
                     reiniciar_estado()
-                    from PantallaPrincipal import background_screen
-                    from PantallaConfigPartida import pantalla2_main
-                    pantalla2_main(screen, background_screen(screen))
+                    from MainMenu import main
+                    main()
                     return
                 elif no_rect.collidepoint(mouse_pos):
                     return
@@ -609,9 +607,8 @@ def confirmar_salida(screen, bg_anim, fondo_anterior):
                     if seleccion == 0:
                         from EstadoPartida import reiniciar_estado
                         reiniciar_estado()
-                        from PantallaPrincipal import background_screen
-                        from PantallaConfigPartida import pantalla2_main
-                        pantalla2_main(screen, background_screen(screen))
+                        from MainMenu import main
+                        main()
                         return
                     else:
                         return
@@ -640,9 +637,8 @@ def confirmar_salida(screen, bg_anim, fondo_anterior):
                     if seleccion == 0:
                         from EstadoPartida import reiniciar_estado
                         reiniciar_estado()
-                        from PantallaPrincipal import background_screen
-                        from PantallaConfigPartida import pantalla2_main
-                        pantalla2_main(screen, background_screen(screen))
+                        from MainMenu import main
+                        main()
                         return
                     else:
                         return
