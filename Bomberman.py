@@ -33,8 +33,14 @@ TOP_OFFSET = 80  # Espacio para el contador y el HUD
 TILE_SIZE = 40
 GRID_COLS = 21
 GRID_ROWS = 17
-WIDTH = GRID_COLS * TILE_SIZE  # Ancho total de la pantalla
+
+# Ancho del área de juego (el mapa)
+GAME_WIDTH = GRID_COLS * TILE_SIZE
 HEIGHT = GRID_ROWS * TILE_SIZE + TOP_OFFSET
+
+# --- CONSTANTES PARA MARCADORES ---
+SIDEBAR_WIDTH = 150  # Ancho para cada barra lateral de marcadores
+WIDTH = GAME_WIDTH + (2 * SIDEBAR_WIDTH) # Ancho total de la nueva ventana
 
 CURSES = {
     "reset": {"duration": None, "shows_in_hud": False, "clears_previous": False,
@@ -118,6 +124,71 @@ def cargar_mapa():  # FUNCION CARGAR MAPA SEGUN SELECCION
 
     return SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG
 
+# CARGAR MARCADORES PARA CADA JUGADOR
+def cargar_marcadores(sets_a_ganar, num_jugadores):
+
+    print(f"[MARCADORES] Cargando imágenes para una partida a {sets_a_ganar} sets.")
+    marcadores_cargados = {}
+    for i in range(1, num_jugadores + 1):
+        marcadores_cargados[i] = []
+        # La ruta depende de la cantidad de sets a ganar
+        ruta_base = os.path.join(ASSETS_DIR, "Marcadores", f"Jugador {i}", f"{sets_a_ganar} set")
+
+        # Load de todas las imágenes para esa configuración (de 0 a sets_a_ganar)
+        for j in range(sets_a_ganar + 1):
+            ruta_img = os.path.join(ruta_base, f"{j}.png")
+            try:
+                img = pygame.image.load(ruta_img).convert_alpha()
+                # Reescalar manteniendo la proporción a un ancho de 120px
+                ancho_original, alto_original = img.get_size()
+                nuevo_alto = int(alto_original * (120 / ancho_original))
+                img_escalada = pygame.transform.scale(img, (120, nuevo_alto))
+                marcadores_cargados[i].append(img_escalada)
+            except FileNotFoundError:
+                print(f"ADVERTENCIA: No se encontró la imagen del marcador: {ruta_img}")
+                # Añadimos un marcador de error para que el juego no se detenga
+                marcador_error = pygame.Surface((120, 120))
+                marcador_error.fill(RED)
+                marcadores_cargados[i].append(marcador_error)
+
+    return marcadores_cargados
+
+def draw_marcadores(screen, players, marcadores_cargados, set_positions):
+    # Recorremos la lista de jugadores usando su índice para máxima seguridad.
+    for i in range(len(players)):
+        # Obtenemos el objeto 'player' explícitamente usando el índice.
+        player = players[i]
+
+        if not isinstance(player, Player):
+            print(f"Error Crítico en draw_marcadores: El elemento en el índice {i} no es un objeto Player.")
+            continue # Saltamos este elemento para evitar que el juego se cierre.
+
+        # Ahora podemos usar 'player' con total seguridad.
+        if player.is_eliminated:
+            continue
+
+        # Obtenemos el marcador correcto según los sets ganados
+        sets_ganados = player.sets_won
+        jugador_id = player.player_index + 1
+
+        if jugador_id in marcadores_cargados and sets_ganados < len(marcadores_cargados[jugador_id]):
+            img_marcador = marcadores_cargados[jugador_id][sets_ganados]
+        else:
+            continue
+
+        # Determinamos la posición del marcador
+        pos_inicio_jugador = set_positions[i]
+        tile_x, tile_y = pos_inicio_jugador
+
+        y_centro_marcador = (tile_y * TILE_SIZE) + (TILE_SIZE // 2) + TOP_OFFSET
+
+        if tile_x < GRID_COLS / 2:
+            x_centro_marcador = SIDEBAR_WIDTH // 2
+        else:
+            x_centro_marcador = GAME_WIDTH + SIDEBAR_WIDTH + (SIDEBAR_WIDTH // 2)
+
+        rect_marcador = img_marcador.get_rect(center=(x_centro_marcador, y_centro_marcador))
+        screen.blit(img_marcador, rect_marcador)
 
 # Habilidades
 SPEED_IMG = load_image("mas_velocidad.png", (40, 40), folder=os.path.join(ASSETS_DIR, "Gadgets", "Habilidades"))
@@ -2432,8 +2503,9 @@ modo_posicion = config.current_position_index  # 0 = fija, 1 = aleatoria
 # ------------------------------------------------------------------------------------
 def iniciar_partida(screen):
 
-    # dimensiones de pantalla partida
+    # pantalla partida y superficie para marcadores
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    game_surface = pygame.Surface((GAME_WIDTH, HEIGHT))
 
     # cargamos la musica de fondo
     MUSIC_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "musica_fondo", "juego.mp3")
@@ -2479,6 +2551,7 @@ def iniciar_partida(screen):
     sets_to_win = config.set_options[config.current_set_index]
     usar_fantasmas = config.current_ultimas_index.get("Fantasmas", 0) == 0
     SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG = cargar_mapa()
+    marcadores = cargar_marcadores(sets_to_win, len(players))
 
     for p in players:
         p.sets_won = 0
@@ -2712,6 +2785,7 @@ def iniciar_partida(screen):
 
             # --- DIBUJADO ---
             screen.fill(BLACK)
+            game_surface.fill(BLACK)
             draw_grid(screen, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG)
             for lapida in lapidas:
                 lapida.draw(screen)
@@ -2735,10 +2809,16 @@ def iniciar_partida(screen):
 
             for i in range(len(gestor_jugadores.todos())):
                 player_info = next((p for p in players if p.player_index == i), None)
-                x_hud = 10 + i * 220
-                if player_info: draw_HUD(screen, player_info, (x_hud, 5), color_pool[i % len(color_pool)])
+                if player_info:
+                    x_hud = 10 + i * 220
+                    draw_HUD(screen, player_info, (x_hud, 5), color_pool[i % len(color_pool)])
 
             draw_timer(screen, max(0, TOTAL_TIME - (time.time() - start_time)))
+
+            screen.blit(game_surface, (SIDEBAR_WIDTH, 0))
+
+            draw_marcadores(screen, marcadores, sets_to_win, players)
+
             pygame.display.flip()
 
             if set_end_sequence_start_time and (time.time() - set_end_sequence_start_time > 3.0):
