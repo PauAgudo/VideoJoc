@@ -201,8 +201,8 @@ def pantalla_personajes(screen, bg_anim):
 
                     if total_listos >= 2:
                         if total_listos == total_conectados:
-                            import Bomberman
-                            Bomberman.main()
+                            from IniciarPartida import iniciar_partida
+                            iniciar_partida(screen)
                             return
                         else:
                             mensaje_error = "Todos tus rivales no están listos"
@@ -227,8 +227,8 @@ def pantalla_personajes(screen, bg_anim):
                         total_conectados = len(gestor_jugadores.jugadores)
                         if len(listos) >= 2:
                             if len(listos) == total_conectados:
-                                import Bomberman
-                                Bomberman.main()
+                                from IniciarPartida import iniciar_partida
+                                iniciar_partida(screen)
                                 return
                             else:
                                 mensaje_error = "Todos tus rivales no están listos"
@@ -319,8 +319,8 @@ def pantalla_personajes(screen, bg_anim):
                         total_conectados = len(gestor_jugadores.jugadores)
                         if len(listos) >= 2:
                             if len(listos) == total_conectados:
-                                import Bomberman
-                                Bomberman.main()
+                                from IniciarPartida import iniciar_partida
+                                iniciar_partida(screen)
                                 return
                             else:
                                 mensaje_error = "Todos tus rivales no están listos"

@@ -39,8 +39,11 @@ def main():
         return
     if not pantalla_controles(screen, bg_anim):
         return
+    from IniciarPartida import iniciar_partida
     if not pantalla_personajes(screen, bg_anim):
         return
+    iniciar_partida(screen)  # <<<< Inicia el juego
+
     pygame.quit()
     sys.exit()
 

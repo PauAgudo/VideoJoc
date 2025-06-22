@@ -8,7 +8,6 @@ class BackgroundAnimation:
         self.screen_width = screen_width
         self.screen_height = screen_height
 
-        # Cargar y escalar imágenes de fondo
         self.sky = pygame.image.load("Media/Menu/Pantalla_principal/cielo.png").convert()
         self.sky = pygame.transform.scale(self.sky, (screen_width, screen_height))
 
@@ -23,7 +22,6 @@ class BackgroundAnimation:
         self.cloud1_width = self.cloud1.get_width()
         self.cloud2_width = self.cloud2.get_width()
 
-        # Posiciones iniciales
         self.cloud1_x = screen_width
         self.cloud1_y = 50
         self.cloud2_x = -self.cloud2_width
@@ -35,16 +33,13 @@ class BackgroundAnimation:
         self.zeppelin_x = screen_width
         self.zeppelin_y = 130
 
-        # Velocidades
         self.ground_speed = 2
         self.cloud1_speed = 1
         self.cloud2_speed = 0.5
         self.zeppelin_speed = 0.85
         self.ground_x = 0
 
-
     def update(self):
-        # Actualizar posiciones
         self.cloud1_x += self.cloud1_speed
         if self.cloud1_x > self.screen_width:
             self.cloud1_x = -self.cloud1_width
@@ -60,7 +55,6 @@ class BackgroundAnimation:
         self.ground_x = (self.ground_x + self.ground_speed) % self.screen_width
 
     def draw(self, screen):
-        # Dibujar en el orden deseado
         screen.blit(self.sky, (0, 0))
         screen.blit(self.cloud1, (self.cloud1_x, self.cloud1_y))
         screen.blit(self.cloud2, (self.cloud2_x, self.cloud2_y))
@@ -69,11 +63,9 @@ class BackgroundAnimation:
         screen.blit(self.ground, (self.ground_x, self.screen_height - self.ground_height))
 
 
-# --- Función para dibujar el texto con efecto de bombeo ---
 def draw_bombeo_texto(screen, center, font, message):
-    # Usamos el tiempo actual para calcular el factor de escala
-    tiempo = pygame.time.get_ticks() / 300.0  # Ajusta la velocidad del efecto
-    factor = 1 + 0.05 * math.sin(tiempo)  # Oscila entre 0.95 y 1.05 aproximadamente
+    tiempo = pygame.time.get_ticks() / 300.0
+    factor = 1 + 0.05 * math.sin(tiempo)
     texto_render = font.render(message, True, (255, 255, 255))
     new_width = int(texto_render.get_width() * factor)
     new_height = int(texto_render.get_height() * factor)
@@ -82,7 +74,34 @@ def draw_bombeo_texto(screen, center, font, message):
     screen.blit(texto_escala, rect)
 
 
-# --- Pantalla de inicio (background con texto animado) ---
+def animar_titulo_kaboom(screen, logo_img, tiempo_inicio, screen_width):
+    tiempo_actual = pygame.time.get_ticks()
+    tiempo_transcurrido = (tiempo_actual - tiempo_inicio) / 1000.0
+
+    duracion_aparicion = 1.0
+    duracion_bote = 1.5
+    screen_height = screen.get_height()
+    x_centro = screen_width // 2
+    y_base = screen_height // 2 - 50
+
+    if tiempo_transcurrido < duracion_aparicion:
+        alpha = int(255 * (tiempo_transcurrido / duracion_aparicion))
+        escala = 0.2 + 0.2 * (tiempo_transcurrido / duracion_aparicion)
+        y_actual = y_base
+    else:
+        alpha = 255
+        escala = 0.4
+        t_bote = tiempo_transcurrido - duracion_aparicion
+        progreso_bote = t_bote % 1.0  # Bote continuo usando ciclo sin fin
+        rebote = abs(math.sin(progreso_bote * math.pi * 2)) * 15
+        y_actual = y_base + rebote
+
+    logo_scaled = pygame.transform.rotozoom(logo_img, 0, escala)
+    logo_scaled.set_alpha(alpha)
+    rect = logo_scaled.get_rect(center=(x_centro, int(y_actual)))
+    screen.blit(logo_scaled, rect)
+
+
 def background_screen(screen):
     pygame.init()
     screen_width, screen_height = 800, 600
@@ -90,42 +109,44 @@ def background_screen(screen):
     pygame.display.set_caption("Pantalla de Inicio - Fondo Animado")
     clock = pygame.time.Clock()
 
-    # Inicializar sistema de mandos
     pygame.joystick.init()
     mandos = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
     for mando in mandos:
         mando.init()
 
-    # Configurar la fuente y parámetros del texto
     font = pygame.font.SysFont(None, 30)
     message = "Pulsa cualquier tecla o botón del mando para continuar"
     text_center = (screen_width // 2, screen_height - 100)
 
-    # Cargar efecto sonido
     key_sound = pygame.mixer.Sound("Media/Sonidos_juego/Botones/boton_inicio.mp3")
-    key_sound.set_volume(1)  # volumen al 100%
+    key_sound.set_volume(1)
 
-    # Crear la instancia del fondo animado
     bg_anim = BackgroundAnimation(screen_width, screen_height)
+    tiempo_inicio = pygame.time.get_ticks()
+    logo_img = pygame.image.load("Media/LOGO/kaboom_logo.png").convert_alpha()
 
     running = True
     while running:
+        tiempo_actual = pygame.time.get_ticks()
+        tiempo_transcurrido = (tiempo_actual - tiempo_inicio) / 1000.0
+        progreso = min(tiempo_transcurrido / 2.5, 1)  # Se sincroniza con la animación
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
-            if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
+            if (event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN) and progreso >= 1:
                 key_sound.play()
                 running = False
 
-            if event.type == pygame.JOYBUTTONDOWN:
+            if event.type == pygame.JOYBUTTONDOWN and progreso >= 1:
                 key_sound.play()
                 running = False
 
             if event.type == pygame.JOYBUTTONDOWN:
                 if event.button == 1:
-                    print ("JUEGO CERRADO")
+                    print("JUEGO CERRADO")
                     pygame.quit()
                     sys.exit()
 
@@ -141,11 +162,9 @@ def background_screen(screen):
 
         bg_anim.update()
         bg_anim.draw(screen)
+        animar_titulo_kaboom(screen, logo_img, tiempo_inicio, screen_width)
         draw_bombeo_texto(screen, text_center, font, message)
         pygame.display.flip()
         clock.tick(60)
 
     return bg_anim
-
-
-
