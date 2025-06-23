@@ -69,7 +69,7 @@ def draw_mensaje_inicio(screen, imagen_rect, tipo_jugador, listo):
         pygame.draw.rect(screen, (255, 255, 0), (imagen_rect.centerx - 60, imagen_rect.bottom + 35, 120, 30))
         texto = "LISTO"
     else:
-        texto = "L para empezar" if tipo_jugador == "teclado" else "Y para empezar"
+        texto = "Enter para empezar" if tipo_jugador == "teclado" else "A para empezar"
     texto_render = fuente.render(texto, True, (0, 0, 0))
     texto_rect = texto_render.get_rect(center=(imagen_rect.centerx, imagen_rect.bottom + 50))
     screen.blit(texto_render, texto_rect)
@@ -219,121 +219,195 @@ def pantalla_personajes(screen, bg_anim):
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    from PantallaMapas import pantalla_mapas
-                    gestor_jugadores.reset()
-                    temporizador_listos.clear()
-                    estado_mandos_desconectados.clear()
-                    recien_unidos.clear()
-                    pantalla_mapas(screen, bg_anim)
-                    return
-                if event.key == pygame.K_RETURN:
-                    jugador1 = gestor_jugadores.get(0)
-                    if jugador1 and jugador1["tipo"] == "teclado":
-                        listos = [j for j in temporizador_listos.values() if j]
-                        total_conectados = len(gestor_jugadores.jugadores)
-                        if len(listos) >= 2:
-                            if len(listos) == total_conectados:
-                                from Bomberman import iniciar_partida
-                                iniciar_partida(screen)
-                                return
-                            else:
-                                mensaje_error = "Todos tus rivales no están listos"
+                    jugador_teclado = gestor_jugadores.get_teclado()
+
+                    # Si no hay un jugador con teclado asignado, vuelve a mapas.
+                    if jugador_teclado is None:
+                        from PantallaMapas import pantalla_mapas
+                        gestor_jugadores.reset()
+                        temporizador_listos.clear()
+                        estado_mandos_desconectados.clear()
+                        recien_unidos.clear()
+                        pantalla_mapas(screen, bg_anim)
+                        return
+
+                    # Si el jugador con teclado existe, aplicamos la nueva lógica.
+                    id_jugador = "teclado"
+                    # Regla 1: Si está "LISTO", solo se le quita el estado.
+                    if temporizador_listos.get(id_jugador, False):
+                        temporizador_listos[id_jugador] = False
+                    # Regla 2: Si NO está "LISTO"...
+                    else:
+                        # ...y es el Jugador 1, vuelve a la pantalla de mapas.
+                        if gestor_jugadores.get(0) == jugador_teclado:
+                            from PantallaMapas import pantalla_mapas
+                            gestor_jugadores.reset()
+                            temporizador_listos.clear()
+                            estado_mandos_desconectados.clear()
+                            recien_unidos.clear()
+                            pantalla_mapas(screen, bg_anim)
+                            return
+                        # ...y es otro jugador, se elimina de la partida.
                         else:
-                            mensaje_error = "¡Deben estar listos al menos 2 jugadores!"
-                        mensaje_timer = pygame.time.get_ticks()
+                            if id_jugador in temporizador_listos:
+                                del temporizador_listos[id_jugador]
+                            # Asumo que tu gestor tiene una función para eliminar el teclado.
+                            gestor_jugadores.eliminar_teclado()
 
-                if event.key not in (pygame.K_ESCAPE, pygame.K_RETURN):
-                    if gestor_jugadores.get_teclado() is None:
-                        gestor_jugadores.unir_teclado()
-                    else:
-                        jugador = gestor_jugadores.get_teclado()
-                        if event.key == pygame.K_l:
-                            if not temporizador_listos.get("teclado", False):
-                                temporizador_listos["teclado"] = True
-                                personaje_idx = gestor_jugadores.get_teclado()["indice"]
-                                nombre = nombres_personajes[personaje_idx]
-                                if nombre in SONIDOS_PERSONAJE:
-                                    SONIDOS_PERSONAJE[nombre].play()
-                        elif event.key == pygame.K_b:
-                            temporizador_listos["teclado"] = False
-                        elif not temporizador_listos.get("teclado"):
-                            if event.key == pygame.K_LEFT:
-                                jugador["indice"] = (jugador.get("indice", 0) - 1) % len(personajes_disponibles)
-                            elif event.key == pygame.K_RIGHT:
-                                jugador["indice"] = (jugador.get("indice", 0) + 1) % len(personajes_disponibles)
+                # 1. Si el teclado no participa, se une con cualquier tecla y se detiene.
+                if gestor_jugadores.get_teclado() is None:
+                    # La primera pulsación de cualquier tecla (excepto ESC) solo une al jugador.
+                    gestor_jugadores.unir_teclado()
+                    # 'continue' salta al siguiente evento, ignorando el código de abajo en esta pulsación.
+                    continue
 
-
-            # Dentro del while running → justo en el manejo del evento
-            if event.type == pygame.JOYBUTTONDOWN:
-
-                joy_id = getattr(event, "instance_id", event.joy)
-                jugador = gestor_jugadores.get_jugador_por_joy(joy_id)
-
-                # Ignorar primer botón pulsado tras unirse
-                if joy_id in recien_unidos:
-                    recien_unidos.remove(joy_id)
-                    continue  # Saltarse esta pulsación
-
-                if jugador is None:
-                    if joy_id in estado_mandos_desconectados:
-                        info = estado_mandos_desconectados.pop(joy_id)
-                        gestor_jugadores.unir_mando(joy_id)
-                        jugador = gestor_jugadores.get_jugador_por_joy(joy_id)
-                        if jugador:
-                            jugador["indice"] = info.get("indice", 0)
-                    else:
-                        gestor_jugadores.unir_mando(joy_id)
-
-                    recien_unidos.add(joy_id)  # ← Marcar como recién unido
-                    jugador = gestor_jugadores.get_jugador_por_joy(joy_id)
-
-                ## IGNORAR cualquier primer botón tras unirse
-                if joy_id in recien_unidos:
-                    recien_unidos.remove(joy_id)
-                    continue  # ← Saltarse este evento de botón
-
-
-                # Ahora ya procesamos normalmente
-                if event.button == 3:  # Y
-                    if not temporizador_listos.get(joy_id, False):
-                        temporizador_listos[joy_id] = True
-                        jugador = gestor_jugadores.get_jugador_por_joy(joy_id)
-                        if jugador:
+                # 2. Si el teclado YA participa, se procesan las acciones.
+                jugador = gestor_jugadores.get_teclado()
+                if jugador:
+                    if event.key == pygame.K_RETURN:
+                        # Si ya está listo (2da pulsación), y es J1, intenta empezar (3ra pulsación).
+                        if temporizador_listos.get("teclado", False):
+                            jugador1 = gestor_jugadores.get(0)
+                            if jugador1 and jugador1["tipo"] == "teclado":
+                                listos = [j for j in temporizador_listos.values() if j]
+                                total_conectados = len(gestor_jugadores.jugadores)
+                                if len(listos) >= 2:
+                                    if len(listos) == total_conectados:
+                                        from Bomberman import iniciar_partida
+                                        iniciar_partida(screen)
+                                        return
+                                    else:
+                                        mensaje_error = "Todos tus rivales no están listos"
+                                else:
+                                    mensaje_error = "¡Deben estar listos al menos 2 jugadores!"
+                                mensaje_timer = pygame.time.get_ticks()
+                        # Si no está listo (1ra pulsación después de unirse), se pone listo.
+                        else:
+                            temporizador_listos["teclado"] = True
                             personaje_idx = jugador["indice"]
                             nombre = nombres_personajes[personaje_idx]
                             if nombre in SONIDOS_PERSONAJE:
                                 SONIDOS_PERSONAJE[nombre].play()
 
+                    elif not temporizador_listos.get("teclado"):
+                        if event.key == pygame.K_LEFT:
+                            jugador["indice"] = (jugador.get("indice", 0) - 1) % len(personajes_disponibles)
+                        elif event.key == pygame.K_RIGHT:
+                            jugador["indice"] = (jugador.get("indice", 0) + 1) % len(personajes_disponibles)
+
+            # Dentro del while running → justo en el manejo del evento
+            if event.type == pygame.JOYBUTTONDOWN:
+                joy_id = getattr(event, "instance_id", event.joy)
+                jugador = gestor_jugadores.get_jugador_por_joy(joy_id)
+
+                # 1. Si el mando no participa, se une con cualquier botón y se detiene.
+                if jugador is None:
+                    if joy_id in estado_mandos_desconectados:
+                        info = estado_mandos_desconectados.pop(joy_id)
+                        gestor_jugadores.unir_mando(joy_id)
+                        jugador_nuevo = gestor_jugadores.get_jugador_por_joy(joy_id)
+                        if jugador_nuevo:
+                            jugador_nuevo["indice"] = info.get("indice", 0)
+                    else:
+                        gestor_jugadores.unir_mando(joy_id)
+                    # 'continue' salta al siguiente evento, la acción se hará en la siguiente pulsación.
+                    continue
+
+                # 2. Si el mando YA participa, se procesan las acciones.
+                if event.button == 0:  # Botón A
+                    if temporizador_listos.get(joy_id, False):
+                        jugador1 = gestor_jugadores.get(0)
+                        if jugador1 and jugador1["tipo"] == "mando" and jugador1.get("id") == joy_id:
+                            listos = [j for j in temporizador_listos.values() if j]
+                            total_conectados = len(gestor_jugadores.jugadores)
+                            if len(listos) >= 2:
+                                if len(listos) == total_conectados:
+                                    from Bomberman import iniciar_partida
+                                    iniciar_partida(screen)
+                                    return
+                                else:
+                                    mensaje_error = "Todos tus rivales no están listos"
+                            else:
+                                mensaje_error = "¡Deben estar listos al menos 2 jugadores!"
+                            mensaje_timer = pygame.time.get_ticks()
+                    else:
+                        temporizador_listos[joy_id] = True
+                        personaje_idx = jugador["indice"]
+                        nombre = nombres_personajes[personaje_idx]
+                        if nombre in SONIDOS_PERSONAJE:
+                            SONIDOS_PERSONAJE[nombre].play()
+
                 elif event.button in (7, 9):  # OPTIONS
                     from PantallaAudio import pantalla_audio
                     pantalla_audio(screen, bg_anim, volver_callback=pantalla_personajes)
 
-                elif event.button == 1:  # B
-                    from PantallaMapas import pantalla_mapas
-                    gestor_jugadores.reset()
-                    temporizador_listos.clear()
-                    estado_mandos_desconectados.clear()
-                    recien_unidos.clear()
-                    pantalla_mapas(screen, bg_anim)
 
-                elif event.button == 2:  # X
-                    temporizador_listos[joy_id] = False
-                elif event.button == 0:  # A
-                    jugador1 = gestor_jugadores.get(0)
-                    if jugador1 and jugador1["tipo"] == "mando" and jugador1.get("id") == joy_id:
-                        listos = [j for j in temporizador_listos.values() if j]
-                        total_conectados = len(gestor_jugadores.jugadores)
-                        if len(listos) >= 2:
-                            if len(listos) == total_conectados:
-                                from Bomberman import iniciar_partida
-                                iniciar_partida(screen)
-                                return
-                            else:
-                                mensaje_error = "Todos tus rivales no están listos"
+                elif event.button == 1:  # B (Atrás)
+
+                    # La lógica se aplica al jugador que pulsó el botón.
+
+                    # Regla 1: Si está "LISTO", solo se le quita el estado.
+
+                    if temporizador_listos.get(joy_id, False):
+
+                        temporizador_listos[joy_id] = False
+
+                    # Regla 2: Si NO está "LISTO"...
+
+                    else:
+
+                        # ...y es el Jugador 1, vuelve a la pantalla de mapas.
+
+                        if gestor_jugadores.get(0) == jugador:
+
+                            from PantallaMapas import pantalla_mapas
+
+                            gestor_jugadores.reset()
+
+                            temporizador_listos.clear()
+
+                            estado_mandos_desconectados.clear()
+
+                            recien_unidos.clear()
+
+                            pantalla_mapas(screen, bg_anim)
+
+                            return
+
+                        # ...y es otro jugador, se elimina de la partida.
+
                         else:
-                            mensaje_error = "¡Deben estar listos al menos 2 jugadores!"
-                        mensaje_timer = pygame.time.get_ticks()
 
+                            if joy_id in temporizador_listos:
+                                del temporizador_listos[joy_id]
+
+                            gestor_jugadores.eliminar_jugador_por_joy(joy_id)
+
+                elif event.button == 0:  # A (Botón de acción principal)
+                    # Si el jugador ya está listo, y es el Jugador 1, intenta iniciar la partida
+                    if temporizador_listos.get(joy_id, False):
+                        jugador1 = gestor_jugadores.get(0)
+                        if jugador1 and jugador1["tipo"] == "mando" and jugador1.get("id") == joy_id:
+                            listos = [j for j in temporizador_listos.values() if j]
+                            total_conectados = len(gestor_jugadores.jugadores)
+                            if len(listos) >= 2:
+                                if len(listos) == total_conectados:
+                                    from Bomberman import iniciar_partida
+                                    iniciar_partida(screen)
+                                    return
+                                else:
+                                    mensaje_error = "Todos tus rivales no están listos"
+                            else:
+                                mensaje_error = "¡Deben estar listos al menos 2 jugadores!"
+                            mensaje_timer = pygame.time.get_ticks()
+                    # Si el jugador no está listo, lo marca como "LISTO"
+                    else:
+                        temporizador_listos[joy_id] = True
+                        if jugador:
+                            personaje_idx = jugador["indice"]
+                            nombre = nombres_personajes[personaje_idx]
+                            if nombre in SONIDOS_PERSONAJE:
+                                SONIDOS_PERSONAJE[nombre].play()
             if event.type == pygame.JOYHATMOTION:
                 joy_id = getattr(event, "instance_id", event.joy)
                 jugador = gestor_jugadores.get_jugador_por_joy(joy_id)

@@ -4,6 +4,7 @@ import sys
 import math
 import random
 import time
+from PIL import Image
 from Config import config, audio
 from ConfiguraciónMandos import gestor_jugadores
 from PausaPartida import menu_pausa
@@ -209,7 +210,7 @@ COGER_MALDICION_SOUND = pygame.mixer.Sound(
     os.path.join(ASSETS_DIR, "Sonidos_juego", "habilidades", "coger_maldicion.mp3"))
 COGER_MALDICION_SOUND.set_volume(0.35)
 
-MUERTE_SOUND_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "Personajes", "muerte.mpeg")
+MUERTE_SOUND_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "Personajes", "muerte.mp3")
 MUERTE_SOUND = pygame.mixer.Sound(MUERTE_SOUND_PATH)
 MUERTE_SOUND.set_volume(0.4)
 
@@ -228,6 +229,50 @@ except pygame.error as e:
     print(f"ADVERTENCIA: No se pudo cargar el sonido 'bloque final.mp3': {e}")
     BLOQUE_FINAL_SOUND = None # Si no se encuentra el audio, el juego no se romperá
 
+
+# ------------------------------------------------------------------------------------
+# Clase para gestionar el fondo animado (GIF)
+# ------------------------------------------------------------------------------------
+class AnimatedBackground:
+    def __init__(self, gif_path, size):
+        self.frames = []
+        self.frame_duration = 100  # Duración por defecto si el GIF no la especifica
+        self.last_update = pygame.time.get_ticks()
+        self.frame_index = 0
+
+        try:
+            # Usamos la librería PIL (Pillow) para abrir el GIF
+            pil_image = Image.open(gif_path)
+            # Obtenemos la duración de cada fotograma desde el propio GIF
+            self.frame_duration = pil_image.info.get('duration', 100)
+
+            # Recorremos cada fotograma del GIF
+            for i in range(pil_image.n_frames):
+                pil_image.seek(i)
+                frame = pil_image.convert("RGBA")
+                pygame_frame = pygame.image.fromstring(frame.tobytes(), frame.size, frame.mode)
+
+                # Escalamos el fotograma al tamaño completo de la pantalla y lo optimizamos
+                scaled_frame = pygame.transform.scale(pygame_frame, size).convert()
+                self.frames.append(scaled_frame)
+
+        except (FileNotFoundError, pygame.error) as e:
+            # Si el GIF no se encuentra, creamos un fondo negro para que el juego no falle
+            print(f"ADVERTENCIA: No se pudo cargar el fondo animado '{gif_path}': {e}")
+            fallback_surface = pygame.Surface(size)
+            fallback_surface.fill(BLACK)
+            self.frames.append(fallback_surface)
+
+    def update(self):
+        # Avanza al siguiente fotograma si ha pasado el tiempo suficiente
+        if len(self.frames) > 1 and pygame.time.get_ticks() - self.last_update > self.frame_duration:
+            self.last_update = pygame.time.get_ticks()
+            self.frame_index = (self.frame_index + 1) % len(self.frames)
+
+    def draw(self, surface):
+        # Dibuja el fotograma actual en la pantalla
+        if self.frames:
+            surface.blit(self.frames[self.frame_index], (0, 0))
 
 modo_posicion = config.current_position_index
 
@@ -2743,6 +2788,17 @@ def iniciar_partida(screen):
     for p in players:
         p.sets_won = 0
 
+    map_backgrounds = {
+        1: "fondo_clasico.gif",
+        2: "fondo_desierto.gif",
+        3: "fondo_jungla.gif"
+    }
+    selected_map_num = config.selected_map
+    gif_filename = map_backgrounds.get(selected_map_num, "fondo_clasico.gif")  # Por defecto usa el clásico
+    gif_path = os.path.join(ASSETS_DIR, "Mapas", f"Mapa{selected_map_num}", gif_filename)
+
+    background_gif = AnimatedBackground(gif_path, (WIDTH, HEIGHT))
+
     # --- BUCLE DE LA PARTIDA (GESTIONA LOS SETS) ---
     match_running = True
     bloques_finales_activados = config.current_ultimas_index.get("Bloques_final", 1) == 0
@@ -3144,10 +3200,9 @@ def iniciar_partida(screen):
                         set_winner.set_winner_start_time = time.time()
 
             # --- DIBUJADO ---
-            screen.fill(BLACK)
-
-            game_surface = pygame.Surface((GRID_WIDTH, HEIGHT))
-            game_surface.fill(BLACK)
+            background_gif.update()
+            background_gif.draw(screen)
+            game_surface = pygame.Surface((GRID_WIDTH, HEIGHT), pygame.SRCALPHA)
 
             draw_grid(game_surface, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG)
             for bloque in final_blocks:
