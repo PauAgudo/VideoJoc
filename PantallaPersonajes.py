@@ -14,12 +14,17 @@ from pygame import mixer
 
 # Inicializar sonidos de selección
 SONIDOS_PERSONAJE = {
-    "Mork": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Mork.mp3")),
+    "Mork": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Yeeaah.mp3")),
     "Mortis": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Mortis.mp3")),
     "Calvo": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Calvo.mp3")),
     "Guerrero Negro": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Guerrero Negro.mp3")),
     "Guerrero Rojo": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Guerrero Rojo.mp3")),
-    "Guerrero Blanco": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Guerrero Blanco.mp3"))
+    "Guerrero Blanco": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Guerrero Blanco.mp3")),
+    "Vael": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Vael.mp3")),
+    "Grimfang": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Grimfang.mp3")),
+    "Guerrero Azul": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Sonido raro.mp3")),
+    "Warlord": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Warlord.mp3")),
+
 }
 # Opcional: ajustar volumen
 for s in SONIDOS_PERSONAJE.values():
