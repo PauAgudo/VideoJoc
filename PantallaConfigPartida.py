@@ -103,10 +103,10 @@ class ConfiguracionPartida:
 
         # Flechas
         izquierda = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_configuracion_partida/izquierda.png"),
-                                           (30, 30))
+                                           (30, 20))
         derecha = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_configuracion_partida/derecha.png"),
-                                         (30, 30))
-        flechas_pos = {k: {"izquierda": (520, posiciones[k][1]), "derecha": (680, posiciones[k][1])} for k in keys}
+                                         (30, 20))
+        flechas_pos = {k: {"izquierda": (520, posiciones[k][1] + 7), "derecha": (680, posiciones[k][1] + 7)} for k in keys}
 
         font = pygame.font.SysFont(None, 23)
         shift_amount = 10
