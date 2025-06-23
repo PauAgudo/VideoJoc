@@ -30,16 +30,17 @@ BASE_DIR = os.path.dirname(__file__)
 ASSETS_DIR = os.path.join(BASE_DIR, "Media")
 
 TOP_OFFSET = 80  # Espacio para el contador y el HUD
+BOTTOM_OFFSET = 20
 TILE_SIZE = 40
 GRID_COLS = 21
 GRID_ROWS = 17
 
 # --- MODIFICACIÓN DE DIMENSIONES ---
 # Se añade espacio a los lados para los marcadores de sets.
-SCOREBOARD_AREA_WIDTH = 150  # Ancho del área en cada lado para los marcadores.
+SCOREBOARD_AREA_WIDTH = 250  # Ancho del área en cada lado para los marcadores.
 GRID_WIDTH = GRID_COLS * TILE_SIZE  # Ancho de la cuadrícula del juego.
 WIDTH = GRID_WIDTH + 2 * SCOREBOARD_AREA_WIDTH  # Ancho total de la ventana.
-HEIGHT = GRID_ROWS * TILE_SIZE + TOP_OFFSET
+HEIGHT = GRID_ROWS * TILE_SIZE + TOP_OFFSET + BOTTOM_OFFSET
 
 CURSES = {
     "reset": {"duration": None, "shows_in_hud": False, "clears_previous": False,
@@ -95,7 +96,7 @@ BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 font = pygame.font.SysFont("Arial", 20)
-
+ability_font = pygame.font.SysFont(None, 20, bold = True)
 EXPLOSION_DURATION = 0.75
 PUSH_SPEED = 3
 
@@ -140,6 +141,35 @@ CALAVERA_IMG = load_image("calavera.png", (40, 40), folder=os.path.join(ASSETS_D
 
 # Lapidas
 LAPIDA_IMG = load_image("lapida.png", (TILE_SIZE, TILE_SIZE), folder=os.path.join(ASSETS_DIR, "Mapas"))
+
+# Se asume que Bloque_final.png está en la misma carpeta que los otros elementos del mapa
+try:
+    mapa_path_general = os.path.join(ASSETS_DIR, "Mapas")
+    BLOQUE_FINAL_IMG = load_image("Bloque_final.png", (TILE_SIZE, TILE_SIZE), folder=mapa_path_general)
+except pygame.error:
+    print(f"ADVERTENCIA: No se pudo cargar 'Bloque_final.png'. Se usará una imagen por defecto.")
+    BLOQUE_FINAL_IMG = pygame.Surface((TILE_SIZE, TILE_SIZE))
+    BLOQUE_FINAL_IMG.fill((20, 20, 30))
+
+# Creamos una imagen para la marca de advertencia en el suelo
+BLOQUE_FINAL_MARCA_IMG = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+pygame.draw.rect(BLOQUE_FINAL_MARCA_IMG, (255, 0, 0, 100), (0, 0, TILE_SIZE, TILE_SIZE), 3) # Borde rojo semitransparente
+
+
+# --- CARGAMOS LAS IMÁGENES DE OVERLAY PARA MARCADORES ---
+try:
+    marcadores_folder = os.path.join(ASSETS_DIR, "Marcadores")
+    MARCADOR_ESCUDO_IMG = pygame.image.load(os.path.join(marcadores_folder, "escudo.png")).convert_alpha()
+    MARCADOR_XUT_IMG = pygame.image.load(os.path.join(marcadores_folder, "xut.png")).convert_alpha()
+    MARCADOR_PUÑO_IMG = pygame.image.load(os.path.join(marcadores_folder, "puño.png")).convert_alpha()
+    MARCADOR_ERROR_IMG = pygame.image.load(os.path.join(marcadores_folder, "error.png")).convert_alpha()
+except pygame.error as e:
+    print(f"ADVERTENCIA: No se pudieron cargar las imágenes de overlay de marcadores: {e}")
+    # Si fallan, creamos variables vacías para que el juego no se rompa
+    MARCADOR_ESCUDO_IMG = None
+    MARCADOR_XUT_IMG = None
+    MARCADOR_PUÑO_IMG = None
+    MARCADOR_ERROR_IMG = None
 
 # Marcas de jugadores (escalado proporcional)
 def load_mark_scaled(path):
@@ -190,6 +220,14 @@ REAPARICION_SOUND.set_volume(0.4)
 FANTASMA_SOUND_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "movimiento", "fantasma.mp3")
 FANTASMA_SOUND = pygame.mixer.Sound(FANTASMA_SOUND_PATH)
 FANTASMA_SOUND.set_volume(0.7)
+try:
+    BLOQUE_FINAL_SOUND_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "Partida", "bloque final.mp3")
+    BLOQUE_FINAL_SOUND = pygame.mixer.Sound(BLOQUE_FINAL_SOUND_PATH)
+    BLOQUE_FINAL_SOUND.set_volume(0.5) # Puedes ajustar este volumen (0.0 a 1.0)
+except pygame.error as e:
+    print(f"ADVERTENCIA: No se pudo cargar el sonido 'bloque final.mp3': {e}")
+    BLOQUE_FINAL_SOUND = None # Si no se encuentra el audio, el juego no se romperá
+
 
 modo_posicion = config.current_position_index
 
@@ -211,7 +249,6 @@ controles_teclado = {
 }
 
 # Animaciones de explosión de la bomba
-EXPLOSION_FRAMES = [load_image(f"explosion_{i}.png", (40, 40)) for i in range(3)]
 CENTER_EXPLOSION_FRAMES = []
 for i in range(1, 18):
     nombre = f"bomba_c{i}.png"
@@ -260,13 +297,13 @@ def tile_blocked_for_player(grid, bombs, tile_x, tile_y, player):
     # Comprobar si el jugador es un fantasma
     if player.is_ghost:
         # Un fantasma solo es bloqueado por muros irrompibles (2) y límites (3)
-        if grid[tile_y][tile_x] in (2, 3):
+        if grid[tile_y][tile_x] in (2, 3, 4):
             return True
         # Los fantasmas ignoran bloques rompibles (1) y bombas, así que no hacemos más comprobaciones
         return False
     else:
         # Lógica original para jugadores vivos
-        if grid[tile_y][tile_x] in (1, 2, 3):
+        if grid[tile_y][tile_x] in (1, 2, 3, 4):
             return True
         for b in bombs:
             if b.tile_x == tile_x and b.tile_y == tile_y:
@@ -488,7 +525,6 @@ def draw_scoreboards(surface, players, scoreboard_images, set_positions, total_w
     if not scoreboard_images:
         return
 
-    # Determinar un buen tamaño para las imágenes del marcador, manteniendo la proporción.
     sample_img = None
     for p_idx in scoreboard_images:
         if scoreboard_images[p_idx]:
@@ -497,12 +533,13 @@ def draw_scoreboards(surface, players, scoreboard_images, set_positions, total_w
     if not sample_img: return
 
     w, h = sample_img.get_size()
-    SCOREBOARD_IMG_WIDTH = 120
+    SCOREBOARD_IMG_WIDTH = 230
     SCOREBOARD_IMG_SIZE = (SCOREBOARD_IMG_WIDTH, int(SCOREBOARD_IMG_WIDTH * h / w))
 
     margin = 15
-    pos_tl = (margin, TOP_OFFSET + margin)
-    pos_tr = (total_width - SCOREBOARD_IMG_SIZE[0] - margin, TOP_OFFSET + margin)
+    vertical_offset = - 80
+    pos_tl = (margin, TOP_OFFSET + vertical_offset)
+    pos_tr = (total_width - SCOREBOARD_IMG_SIZE[0] - margin, TOP_OFFSET + vertical_offset)
     pos_bl = (margin, total_height - SCOREBOARD_IMG_SIZE[1] - margin)
     pos_br = (total_width - SCOREBOARD_IMG_SIZE[0] - margin, total_height - SCOREBOARD_IMG_SIZE[1] - margin)
 
@@ -526,10 +563,57 @@ def draw_scoreboards(surface, players, scoreboard_images, set_positions, total_w
                 target_pos = pos_tr
 
             if target_pos:
-                if player.player_index in scoreboard_images and player.sets_won in scoreboard_images[player.player_index]:
+
+                # --- DIBUJADO DE FONDO Y RETRATO (Tu código, sin cambios) ---
+                marcador_sets_rect = pygame.Rect(target_pos, SCOREBOARD_IMG_SIZE)
+
+                portrait_rect = None
+                if hasattr(player, 'portrait_image') and player.portrait_image:
+                    portrait_img = player.portrait_image
+                    portrait_rect = portrait_img.get_rect()
+                    portrait_rect.centerx = marcador_sets_rect.centerx
+                    portrait_rect.centery = marcador_sets_rect.centery - 50
+
+                if player.player_index in scoreboard_images and player.sets_won in scoreboard_images[
+                    player.player_index]:
                     img = scoreboard_images[player.player_index][player.sets_won]
                     scaled_img = pygame.transform.scale(img, SCOREBOARD_IMG_SIZE)
                     surface.blit(scaled_img, target_pos)
+
+                if portrait_rect:
+                    surface.blit(portrait_img, portrait_rect)
+
+                # CASO 1: El jugador está maldito
+                if player.active_curse and MARCADOR_ERROR_IMG:
+                    scaled_overlay = pygame.transform.scale(MARCADOR_ERROR_IMG, SCOREBOARD_IMG_SIZE)
+                    surface.blit(scaled_overlay, target_pos)
+                else:
+                    # CASO 2: El jugador NO está maldito. Se dibujan las capas de los poderes.
+
+                    if player.escudo_available and MARCADOR_ESCUDO_IMG:
+                        scaled_overlay = pygame.transform.scale(MARCADOR_ESCUDO_IMG, SCOREBOARD_IMG_SIZE)
+                        surface.blit(scaled_overlay, target_pos)
+
+                    if player.push_bomb_available and MARCADOR_XUT_IMG:
+                        scaled_overlay = pygame.transform.scale(MARCADOR_XUT_IMG, SCOREBOARD_IMG_SIZE)
+                        surface.blit(scaled_overlay, target_pos)
+
+                    if player.hit_bomb_available and MARCADOR_PUÑO_IMG:
+                        scaled_overlay = pygame.transform.scale(MARCADOR_PUÑO_IMG, SCOREBOARD_IMG_SIZE)
+                        surface.blit(scaled_overlay, target_pos)
+
+                text_color = (255, 255, 255)
+                bomb_text = ability_font.render(f"x{player.bomb_limit}", True, text_color)
+                range_text = ability_font.render(f"x{player.bomb_range}", True, text_color)
+                speed_text = ability_font.render(f"x{player.display_speed}", True, text_color)
+                y_pos = marcador_sets_rect.bottom - 85
+                bomb_text_rect = bomb_text.get_rect(midtop=(marcador_sets_rect.left + 70, y_pos))
+                surface.blit(bomb_text, bomb_text_rect)
+                range_text_rect = range_text.get_rect(midtop=(marcador_sets_rect.centerx + 18, y_pos))
+                surface.blit(range_text, range_text_rect)
+                speed_text_rect = speed_text.get_rect(midtop=(marcador_sets_rect.right - 35, y_pos))
+                surface.blit(speed_text, speed_text_rect)
+
 
 
 # ------------------------------------------------------------------------------------
@@ -780,6 +864,44 @@ class PowerUp:
         self.bounce_index = 0
         self.bounce_timer = 0.0
 
+# ------------------------------------------------------------------------------------
+# Clase BloqueFinal
+# ------------------------------------------------------------------------------------
+class BloqueFinal:
+    """
+    Gestiona un bloque que cae al final de la partida.
+    """
+    def __init__(self, tile_x, tile_y):
+        self.tile_x = tile_x
+        self.tile_y = tile_y
+        self.anim_duration = 0.5  # segundos que tarda en caer
+        self.anim_timer = 0.0
+        self.start_y = -TILE_SIZE # Aparece justo encima de la pantalla
+        self.target_y = self.tile_y * TILE_SIZE + TOP_OFFSET
+        self.current_y = self.start_y
+        self.state = "falling"  # Estados: "falling", "landed"
+
+    def update(self, dt):
+        if self.state == "falling":
+            self.anim_timer += dt
+            if self.anim_timer >= self.anim_duration:
+                self.anim_timer = self.anim_duration
+                self.current_y = self.target_y
+                self.state = "landed"
+            else:
+                # Interpolación suave (ease-out)
+                progress = self.anim_timer / self.anim_duration
+                self.current_y = self.start_y + (self.target_y - self.start_y) * (1 - (1 - progress) ** 2)
+
+    def draw_marker(self, surface):
+        """Dibuja la marca de advertencia en la casilla de destino."""
+        if self.state == "falling":
+            surface.blit(BLOQUE_FINAL_MARCA_IMG, (self.tile_x * TILE_SIZE, self.tile_y * TILE_SIZE + TOP_OFFSET))
+
+    def draw(self, surface):
+        """Dibuja el bloque cayendo."""
+        if self.state == "falling":
+            surface.blit(BLOQUE_FINAL_IMG, (self.tile_x * TILE_SIZE, self.current_y))
 
 # ------------------------------------------------------------------------------------
 # Clase Player (sin cambios)
@@ -876,8 +998,8 @@ class Player:
                 for cell_y in range(top_cell, bottom_cell + 1):
                     if cell_x < 0 or cell_x >= GRID_COLS or cell_y < 0 or cell_y >= GRID_ROWS:
                         return True # Choca con los límites exteriores del mapa
-                    # Un fantasma solo choca con muros irrompibles (2) y límites (3)
-                    if grid[cell_y][cell_x] in (2, 3):
+                    # Un fantasma solo choca con muros irrompibles (2), límites (3) y bloques finales (4)
+                    if grid[cell_y][cell_x] in (2, 3, 4): # <--- AÑADIDO
                         return True
             # Los fantasmas no chocan con bombas ni con bloques rompibles.
             return False
@@ -892,7 +1014,7 @@ class Player:
             for cell_y in range(top_cell, bottom_cell + 1):
                 if cell_x < 0 or cell_x >= GRID_COLS or cell_y < 0 or cell_y >= GRID_ROWS:
                     return True
-                if grid[cell_y][cell_x] in (1, 2, 3):
+                if grid[cell_y][cell_x] in (1, 2, 3, 4): # <--- AÑADIDO
                     return True
         for bomb in bombs:
             bomb_rect = pygame.Rect(bomb.pos_x, bomb.pos_y, TILE_SIZE, TILE_SIZE)
@@ -1300,7 +1422,7 @@ class Player:
                 # Hacemos que la visibilidad alterne cada 0.1 segundos
                 if int(time.time() * 10) % 2 == 0:
                     # En los ciclos pares, "saltamos" el dibujo del jugador para crear el parpadeo.
-                    # Para ello, simplemente no dibujamos nada y salimos
+                    # Para ello, simplemente no dibujamos nada y salimos del método draw.
                     # Sin embargo, para que se vean otros efectos como el escudo, es mejor
                     # simplemente no dibujar el sprite del jugador. Lo gestionaremos abajo.
                     pass
@@ -1613,7 +1735,8 @@ nombres_por_indice = {
     7: "Guerrero Azul",
     8: "Guerrero Blanco",
     9: "Guerrero Negro",
-    10: "Calvo"
+    10: "Calvo",
+    11: "Gladiador"
 }
 
 
@@ -1660,7 +1783,7 @@ class Bomb:
     def tile_blocked_for_bomb(self, grid, bombs, tx, ty):
         if tx < 0 or tx >= GRID_COLS or ty < 0 or ty >= GRID_ROWS:
             return True
-        if grid[ty][tx] in (1, 2, 3):
+        if grid[ty][tx] in (1, 2, 3, 4):
             return True
         for b in bombs:
             if b is not self and not b.exploded:
@@ -2102,7 +2225,6 @@ class Explosion:
             self.frame_duration = TOTAL_EXPLOSION_TIME / len(self.frames)
             self.rotation_angle = 0
         else:
-            self.frames = EXPLOSION_FRAMES
             self.frame_duration = 0.1
             self.rotation_angle = 0
 
@@ -2451,6 +2573,8 @@ def draw_grid(surface, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG):
                 surface.blit(STONE, rect)
             elif grid[y][x] == 3:
                 surface.blit(LIMIT_IMG, rect)
+            elif grid[y][x] == 4:
+                surface.blit(BLOQUE_FINAL_IMG, rect)
 
 
 def draw_grid_lines(surface):
@@ -2498,6 +2622,40 @@ def obtener_posiciones_aleatorias(num_players):
 modo_posicion = config.current_position_index  # 0 = fija, 1 = aleatoria
 
 
+def generar_ruta_espiral():
+    ruta = []
+    min_x, max_x = 0, GRID_COLS - 1
+    min_y, max_y = 0, GRID_ROWS - 1
+
+    while min_x <= max_x and min_y <= max_y:
+
+        # --- TRAMO 1: Subir por la columna izquierda (INICIO) ---
+        for y in range(max_y, min_y - 1, -1):
+            ruta.append((min_x, y))
+        min_x += 1
+        if min_x > max_x: break
+
+        # --- TRAMO 2: Derecha por la fila superior ---
+        for x in range(min_x, max_x + 1):
+            ruta.append((x, min_y))
+        min_y += 1
+        if min_y > max_y: break
+
+        # --- TRAMO 3: Bajar por la columna derecha ---
+        for y in range(min_y, max_y + 1):
+            ruta.append((max_x, y))
+        max_x -= 1
+        if min_x > max_x: break
+
+        # --- TRAMO 4: Izquierda por la fila inferior ---
+        for x in range(max_x, min_x - 1, -1):
+            # CORRECCIÓN: Se usa (x, max_y) en lugar de (max_y, x)
+            ruta.append((x, max_y))
+        max_y -= 1
+        if min_y > max_y: break
+
+    return ruta
+
 # ------------------------------------------------------------------------------------
 # Bucle principal
 # ------------------------------------------------------------------------------------
@@ -2543,11 +2701,22 @@ def iniciar_partida(screen):
         else:
             continue  # No válido
 
-        nombre_personaje = nombres_por_indice.get(personaje_idx, "red")
+        nombre_personaje = nombres_por_indice.get(personaje_idx, "Mork")
         animaciones = cargar_animaciones_personaje(nombre_personaje)
+
+        portrait_image = None
+        try:
+            portrait_path = os.path.join(ASSETS_DIR, "Jugadores", "Dibujos", f"{nombre_personaje}.png")
+            portrait_full_size = pygame.image.load(portrait_path).convert_alpha()
+            portrait_image = pygame.transform.scale(portrait_full_size, (110, 110))
+        except pygame.error as e:
+            print(f"ADVERTENCIA: No se pudo cargar el retrato para {nombre_personaje}: {e}")
+            portrait_image = pygame.Surface((80, 80))
+            portrait_image.fill((50, 50, 50))  # Un cuadrado gris oscuro
 
         nuevo_jugador = Player(tile_x, tile_y, color, controls)
         nuevo_jugador.animaciones = animaciones
+        nuevo_jugador.portrait_image = portrait_image
         nuevo_jugador.player_index = idx
         nuevo_jugador.ghost_anim_frames = cargar_animacion_fantasma(idx)
         players.append(nuevo_jugador)
@@ -2580,9 +2749,24 @@ def iniciar_partida(screen):
 
     # --- BUCLE DE LA PARTIDA (GESTIONA LOS SETS) ---
     match_running = True
+    bloques_finales_activados = config.current_ultimas_index.get("Bloques_final", 1) == 0
+    ruta_espiral = []
+    final_blocks = []  # Lista para los objetos BloqueFinal activos
+    tiempo_por_bloque = 0
+    proximo_bloque_idx = 0
+    temporizador_caida_bloque = 0.0
+
+    if bloques_finales_activados:
+        ruta_espiral = generar_ruta_espiral()
+        if ruta_espiral:  # Evitar división por cero
+            # Calculamos el intervalo exacto para que el último caiga en el segundo 0
+            tiempo_por_bloque = 55.0 / len(ruta_espiral)
     while match_running:
         # --- REINICIO PARA UN NUEVO SET ---
         grid, powerups = generate_grid_and_powerups()
+        final_blocks.clear()
+        proximo_bloque_idx = 0
+        temporizador_caida_bloque = 0.0
         bombs, explosions, lapidas, dropped_abilities = [], [], [], []
         lapida_por_colocar = None
         exploding_blocks = {}
@@ -2608,6 +2792,8 @@ def iniciar_partida(screen):
         set_running = True
         while set_running:
             dt = clock.tick(60) / 1000.0
+            if dt > 0.1:
+                dt = 1 / 60.0
             remaining_time = max(0, TOTAL_TIME - (time.time() - start_time))
             if remaining_time <= 60 and not hurry_up_mode_activated:
                 hurry_up_mode_activated = True
@@ -2628,10 +2814,14 @@ def iniciar_partida(screen):
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    time_before_pause = time.time()
                     resultado = menu_pausa(screen, "teclado", screen.copy())
+                    start_time += time.time() - time_before_pause
                     if resultado == "Salir de la partida": return
                 if event.type == pygame.JOYBUTTONDOWN and event.button in (7,9):
+                    time_before_pause = time.time()
                     resultado = menu_pausa(screen, event.instance_id, screen.copy())
+                    start_time += time.time() - time_before_pause
                     if resultado == "Salir de la partida": return
 
                 if not set_end_sequence_start_time:
@@ -2872,6 +3062,65 @@ def iniciar_partida(screen):
                                 lapida_por_colocar = player_muerto.get_center_tile()
 
                             generar_poderes_al_morir(grid, bombs, powerups, players)
+            # 1. Spawning de nuevos bloques
+            if bloques_finales_activados and remaining_time <= 55 and proximo_bloque_idx < len(
+                    ruta_espiral):
+                temporizador_caida_bloque += dt
+                # Si es el primer bloque, lo soltamos inmediatamente
+                if proximo_bloque_idx == 0 and len(final_blocks) == 0:
+                    tx, ty = ruta_espiral[proximo_bloque_idx]
+                    if grid[ty][tx] != 4:
+                        final_blocks.append(BloqueFinal(tx, ty))
+                        if BLOQUE_FINAL_SOUND:
+                            BLOQUE_FINAL_SOUND.play()
+                    proximo_bloque_idx += 1
+                    temporizador_caida_bloque = 0  # Reiniciamos para el siguiente
+
+                # Para los siguientes, esperamos el intervalo
+                elif temporizador_caida_bloque >= tiempo_por_bloque:
+                    temporizador_caida_bloque -= tiempo_por_bloque
+                    tx, ty = ruta_espiral[proximo_bloque_idx]
+                    if grid[ty][tx] != 4:
+                        final_blocks.append(BloqueFinal(tx, ty))
+                        if BLOQUE_FINAL_SOUND:
+                            BLOQUE_FINAL_SOUND.play()
+                    proximo_bloque_idx += 1
+
+            # 2. Actualizar bloques en el aire y gestionar aterrizajes
+            bloques_para_remover = []
+            for bloque in final_blocks:
+                bloque.update(dt)
+                if bloque.state == "landed":
+                    tx, ty = bloque.tile_x, bloque.tile_y
+
+                    # Marcar la casilla como bloque final permanente
+                    if 0 <= ty < GRID_ROWS and 0 <= tx < GRID_COLS:
+                        grid[ty][tx] = 4
+
+                    # Eliminar gadgets en la casilla
+                    for p in powerups[:]:
+                        if p.x == tx and p.y == ty:
+                            powerups.remove(p)
+                    for l in lapidas[:]:
+                        if l.tile_x == tx and l.tile_y == ty:
+                            lapidas.remove(l)
+
+                    # Matar jugadores en la casilla
+                    for player in players:
+                        if player.is_eliminated:
+                            continue
+                        player_tile = player.get_center_tile()
+                        if player_tile == (tx, ty):
+                            MUERTE_SOUND.play()
+                            if usar_fantasmas and not hurry_up_mode_activated:
+                                player.become_ghost()
+                            else:
+                                player.eliminate()
+
+                    bloques_para_remover.append(bloque)
+
+            for bloque in bloques_para_remover:
+                final_blocks.remove(bloque)
             if not set_end_sequence_start_time:
                 alive_players = [p for p in players if not p.is_ghost and not p.is_eliminated]
 
@@ -2905,6 +3154,8 @@ def iniciar_partida(screen):
             game_surface.fill(BLACK)
 
             draw_grid(game_surface, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG)
+            for bloque in final_blocks:
+                bloque.draw_marker(game_surface)
             for lapida in lapidas:
                 lapida.draw(game_surface)
             for p in powerups: p.draw(game_surface)
@@ -2924,7 +3175,8 @@ def iniciar_partida(screen):
                     explosion.draw(game_surface)
             for p in drawable_players:
                 if p.is_ghost and not p.is_eliminated: p.draw(game_surface)
-
+            for bloque in final_blocks:
+                bloque.draw(game_surface)
             for i in range(len(gestor_jugadores.todos())):
                 player_info = next((p for p in players if p.player_index == i), None)
                 x_hud = 10 + i * 220
