@@ -24,6 +24,8 @@ SONIDOS_PERSONAJE = {
     "Grimfang": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Grimfang.mp3")),
     "Guerrero Azul": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Sonido raro.mp3")),
     "Warlord": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Warlord.mp3")),
+    "Gladiador": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Gladiador.mp3")),
+    "Sarthus": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Gladiador.mp3")),
 
 }
 # Opcional: ajustar volumen
@@ -31,12 +33,13 @@ for s in SONIDOS_PERSONAJE.values():
     s.set_volume(1.0)
 
 # Diccionario temporal para guardar estado de mandos desconectados
-temporizador_listos = {} # Diccionario para guardar si un jugador está listo
+temporizador_listos = {}  # Diccionario para guardar si un jugador está listo
 estado_mandos_desconectados = {}
 recien_unidos = set()  # ← Añade esto fuera del bucle principal
 
 mensaje_error = ""
 mensaje_timer = 0
+
 
 def draw_personaje_con_bombeo(screen, imagen, texto, center, flecha_izq, flecha_der, mostrar_flechas, bombeo=True):
     tiempo = pygame.time.get_ticks() / 300.0
@@ -63,6 +66,7 @@ def draw_personaje_con_bombeo(screen, imagen, texto, center, flecha_izq, flecha_
 
     return imagen_rect
 
+
 def draw_mensaje_inicio(screen, imagen_rect, tipo_jugador, listo):
     fuente = pygame.font.Font(None, size=22)
     if listo:
@@ -73,6 +77,7 @@ def draw_mensaje_inicio(screen, imagen_rect, tipo_jugador, listo):
     texto_render = fuente.render(texto, True, (0, 0, 0))
     texto_rect = texto_render.get_rect(center=(imagen_rect.centerx, imagen_rect.bottom + 50))
     screen.blit(texto_render, texto_rect)
+
 
 def draw_texto_inferior_bombeo(screen, texto, pos_centro):
     tiempo = pygame.time.get_ticks() / 300.0
@@ -85,12 +90,14 @@ def draw_texto_inferior_bombeo(screen, texto, pos_centro):
     rect = texto_escalado.get_rect(center=pos_centro)
     screen.blit(texto_escalado, rect)
 
+
 def draw_etiqueta_jugador(screen, texto, posicion):
     fuente = pygame.font.Font(None, size=24)
     texto_render = fuente.render(texto, True, (0, 0, 0))
     texto_rect = texto_render.get_rect()
     texto_rect.topright = (posicion[0] + 70, posicion[1] - 70)
     screen.blit(texto_render, texto_rect)
+
 
 def pantalla_personajes(screen, bg_anim):
     global mensaje_error, mensaje_timer
@@ -137,24 +144,33 @@ def pantalla_personajes(screen, bg_anim):
     fondo = pygame.transform.scale(pygame.image.load("Media/Menu/fondobasico.png").convert_alpha(), (750, 450))
     fondo_rect = fondo.get_rect(midright=(screen.get_width(), screen.get_height() // 2))
 
-    img_default = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_personajes/selec_pers.png").convert_alpha(), (130, 130))
-    img_teclado = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_personajes/teclado.png").convert_alpha(), (160, 160))
-    img_mando = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_personajes/mando.png").convert_alpha(), (160, 160))
+    img_default = pygame.transform.scale(
+        pygame.image.load("Media/Menu/Pantalla_personajes/selec_pers.png").convert_alpha(), (130, 130))
+    img_teclado = pygame.transform.scale(
+        pygame.image.load("Media/Menu/Pantalla_personajes/teclado.png").convert_alpha(), (160, 160))
+    img_mando = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_personajes/mando.png").convert_alpha(),
+                                       (160, 160))
 
-    flecha_izq = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_personajes/flecha_izquierda.png").convert_alpha(), (20, 20))
-    flecha_der = pygame.transform.scale(pygame.image.load("Media/Menu/Pantalla_personajes/flecha_derecha.png").convert_alpha(), (20, 20))
+    flecha_izq = pygame.transform.scale(
+        pygame.image.load("Media/Menu/Pantalla_personajes/flecha_izquierda.png").convert_alpha(), (20, 20))
+    flecha_der = pygame.transform.scale(
+        pygame.image.load("Media/Menu/Pantalla_personajes/flecha_derecha.png").convert_alpha(), (20, 20))
 
     personajes_disponibles = [
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Mork.png").convert_alpha(), (90, 90)),
-        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Guerrero Rojo.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Guerrero Rojo.png").convert_alpha(),
+                               (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Mortis.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Grimfang.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Warlord.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Vael.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Sarthus.png").convert_alpha(), (90, 90)),
-        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Guerrero Azul.png").convert_alpha(), (90, 90)),
-        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Guerrero Blanco.png").convert_alpha(), (90, 90)),
-        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Guerrero Negro.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Guerrero Azul.png").convert_alpha(),
+                               (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Guerrero Blanco.png").convert_alpha(),
+                               (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Guerrero Negro.png").convert_alpha(),
+                               (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/calvo.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/gladiador.png").convert_alpha(), (90, 90))
     ]
@@ -178,7 +194,8 @@ def pantalla_personajes(screen, bg_anim):
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit(); sys.exit()
+                pygame.quit();
+                sys.exit()
 
             # --------- DETECCIÓN DE TIPO DE INPUT ------------
             if event.type in [pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.MOUSEMOTION]:
@@ -456,15 +473,17 @@ def pantalla_personajes(screen, bg_anim):
                 tipo_jugador = jugador["tipo"]
                 base_rect = (img_teclado if tipo_jugador == "teclado" else img_mando).get_rect(center=pos)
                 screen.blit(img_teclado if tipo_jugador == "teclado" else img_mando, base_rect)
-                draw_etiqueta_jugador(screen, f"J{i+1}", pos)
+                draw_etiqueta_jugador(screen, f"J{i + 1}", pos)
                 personaje_img = personajes_disponibles[jugador["indice"]]
                 nombre_personaje = nombres_personajes[jugador["indice"]]
                 id_jugador = "teclado" if tipo_jugador == "teclado" else jugador.get("id")
                 listo = temporizador_listos.get(id_jugador, False)
-                rect_img = draw_personaje_con_bombeo(screen, personaje_img, nombre_personaje, pos, flecha_izq, flecha_der, not listo, bombeo=False)
+                rect_img = draw_personaje_con_bombeo(screen, personaje_img, nombre_personaje, pos, flecha_izq,
+                                                     flecha_der, not listo, bombeo=False)
                 draw_mensaje_inicio(screen, rect_img, tipo_jugador, listo)
             else:
-                draw_personaje_con_bombeo(screen, img_default, "NINGUNO", pos, flecha_izq, flecha_der, False, bombeo=True)
+                draw_personaje_con_bombeo(screen, img_default, "NINGUNO", pos, flecha_izq, flecha_der, False,
+                                          bombeo=True)
 
         draw_texto_inferior_bombeo(screen, "Pulsa para unirte", (screen.get_width() // 2, screen.get_height() - 30))
 

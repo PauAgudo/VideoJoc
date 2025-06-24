@@ -3292,7 +3292,6 @@ def iniciar_partida(screen):
     MENU_WIDTH = 800
     MENU_HEIGHT = 600
 
-    # ¡AQUÍ ESTÁ LA CORRECCIÓN CLAVE!
     screen = pygame.display.set_mode((MENU_WIDTH, MENU_HEIGHT))
 
     # Ahora creamos la animación de fondo con las dimensiones correctas del menú
