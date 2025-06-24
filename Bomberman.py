@@ -1107,7 +1107,6 @@ class Player:
 
     def move(self, direction, grid, bombs, powerups, lapidas):
         """
-        Método central que gestiona el movimiento.
         Aplica la inversión de controles si la maldición está activa.
         """
         final_direction = direction
@@ -1554,7 +1553,6 @@ class Player:
         elif curse_name == "slow_speed":
             self.speed = 0.5
 
-    # En la clase Player, REEMPLAZA el método _clear_curse_effects:
     def _clear_curse_effects(self, curse_name):
         if curse_name == "no_ability":
             self.can_pick_abilities = True
@@ -3358,7 +3356,6 @@ def iniciar_partida(screen):
                 if p.is_eliminated: continue
                 p.draw(game_surface)
 
-            # 3. Dibujar FANTASMAS por encima de todo lo anterior
             for p in drawable_players:
                 if p.is_ghost and not p.is_eliminated:
                     p.draw(game_surface)
