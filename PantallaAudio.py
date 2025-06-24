@@ -477,18 +477,19 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
         delay = 200  # milisegundos
 
         if current_time - tiempo_ultimo_movimiento > delay:
-            last_input_method = "gamepad"
-
             # Movimiento vertical para navegar por las casillas
             if hat_y == -1:  # Abajo
+                last_input_method = "gamepad"
                 selected_element_index = min(selected_element_index + 1, len(casillas_rects) - 1)
                 tiempo_ultimo_movimiento = current_time
             elif hat_y == 1:  # Arriba
+                last_input_method = "gamepad"
                 selected_element_index = max(selected_element_index - 1, 0)
                 tiempo_ultimo_movimiento = current_time
 
             # Movimiento horizontal para cambiar opciones o valores
             elif hat_x == -1:
+                last_input_method = "gamepad"
                 if selected_element_index == 0:  # Slider
                     sliders[0].value = max(0.0, sliders[0].value - 0.01)
                 elif selected_element_index == 1:  # Pantalla modo
@@ -496,6 +497,7 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                 tiempo_ultimo_movimiento = current_time
 
             elif hat_x == 1:
+                last_input_method = "gamepad"
                 if selected_element_index == 0:  # Slider
                     sliders[0].value = min(1.0, sliders[0].value + 0.01)
                 elif selected_element_index == 1:  # Pantalla modo
@@ -514,6 +516,7 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
         y_axis = joystick.get_axis(1)  # Eje vertical
 
         if abs(y_axis) > 0.5 and current_time - last_joystick_move_time > JOYSTICK_COOLDOWN:
+            last_input_method = "gamepad"
             if y_axis > 0.5:
                 selected_element_index = (selected_element_index + 1) % len(casillas_rects)
             elif y_axis < -0.5:
@@ -523,6 +526,7 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
         # Movimiento izquierda/derecha
         x_axis = joystick.get_axis(0)
         if abs(x_axis) > 0.5 and current_time - last_joystick_move_time > JOYSTICK_COOLDOWN:
+            last_input_method = "gamepad"
             if selected_element_index == 0:
                 if x_axis > 0.5:
                     sliders[0].value = min(1.0, sliders[0].value + 0.01)

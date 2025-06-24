@@ -44,15 +44,15 @@ def pantalla_mapas(screen, bg_anim):
     imagen_tecla_escape = pygame.image.load("Media/Menu/Botones/escape.png").convert_alpha()
     imagen_boton_options = pygame.image.load("Media/Menu/Botones/options.png").convert_alpha()
     imagen_boton_a = pygame.image.load("Media/Menu/Botones/boton_A.png").convert_alpha()
-    imagen_tecla_s = pygame.image.load("Media/Menu/Botones/tecla_s.png").convert_alpha()
+    imagen_tecla_control = pygame.image.load("Media/Menu/Botones/tecla_control.png").convert_alpha()
     imagen_tecla_enter = pygame.image.load("Media/Menu/Botones/enter.png").convert_alpha()
 
     # Redimensionar si es necesario
-    imagen_boton_b = pygame.transform.scale(imagen_boton_b, (40, 40))
-    imagen_boton_a = pygame.transform.scale(imagen_boton_a, (40, 40))
+    imagen_boton_b = pygame.transform.scale(imagen_boton_b, (50, 50))
+    imagen_boton_a = pygame.transform.scale(imagen_boton_a, (50, 50))
     imagen_boton_options = pygame.transform.scale(imagen_boton_options, (40, 40))
     imagen_tecla_escape = pygame.transform.scale(imagen_tecla_escape, (40, 40))
-    imagen_tecla_s = pygame.transform.scale(imagen_tecla_s, (40, 40))
+    imagen_tecla_control = pygame.transform.scale(imagen_tecla_control, (50, 40))
     imagen_tecla_enter = pygame.transform.scale(imagen_tecla_enter, (50, 40))
 
     # Nombres de los mapas
@@ -138,6 +138,10 @@ def pantalla_mapas(screen, bg_anim):
                     from PantallaConfigPartida import pantalla2_main
                     pantalla2_main(screen, bg_anim)
                     return
+
+                if event.key == pygame.K_LCTRL or event.key == pygame.K_RCTRL:
+                    from PantallaAudio import pantalla_audio
+                    pantalla_audio(screen, bg_anim, volver_callback=pantalla_mapas)
 
                 elif event.key == pygame.K_RETURN and selected_index >= 0:
                     from PantallaPersonajes import pantalla_personajes
@@ -258,7 +262,7 @@ def pantalla_mapas(screen, bg_anim):
         if last_input_type == "mando":
             imagen = imagen_boton_options
         else:
-            imagen = imagen_tecla_s
+            imagen = imagen_tecla_control
 
         pos_x = audio_rect.right + 10
         pos_y = audio_rect.centery - imagen.get_height() // 2

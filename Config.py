@@ -15,7 +15,6 @@ class Config:
         }
         # Opciones fijas
         self.set_options = [1, 2, 3, 4, 5]
-        self.level_options = ["Fácil", "Intermedio", "Avanzado"]
         self.position_options = ["Fija", "Aleatoria"]
         self.ultimas_opciones = ["Sí", "No"]
 
