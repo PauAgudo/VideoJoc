@@ -3,14 +3,17 @@ import sys
 # Importamos directamente las instancias globales de Config.py y ConfiguraciónMandos.py
 from Config import config, personajes, audio
 from ConfiguraciónMandos import gestor_jugadores
+from PantallaPersonajes import reiniciar_estado_personajes
 
 # Este módulo centraliza la limpieza del estado del juego para un reinicio completo
 def reiniciar_estado():
     print("[ESTADO] Reiniciando estado de la partida...")
 
-    # 1. Resetear las configuraciones de la partida
-    config.reset()
-    print("[ESTADO] Configuración de partida reseteada.")
+    # 1. Resetear las configuraciones de la partida a valores por defecto
+    """ AHORA MISMO ESTA COMENTADO, DE MODO QUE CUANDO SALES DE LA PARTIDA SE QUEDA LA CONFIGURACION
+    DE LA ULTIMA PARTIDA JUGADA"""
+    #config.reset()
+    #print("[ESTADO] Configuración de partida reseteada.")
 
     # 2. Resetear la selección de personajes
     personajes.reset()
@@ -19,6 +22,10 @@ def reiniciar_estado():
     # 3. Resetear el gestor de jugadores (mandos/teclado)
     gestor_jugadores.reset()
     print("[ESTADO] Gestor de jugadores reseteado.")
+
+    # Resetear jugadores/dispositivos connectados
+    reiniciar_estado_personajes()
+
 
     # 4. Detener la música del juego si está sonando y reproducir la música del menú
     pygame.mixer.music.stop()

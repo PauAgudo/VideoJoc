@@ -308,10 +308,10 @@ def manejar_eventos(sliders, screen, bg_anim):
                         guardar_volumenes(sliders)
                         return "ATRAS"
                     elif i == 3:
-                        from AprendeControles import pantalla_controles
+                        from AprendeControlesPartida import pantalla_controles
                         guardar_volumenes(sliders)
                         fondo_pausa = screen.copy()  # Guardar el fondo antes de cambiar de pantalla
-                        pantalla_controles(screen)
+                        pantalla_controles(screen, fondo_pausa)
                         screen.blit(fondo_pausa, (0, 0))  # Restaurar el fondo
                     elif i == 4:
                         from GuiaJuego import pantalla_guia
@@ -348,10 +348,10 @@ def manejar_eventos(sliders, screen, bg_anim):
                     guardar_volumenes(sliders)
                     return "ATRAS"
                 elif selected_element_index == 3:
-                    from AprendeControles import pantalla_controles
+                    from AprendeControlesPartida import pantalla_controles
                     guardar_volumenes(sliders)
                     fondo_pausa = screen.copy()  # Guardar el fondo antes de cambiar de pantalla
-                    pantalla_controles(screen)
+                    pantalla_controles(screen, fondo_pausa)
                     screen.blit(fondo_pausa, (0, 0))  # Restaurar el fondo
                 elif selected_element_index == 4:
                     from GuiaJuego import pantalla_guia
@@ -370,10 +370,10 @@ def manejar_eventos(sliders, screen, bg_anim):
                     guardar_volumenes(sliders)
                     return "ATRAS"
                 elif selected_element_index == 3:
-                    from AprendeControles import pantalla_controles
+                    from AprendeControlesPartida import pantalla_controles
                     guardar_volumenes(sliders)
                     fondo_pausa = screen.copy()  # Guardar el fondo antes de cambiar de pantalla
-                    pantalla_controles(screen)
+                    pantalla_controles(screen, fondo_pausa)
                     screen.blit(fondo_pausa, (0, 0))  # Restaurar el fondo
                 elif selected_element_index == 4:
                     from GuiaJuego import pantalla_guia
@@ -384,7 +384,7 @@ def manejar_eventos(sliders, screen, bg_anim):
                 elif selected_element_index == 5:
                     guardar_volumenes(sliders)
                     confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
-            elif event.button == 1:
+            elif event.button in (7, 9):
                 guardar_volumenes(sliders)
                 return "ATRAS"
 

@@ -1,8 +1,6 @@
 import pygame
 import sys
 
-from ConfiguraciónMandos import gestor_jugadores
-from PantallaPrincipal import background_screen
 from PantallaMapas import pantalla_mapas
 from PantallaAudio import pantalla_audio, GRIS_CLARO
 from Config import config
@@ -20,7 +18,6 @@ class ConfiguracionPartida:
         # Valores iniciales desde config
         current_set_index = config.current_set_index
         current_minute = config.current_minute
-        current_level_index = config.current_level_index
         current_position_index = config.current_position_index
         current_ultimas_index = current_ultimas_index = config.current_ultimas_index.copy()
 
@@ -43,39 +40,37 @@ class ConfiguracionPartida:
         imagen_tecla_escape = pygame.image.load("Media/Menu/Botones/escape.png").convert_alpha()
         imagen_boton_options = pygame.image.load("Media/Menu/Botones/options.png").convert_alpha()
         imagen_boton_a = pygame.image.load("Media/Menu/Botones/boton_A.png").convert_alpha()
-        imagen_tecla_s = pygame.image.load("Media/Menu/Botones/tecla_s.png").convert_alpha()
+        imagen_tecla_control = pygame.image.load("Media/Menu/Botones/tecla_control.png").convert_alpha()
         imagen_tecla_enter = pygame.image.load("Media/Menu/Botones/enter.png").convert_alpha()
 
         # Redimensionar si es necesario
-        imagen_boton_b = pygame.transform.scale(imagen_boton_b, (40, 40))
-        imagen_boton_a = pygame.transform.scale(imagen_boton_a, (40, 40))
+        imagen_boton_b = pygame.transform.scale(imagen_boton_b, (50, 50))
+        imagen_boton_a = pygame.transform.scale(imagen_boton_a, (50, 50))
         imagen_boton_options = pygame.transform.scale(imagen_boton_options, (40, 40))
         imagen_tecla_escape = pygame.transform.scale(imagen_tecla_escape, (40, 40))
-        imagen_tecla_s = pygame.transform.scale(imagen_tecla_s, (40, 40))
+        imagen_tecla_control = pygame.transform.scale(imagen_tecla_control, (50, 40))
         imagen_tecla_enter = pygame.transform.scale(imagen_tecla_enter, (50, 40))
 
         # Tiras
         tira_activa_idx = 0  # Índice de la tira activa
 
         # Definición de las claves y sus respectivas imágenes
-        keys = ["sets", "minutos", "nivel_COM", "pos_inicial", "Fantasmas", "Maldiciones", "Bloques_final"]
+        keys = ["sets", "minutos", "pos_inicial", "Fantasmas", "Maldiciones", "Bloques_final"]
 
         tira_files = {
             "sets": "Media/Menu/Pantalla_configuracion_partida/tira_sets.png",
             "minutos": "Media/Menu/Pantalla_configuracion_partida/tiempo.png",
-            "nivel_COM": "Media/Menu/Pantalla_configuracion_partida/tira_COM.png",
             "pos_inicial": "Media/Menu/Pantalla_configuracion_partida/tira_posicion.png",
             "Fantasmas": "Media/Menu/Pantalla_configuracion_partida/tira_fantasmas.png",
             "Maldiciones": "Media/Menu/Pantalla_configuracion_partida/tira_maldiciones.png",
             "Bloques_final": "Media/Menu/Pantalla_configuracion_partida/tira_bloques.png"
         }
 
-        aumento_ancho_izquierda = 100  # Píxeles que crecerá la tira hacia la izquierda. ¡Puedes cambiar este número!
+        aumento_ancho_izquierda = 100
         ancho_original = 550
         nuevo_ancho_tira = ancho_original + aumento_ancho_izquierda
 
-        # Carga cada imagen individual y la guarda en el diccionario tiras
-        nueva_altura_tira = 35
+        nueva_altura_tira = 40
         tiras = {
             k: pygame.transform.scale(pygame.image.load(tira_files[k]), (nuevo_ancho_tira, nueva_altura_tira))
             for k in keys
@@ -84,18 +79,15 @@ class ConfiguracionPartida:
         # Desplazamiento vertical
         vertical_shift = 50
 
-        # MODIFICACIÓN: La coordenada X se mueve a la izquierda para compensar el aumento de ancho
         nueva_posicion_x = 280 - aumento_ancho_izquierda
 
-        # Se mantiene el espaciado vertical de 45 píxeles
         posiciones = {
-            "sets":           (nueva_posicion_x, 90 + vertical_shift),
-            "minutos":        (nueva_posicion_x, 140 + vertical_shift),
-            "nivel_COM":      (nueva_posicion_x, 190 + vertical_shift),
-            "pos_inicial":    (nueva_posicion_x, 240 + vertical_shift),
-            "Fantasmas":      (nueva_posicion_x, 290 + vertical_shift),
-            "Maldiciones":    (nueva_posicion_x, 340 + vertical_shift),
-            "Bloques_final":  (nueva_posicion_x, 390 + vertical_shift)
+            "sets":           (nueva_posicion_x, 120 + vertical_shift),
+            "minutos":        (nueva_posicion_x, 170 + vertical_shift),
+            "pos_inicial":    (nueva_posicion_x, 220 + vertical_shift),
+            "Fantasmas":      (nueva_posicion_x, 270 + vertical_shift),
+            "Maldiciones":    (nueva_posicion_x, 320 + vertical_shift),
+            "Bloques_final":  (nueva_posicion_x, 370 + vertical_shift)
         }
 
 
@@ -114,7 +106,6 @@ class ConfiguracionPartida:
         def ir_a_pantalla_mapas():
             config.current_set_index = current_set_index
             config.current_minute = current_minute
-            config.current_level_index = current_level_index
             config.current_position_index = current_position_index
             config.current_ultimas_index = current_ultimas_index.copy()
             pantalla_mapas(screen, bg_anim)
@@ -171,8 +162,6 @@ class ConfiguracionPartida:
                             current_set_index -= 1
                         elif key == "minutos" and current_minute > 2:
                             current_minute -= 1
-                        elif key == "nivel_COM" and current_level_index > 0:
-                            current_level_index -= 1
                         elif key == "pos_inicial" and current_position_index > 0:
                             current_position_index -= 1
                         elif key in current_ultimas_index and current_ultimas_index[key] > 0:
@@ -186,8 +175,6 @@ class ConfiguracionPartida:
                             current_set_index += 1
                         elif key == "minutos" and current_minute < 9:
                             current_minute += 1
-                        elif key == "nivel_COM" and current_level_index < len(config.level_options) - 1:
-                            current_level_index += 1
                         elif key == "pos_inicial" and current_position_index < len(config.position_options) - 1:
                             current_position_index += 1
                         elif key in current_ultimas_index and current_ultimas_index[key] < len(
@@ -214,8 +201,6 @@ class ConfiguracionPartida:
                                     current_set_index -= 1
                                 elif key == "minutos" and current_minute > 2:
                                     current_minute -= 1
-                                elif key == "nivel_COM" and current_level_index > 0:
-                                    current_level_index -= 1
                                 elif key == "pos_inicial" and current_position_index > 0:
                                     current_position_index -= 1
                                 elif key in current_ultimas_index and current_ultimas_index[key] > 0:
@@ -228,8 +213,6 @@ class ConfiguracionPartida:
                                     current_set_index += 1
                                 elif key == "minutos" and current_minute < 9:
                                     current_minute += 1
-                                elif key == "nivel_COM" and current_level_index < len(config.level_options) - 1:
-                                    current_level_index += 1
                                 elif key == "pos_inicial" and current_position_index < len(config.position_options) - 1:
                                     current_position_index += 1
                                 elif key in current_ultimas_index and current_ultimas_index[key] < len(
@@ -244,7 +227,7 @@ class ConfiguracionPartida:
                     if event.key == pygame.K_RETURN:
                         ir_a_pantalla_mapas()
 
-                    if event.key == pygame.K_s:
+                    if event.key == pygame.K_LCTRL or event.key == pygame.K_RCTRL:
                         pantalla_audio(screen, bg_anim, volver_callback=pantalla2_main)
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
@@ -267,8 +250,6 @@ class ConfiguracionPartida:
                                     current_set_index -= 1
                                 elif key == "minutos" and current_minute > 2:
                                     current_minute -= 1
-                                elif key == "nivel_COM" and current_level_index > 0:
-                                    current_level_index -= 1
                                 elif key == "pos_inicial" and current_position_index > 0:
                                     current_position_index -= 1
                                 elif key in current_ultimas_index and current_ultimas_index[key] > 0:
@@ -278,8 +259,6 @@ class ConfiguracionPartida:
                                     current_set_index += 1
                                 elif key == "minutos" and current_minute < 9:
                                     current_minute += 1
-                                elif key == "nivel_COM" and current_level_index < len(config.level_options) - 1:
-                                    current_level_index += 1
                                 elif key == "pos_inicial" and current_position_index < len(config.position_options) - 1:
                                     current_position_index += 1
                                 elif key in current_ultimas_index and current_ultimas_index[key] < len(
@@ -298,8 +277,6 @@ class ConfiguracionPartida:
                             current_set_index -= 1
                         elif key == "minutos" and current_minute > 2:
                             current_minute -= 1
-                        elif key == "nivel_COM" and current_level_index > 0:
-                            current_level_index -= 1
                         elif key == "pos_inicial" and current_position_index > 0:
                             current_position_index -= 1
                         elif key in current_ultimas_index and current_ultimas_index[key] > 0:
@@ -311,8 +288,6 @@ class ConfiguracionPartida:
                             current_set_index += 1
                         elif key == "minutos" and current_minute < 9:
                             current_minute += 1
-                        elif key == "nivel_COM" and current_level_index < len(config.level_options) - 1:
-                            current_level_index += 1
                         elif key == "pos_inicial" and current_position_index < len(config.position_options) - 1:
                             current_position_index += 1
                         elif key in current_ultimas_index and current_ultimas_index[key] < len(
@@ -370,19 +345,12 @@ class ConfiguracionPartida:
                     screen.blit(
                         pygame.transform.scale(pygame.image.load(f"Media/Menu/Pantalla_configuracion_partida/{v}.png"),
                                                (30, 30)),
-                        (600 - (shift_amount if hov else 0), posiciones[key][1]))
+                        (600 - (shift_amount if hov else 0), posiciones[key][1] + 5))
                 if key == "minutos":
                     screen.blit(pygame.transform.scale(
                         pygame.image.load(f"Media/Menu/Pantalla_configuracion_partida/{current_minute}.png"), (30, 30)),
-                                (600 - (shift_amount if hov else 0), posiciones[key][1]))
-                if key == "nivel_COM":
-                    txt = config.level_options[current_level_index]
-                    surf = font.render(txt, True, (255, 255, 255))
-                    lx = flechas_pos[key]["izquierda"][0] - (shift_amount if hov else 0)
-                    rx = flechas_pos[key]["derecha"][0] - (shift_amount if hov else 0)
-                    cx = (lx + 30 + rx) // 2
-                    cy = cur_rect.centery
-                    screen.blit(surf, (cx - surf.get_width() // 2, cy - surf.get_height() // 2))
+                                (600 - (shift_amount if hov else 0), posiciones[key][1] + 5))
+
                 if key == "pos_inicial":
                     txt = config.position_options[current_position_index]
                     surf = font.render(txt, True, (255, 255, 255))
@@ -450,7 +418,7 @@ class ConfiguracionPartida:
             if last_input_type == "mando":
                 imagen = imagen_boton_options
             else:
-                imagen = imagen_tecla_s
+                imagen = imagen_tecla_control
 
             pos_x = audio_rect.right + 10
             pos_y = audio_rect.centery - imagen.get_height() // 2

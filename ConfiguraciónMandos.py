@@ -17,26 +17,27 @@ class GestorJugadores:
             self.jugadores.append({
                 "tipo": "teclado",
                 "id": None,
+                "instance_id": "teclado",
                 "indice": 0,
                 "id_jugador": nuevo_id
             })
             return len(self.jugadores)
         return None
 
-    def unir_mando(self, joy_id):
-        if not any(j["tipo"] == "mando" and j["id"] == joy_id for j in self.jugadores) \
-                and len(self.jugadores) < self.max_jugadores:
+    def unir_mando(self, device_index):
+        joy = pygame.joystick.Joystick(device_index)
+        if not joy.get_init():
+            joy.init()
 
-            joy = pygame.joystick.Joystick(joy_id)
-            if not joy.get_init():
-                joy.init()
-
-            nuevo_id = f"J{len(self.jugadores) + 1}"  # Asignamos ID como J1, J2...
+        instance_id = joy.get_instance_id()
+        if not any(j.get("instance_id") == instance_id for j in self.jugadores) and len(
+                self.jugadores) < self.max_jugadores:
+            nuevo_id = f"J{len(self.jugadores) + 1}"
 
             self.jugadores.append({
                 "tipo": "mando",
-                "id": joy_id,  # lo conservamos por si hace falta
-                "instance_id": joy.get_instance_id(),  # ¡el que nunca cambia!
+                "id": device_index,  # lo conservamos por si hace falta
+                "instance_id": instance_id,  # ¡el que nunca cambia!
                 "indice": 0,
                 "id_jugador": nuevo_id  # ← ¡ahora sí definido!
             })
@@ -47,9 +48,9 @@ class GestorJugadores:
         if 0 <= jugador_index < len(self.jugadores):
             self.jugadores[jugador_index]["indice"] = nuevo_indice
 
-    def get_jugador_por_joy(self, joy_id):
+    def get_jugador_por_joy(self, instance_id):
         for j in self.jugadores:
-            if j["tipo"] == "mando" and j["id"] == joy_id:
+            if j.get("instance_id") == instance_id:
                 return j
         return None
 
@@ -67,9 +68,10 @@ class GestorJugadores:
     def todos(self):
         return self.jugadores
 
-    def eliminar_jugador_por_joy(self, joy_id):
-        self.jugadores = [j for j in self.jugadores if not (j["tipo"] == "mando" and j["id"] == joy_id)]
-        self.reordenar_jugadores()
+    def eliminar_jugador_por_joy(self, instance_id):
+        self.jugadores = [j for j in self.jugadores if j.get("instance_id") != instance_id]
+        self.reordenar_jugadores()  # Esencial para reasignar "J1", "J2", etc.
+
 
     def eliminar_teclado(self):
         self.jugadores = [j for j in self.jugadores if j["tipo"] != "teclado"]
@@ -78,6 +80,8 @@ class GestorJugadores:
     def reordenar_jugadores(self):
         # Simplemente reordena la lista sin huecos y mantiene hasta 4 jugadores
         self.jugadores = self.jugadores[:self.max_jugadores]
+        for i, jugador in enumerate(self.jugadores):
+            jugador["id_jugador"] = f"J{i + 1}"
 
 
 gestor_jugadores = GestorJugadores()

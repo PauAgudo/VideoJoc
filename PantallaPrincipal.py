@@ -78,7 +78,7 @@ def animar_titulo_kaboom(screen, logo_img, tiempo_inicio, screen_width):
     tiempo_actual = pygame.time.get_ticks()
     tiempo_transcurrido = (tiempo_actual - tiempo_inicio) / 1000.0
 
-    duracion_aparicion = 1.0
+    duracion_aparicion = 0.7
     duracion_bote = 1.5
     screen_height = screen.get_height()
     x_centro = screen_width // 2
@@ -86,11 +86,11 @@ def animar_titulo_kaboom(screen, logo_img, tiempo_inicio, screen_width):
 
     if tiempo_transcurrido < duracion_aparicion:
         alpha = int(255 * (tiempo_transcurrido / duracion_aparicion))
-        escala = 0.2 + 0.2 * (tiempo_transcurrido / duracion_aparicion)
+        escala = 0.15 + 0.15 * (tiempo_transcurrido / duracion_aparicion)
         y_actual = y_base
     else:
         alpha = 255
-        escala = 0.4
+        escala = 0.3
         t_bote = tiempo_transcurrido - duracion_aparicion
         progreso_bote = t_bote % 1.0  # Bote continuo usando ciclo sin fin
         rebote = abs(math.sin(progreso_bote * math.pi * 2)) * 15
@@ -129,7 +129,7 @@ def background_screen(screen):
     while running:
         tiempo_actual = pygame.time.get_ticks()
         tiempo_transcurrido = (tiempo_actual - tiempo_inicio) / 1000.0
-        progreso = min(tiempo_transcurrido / 2.5, 1)  # Se sincroniza con la animación
+        progreso = min(tiempo_transcurrido / 1.5, 1)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -163,7 +163,9 @@ def background_screen(screen):
         bg_anim.update()
         bg_anim.draw(screen)
         animar_titulo_kaboom(screen, logo_img, tiempo_inicio, screen_width)
-        draw_bombeo_texto(screen, text_center, font, message)
+        if progreso >= 1:
+            draw_bombeo_texto(screen, text_center, font, message)
+
         pygame.display.flip()
         clock.tick(60)
 
