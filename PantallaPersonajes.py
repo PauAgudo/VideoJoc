@@ -22,7 +22,7 @@ SONIDOS_PERSONAJE = {
     "Guerrero Azul": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Sonido raro.mp3")),
     "Warlord": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Warlord.mp3")),
     "Ragnar": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Gladiador.mp3")),
-    "Sarthus": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Gladiador.mp3")),
+    "Sarthus": mixer.Sound(os.path.join("Media", "Sonidos_juego", "Escoger_personaje", "Sarthus.mp3")),
 
 }
 # Opcional: ajustar volumen
@@ -171,12 +171,9 @@ def pantalla_personajes(screen, bg_anim):
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Warlord.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Vael.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Sarthus.png").convert_alpha(), (90, 90)),
-        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Guerrero Azul.png").convert_alpha(),
-                               (90, 90)),
-        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Guerrero Blanco.png").convert_alpha(),
-                               (90, 90)),
-        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Guerrero Negro.png").convert_alpha(),
-                               (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Guerrero Azul.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Guerrero Blanco.png").convert_alpha(), (90, 90)),
+        pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/Guerrero Negro.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/calvo.png").convert_alpha(), (90, 90)),
         pygame.transform.scale(pygame.image.load("Media/Jugadores/Dibujos/ragnar.png").convert_alpha(), (90, 90))
     ]

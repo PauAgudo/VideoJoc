@@ -369,9 +369,9 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                         guardar_volumenes(sliders)
                         pantalla_controles(screen)
                     elif i == 3:
-                        from GuiaJuego import pantalla_guia
+                        from GuiaJuego import abrir_guia_pdf
                         guardar_volumenes(sliders)
-                        pantalla_guia(screen)
+                        abrir_guia_pdf()
                     elif i == 4:
                         guardar_volumenes(sliders)
                         confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
@@ -408,9 +408,9 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                     pantalla_controles(screen)
                 elif selected_element_index == 3:
                     # Acción: ir a guía del juego
-                    from GuiaJuego import pantalla_guia
+                    from GuiaJuego import abrir_guia_pdf
                     guardar_volumenes(sliders)
-                    pantalla_guia(screen)
+                    abrir_guia_pdf()
                 elif selected_element_index == 4:
                     # Acción: cerrar el juego
                     guardar_volumenes(sliders)
@@ -429,8 +429,8 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                         from AprendeControles import pantalla_controles
                         pantalla_controles(screen)
                     elif selected_element_index == 3:
-                        from GuiaJuego import pantalla_guia
-                        pantalla_guia(screen)
+                        from GuiaJuego import abrir_guia_pdf
+                        abrir_guia_pdf()
                     elif selected_element_index == 4:
                         confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
 
@@ -453,8 +453,8 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                     pantalla_controles(screen)
                 elif selected_element_index == 3:
                     guardar_volumenes(sliders)
-                    from GuiaJuego import pantalla_guia
-                    pantalla_guia(screen)
+                    from GuiaJuego import abrir_guia_pdf
+                    abrir_guia_pdf()
                 elif selected_element_index == 4:
                     guardar_volumenes(sliders)
                     confirmar_salida(screen, bg_anim, fondo_anterior=screen.copy())
