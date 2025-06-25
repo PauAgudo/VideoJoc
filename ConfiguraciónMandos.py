@@ -39,7 +39,7 @@ class GestorJugadores:
                 "id": device_index,  # lo conservamos por si hace falta
                 "instance_id": instance_id,  # ¡el que nunca cambia!
                 "indice": 0,
-                "id_jugador": nuevo_id  # ← ¡ahora sí definido!
+                "id_jugador": nuevo_id
             })
             return len(self.jugadores)
         return None

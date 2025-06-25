@@ -38,8 +38,7 @@ TILE_SIZE = 40
 GRID_COLS = 21
 GRID_ROWS = 17
 
-# --- MODIFICACIÓN DE DIMENSIONES ---
-# Se añade espacio a los lados para los marcadores de sets.
+# --- DIMENSIONES ---
 SCOREBOARD_AREA_WIDTH = 250  # Ancho del área en cada lado para los marcadores.
 GRID_WIDTH = GRID_COLS * TILE_SIZE  # Ancho de la cuadrícula del juego.
 WIDTH = GRID_WIDTH + 2 * SCOREBOARD_AREA_WIDTH  # Ancho total de la ventana.
@@ -130,7 +129,6 @@ CALAVERA_IMG = load_image("calavera.png", (40, 40), folder=os.path.join(ASSETS_D
 # Lapidas
 LAPIDA_IMG = load_image("lapida.png", (TILE_SIZE, TILE_SIZE), folder=os.path.join(ASSETS_DIR, "Mapas"))
 
-# Se asume que Bloque_final.png está en la misma carpeta que los otros elementos del mapa
 try:
     mapa_path_general = os.path.join(ASSETS_DIR, "Mapas")
     BLOQUE_FINAL_IMG = load_image("Bloque_final.png", (TILE_SIZE, TILE_SIZE), folder=mapa_path_general)
@@ -160,7 +158,6 @@ except pygame.error as e:
     MARCADOR_ERROR_IMG = None
 
 
-# Marcas de jugadores (escalado proporcional)
 def load_mark_scaled(path):
     full_path = os.path.join(ASSETS_DIR, "Jugadores", "Marca", path)
     img = pygame.image.load(full_path).convert_alpha()
@@ -327,7 +324,6 @@ def tile_blocked_for_player(grid, bombs, tile_x, tile_y, player):
     if tile_x < 0 or tile_x >= GRID_COLS or tile_y < 0 or tile_y >= GRID_ROWS:
         return True
 
-    # --- > LÓGICA MODIFICADA AQUÍ <---
     # Comprobar si el jugador es un fantasma
     if player.is_ghost:
         # Un fantasma solo es bloqueado por muros irrompibles (2) y límites (3)
@@ -349,10 +345,7 @@ def tile_blocked_for_player(grid, bombs, tile_x, tile_y, player):
 
 
 def generar_poderes_al_morir(grid, bombs, powerups, players):
-    """
-    Genera entre 2 y 5 gadgets aleatorios en casillas completamente libres cuando un jugador muere.
-    Cada gadget se coloca en una casilla diferente y con animación de aparición.
-    """
+
     tipos_poderes = ["speed", "more_bomb", "major_explosion", "push_bomb", "golpear_bombas"]
     cantidad = random.randint(2, 5)
     celdas_validas = []
@@ -829,10 +822,7 @@ class PowerUp:
 # Clase BloqueFinal
 # ------------------------------------------------------------------------------------
 class BloqueFinal:
-    """
-    Gestiona un bloque que cae al final de la partida.
-    """
-
+# gestion bloque final
     def __init__(self, tile_x, tile_y):
         self.tile_x = tile_x
         self.tile_y = tile_y
@@ -856,12 +846,10 @@ class BloqueFinal:
                 self.current_y = self.start_y + (self.target_y - self.start_y) * (1 - (1 - progress) ** 2)
 
     def draw_marker(self, surface):
-        """Dibuja la marca de advertencia en la casilla de destino."""
         if self.state == "falling":
             surface.blit(BLOQUE_FINAL_MARCA_IMG, (self.tile_x * TILE_SIZE, self.tile_y * TILE_SIZE + TOP_OFFSET))
 
     def draw(self, surface):
-        """Dibuja el bloque cayendo."""
         if self.state == "falling":
             surface.blit(BLOQUE_FINAL_IMG, (self.tile_x * TILE_SIZE, self.current_y))
 
@@ -899,8 +887,8 @@ class Player:
         self.can_place_bombs = True
         self.auto_bombing = False
         self.invert_controls = False
-        self.speed = 2.0
         self.base_speed = 2.0
+        self.speed = 2.0
         self.display_speed = 1
         self.pending_speed_boosts = 0
         self.controls = controls
@@ -1110,7 +1098,6 @@ class Player:
         Aplica la inversión de controles si la maldición está activa.
         """
         final_direction = direction
-        # Si hay un mapa de inversión activo, lo usamos para cambiar la dirección
         if self.inversion_map:
             final_direction = self.inversion_map.get(direction, direction)
 
@@ -1194,61 +1181,50 @@ class Player:
 
         current_time = time.time()
         if current_time - self.last_ghost_sound_time > GHOST_SOUND_INTERVAL:
-            # Ya tienes el sonido cargado como FANTASMA_SOUND
             FANTASMA_SOUND.play()
             self.last_ghost_sound_time = current_time  # Reinicia el temporizador
 
     def apply_curse(self, curse_name):
-        # Caso especial para RESET: es instantáneo y no interfiere con otras maldiciones
         if curse_name == "reset":
-            # Necesitamos acceder a las listas globales para crear las animaciones
             global grid, powerups, dropped_abilities
             trigger_reset_effect(self, grid, powerups, dropped_abilities)
-            return  # Termina aquí, no establece timers ni nada más
+            return
 
         meta = CURSES[curse_name]
 
-        # 1) Si la nueva maldición debe borrar la anterior, la limpiamos
         if meta.get("clears_previous", False) and self.active_curse:
             self._clear_curse_effects(self.active_curse)
 
-        # 2) Para hyper_speed / slow_speed, guardamos velocidad actual y reseteamos boosts
         if curse_name in ("hyper_speed", "slow_speed"):
             self._saved_speed_before_curse = self.speed
             self.pending_speed_boosts = 0
 
-        # 3) Activamos la maldición y calculamos su fin
         self.active_curse = curse_name
         duration = meta.get("duration")
         self.curse_ends_at = time.time() + duration if duration is not None else None
 
-        # 4) Aplicamos el efecto concreto
         meta["set_effect"](self, curse_name)
 
     def receive_transmitted_curse(self, new_curse_name, new_curse_ends_at):
         """Aplica una maldición y su tiempo restante al recibirla de otro jugador."""
-        # 1. Limpiar los efectos de la maldición actual (si la hay)
         if self.active_curse:
             self._clear_curse_effects(self.active_curse)
 
         self.active_curse = new_curse_name
         self.curse_ends_at = new_curse_ends_at
 
-        # 2. Aplicar los efectos de la nueva maldición
         if self.active_curse:
             self._set_curse_effects(self.active_curse)
         else:  # Si se recibe 'None', es que el jugador ha quedado limpio
             self.inversion_map = None  # Asegurarse de limpiar el mapa de inversión
 
     def update_curse(self):
-        """Debe llamarse cada frame para limpiar automáticamente al expirar."""
         if self.active_curse and self.curse_ends_at:
             if time.time() >= self.curse_ends_at:
                 ended = self.active_curse
                 self._clear_curse_effects(ended)
                 self.active_curse = None
                 self.curse_ends_at = None
-                # Opcional: efecto de parpadeo al finalizar
                 self.flashing = True
                 self.flash_count = 3
                 self.flash_timer = time.time()
@@ -1259,13 +1235,13 @@ class Player:
         """
         print(f"¡El jugador {self.player_index + 1} se ha convertido en un fantasma!")
 
-        # 1. Estado de fantasma
+        # Estado de fantasma
         self.is_ghost = True
         self.is_invulnerable = False  # No es invulnerable como fantasma
 
         self.last_ghost_sound_time = time.time()
 
-        # 2. Limpiar estado de jugador vivo
+        # Limpiar estado de jugador vivo
         if self.active_curse:
             self._clear_curse_effects(self.active_curse)
         self.active_curse = None
@@ -1281,11 +1257,10 @@ class Player:
         self.escudo_active = False
         self.escudo_cooldown_end_time = 0
 
-        # 3. Aplicar propiedades de fantasma
+        # Aplicar propiedades de fantasma
         self.speed = 1  # Velocidad reducida
 
-        # El jugador no se mueve, se queda en la casilla donde murió.
-        # Su posición (self.x, self.y) ya es la correcta.
+
 
     def eliminate(self):
         print(f"¡El jugador {self.player_index + 1} ha sido eliminado de la ronda!")
@@ -1323,7 +1298,6 @@ class Player:
         self.invulnerable_flash_timer = time.time()  # Inicia el temporizador para el parpadeo
 
     def draw(self, surface):
-        # SI ES FANTASMA, DIBUJA LA ANIMACIÓN CORRECTA SEGÚN LA DIRECCIÓN
         if self.is_ghost:
             animacion_actual = self.ghost_animations.get(self.current_direction, [])
             if not animacion_actual:
@@ -1348,10 +1322,9 @@ class Player:
                 flash_surf.fill((255, 255, 255, 150))
                 surface.blit(flash_surf, (self.x, self.y + self.sprite_draw_offset_y + TOP_OFFSET))
 
-        # 1) Aura por detrás (solo si hay maldición activa)
+        # Aura por detrás (solo si hay maldición activa)
         if self.active_curse and CURSES[self.active_curse]["duration"] is not None:
             if not hasattr(Player, 'aura_frames'):
-                # (código de carga del aura...)
                 import os
                 from PIL import Image
                 aura_path = os.path.join(os.path.dirname(__file__), ASSETS_DIR, "Gadgets", "Efectos_visuales",
@@ -1386,7 +1359,6 @@ class Player:
         # DIBUJO DEL ESCUDO (DETRÁS)
         if self.escudo_active:
             if not hasattr(Player, 'escudo_frames'):
-                # (código de carga del escudo...)
                 import os
                 from PIL import Image
                 escudo_path = os.path.join(os.path.dirname(__file__), ASSETS_DIR, "Gadgets", "Efectos_visuales",
@@ -1418,9 +1390,8 @@ class Player:
                                                                     self.y + self.sprite_draw_offset_y + TOP_OFFSET + self.sprite_size // 2))
                 surface.blit(escudo_behind, escudo_rect_behind)
 
-        # 2) Dibujo del jugador (sprite según dirección y personaje)
+        # Dibujo del jugador (sprite según dirección y personaje)
         if hasattr(self, "animaciones") and self.current_direction in self.animaciones:
-            # --- RESTAURADO: Lógica de parpadeo para la invulnerabilidad ---
             debe_dibujarse = True
             if self.is_invulnerable:
                 # Esta condición hace que el jugador parpadee
@@ -1438,9 +1409,8 @@ class Player:
                     mark_rect.midbottom = (self.x + self.sprite_size // 2,
                                            self.y + self.sprite_draw_offset_y + TOP_OFFSET + altura_offset)
                     surface.blit(mark_img, mark_rect)
-            # --- FIN DE LA RESTAURACIÓN ---
 
-        # 3) Aura por delante (solo si hay maldición activa)
+        # Aura por delante (solo si hay maldición activa)
         if self.active_curse and CURSES[self.active_curse]["duration"] is not None:
             aura_front = aura_image_scaled.copy()
             aura_front.set_alpha(100)
@@ -1461,7 +1431,7 @@ class Player:
                                                                 self.y + self.sprite_draw_offset_y + TOP_OFFSET + self.sprite_size // 2))
             surface.blit(escudo_overlay, escudo_rect_front)
 
-        # 4) Efecto de parpadeo al expirar la maldición
+        # Efecto de parpadeo al expirar la maldición
         if self.flashing:
             flash_surf = pygame.Surface((self.sprite_size, self.sprite_size))
             flash_surf.fill(WHITE)
@@ -1546,7 +1516,6 @@ class Player:
             self.auto_bombing = True
             self.last_auto_bomb_tile = self.get_center_tile()
         elif curse_name == "inverted":
-            # Ahora solo guardamos el mapa de inversión, no tocamos los controles.
             self.inversion_map = random.choice(self.INVERT_COMBINATIONS)
         elif curse_name == "hyper_speed":
             self.speed = 20
@@ -1562,7 +1531,6 @@ class Player:
             self.auto_bombing = False
             self.last_auto_bomb_tile = None
         elif curse_name == "inverted":
-            # Simplemente limpiamos el mapa de inversión.
             self.inversion_map = None
         elif curse_name in ("hyper_speed", "slow_speed"):
             original = getattr(self, "_saved_speed_before_curse", self.base_speed)
@@ -1612,8 +1580,10 @@ class Player:
 
         self.bomb_range = 1
         self.bomb_limit = 1
-        self.speed = self.base_speed
+        self.speed = 2.0
+        self.base_speed = 2.0
         self.display_speed = 1
+        self.pending_speed_boosts = 0
         self.push_bomb_available = False
         self.hit_bomb_available = False
         self.escudo_available = False
@@ -1626,7 +1596,7 @@ class Player:
         self.curse_ends_at = None
         self.controls = self.original_controls.copy()
 
-        # <--- MODIFICACIÓN: El personaje siempre empieza mirando hacia abajo --->
+        # orientacion inicial del personaje
         self.current_direction = "down"
         self.anim_frame = 0
 
@@ -1649,8 +1619,7 @@ def cargar_animaciones_fantasma_por_direccion(player_index):
     animaciones = {}
     direcciones = ["up", "down", "left", "right"]
 
-    # <--- MODIFICACIÓN: Definimos el ancho deseado para el fantasma --->
-    GHOST_TARGET_WIDTH = 55  # Puedes ajustar este valor (antes era 40)
+    GHOST_TARGET_WIDTH = 55
 
     base_path = os.path.join(ASSETS_DIR, "Jugadores", "Fantasma muerto", f"Jugador {player_index + 1}")
 
@@ -1668,7 +1637,6 @@ def cargar_animaciones_fantasma_por_direccion(player_index):
 
             if os.path.exists(ruta_imagen):
                 try:
-                    # <--- MODIFICACIÓN: Lógica para reescalar proporcionalmente --->
                     original_image = pygame.image.load(ruta_imagen).convert_alpha()
                     original_width, original_height = original_image.get_size()
 
@@ -1825,7 +1793,7 @@ class Bomb:
                 break
 
     def draw(self, surface):
-        self.update_push_slide()  # ← IMPORTANTE: actualiza animación de empuje continuo
+        self.update_push_slide()  # actualiza animación de empuje continuo
         draw_x = self.pos_x
         draw_y = self.pos_y
         if self.chain_triggered:
@@ -2046,7 +2014,7 @@ class Bomb:
                             p.start_disappear()
                 return
 
-        # Determina en qué tramo de la ruta nos encontramos según el tiempo transcurrido
+        # tramo de la ruta nos encontramos según el tiempo transcurrido
         t_accum = 0
         segment_index = 0
         for i, dur in enumerate(self.hit_bounce_durations):
@@ -2219,7 +2187,6 @@ class Explosion:
 
             frame_data = self.frames[self.current_frame]
 
-            # --- INICIO DE LA CORRECCIÓN ---
             # Comprobamos si el frame es un diccionario o una imagen directa
             if isinstance(frame_data, dict):
                 frame_image = frame_data.get("image")
@@ -2229,7 +2196,6 @@ class Explosion:
             # Si por alguna razón no se encuentra la imagen, no hacemos nada para evitar un error.
             if frame_image is None:
                 return
-            # --- FIN DE LA CORRECCIÓN ---
 
             self.current_sprite = frame_data  # guardamos también el nombre para detección
 
@@ -2281,7 +2247,7 @@ class Lapida:
     def start_slow_fade(self):
         self.state = "fading"
         self.fade_start_time = time.time()
-        self.fade_duration = 3.0  # ← duración más lenta al contagiar
+        self.fade_duration = 3.0  # duración más lenta al contagiar
 
 
 # ------------------------------------------------------------------------------------
@@ -2341,6 +2307,7 @@ class DroppedAbility:
             self.current_pos = (new_x, new_y)
 
         # --- Final de la animación ---
+
         if self.elapsed >= self.duration:
             self.current_pos = self.target_pos
             self.completed = True
@@ -2410,8 +2377,7 @@ def trigger_reset_effect(player, grid, powerups, dropped_abilities):
     print(f"¡Jugador {player.player_index + 1} ha activado la maldición de RESET!")
 
     abilities_to_drop = []
-    # 1. Contar las habilidades y poderes que tiene el jugador
-    # El diccionario mapea el tipo de habilidad a su imagen correspondiente
+    # Contar las habilidades y poderes que tiene el jugador
     ability_images = {
         "speed": SPEED_IMG,
         "more_bomb": MORE_BOMB_IMG,
@@ -2434,7 +2400,7 @@ def trigger_reset_effect(player, grid, powerups, dropped_abilities):
     if not abilities_to_drop:
         return  # No hacer nada si no hay nada que resetear
 
-    # 2. Resetear las estadísticas del jugador a los valores iniciales
+    # Resetear las estadísticas del jugador a los valores iniciales
     player.base_speed -= (player.display_speed - 1)
     player.speed = player.base_speed
     player.display_speed = 1
@@ -2445,7 +2411,7 @@ def trigger_reset_effect(player, grid, powerups, dropped_abilities):
     player.escudo_available = False
     player.escudo_active = False  # También desactiva el escudo si estaba activo
 
-    # 3. Encontrar casillas libres para soltar los objetos
+    # Encontrar casillas libres para soltar los objetos
     player_tile = player.get_center_tile()
     all_free_cells = get_available_free_cells(grid, powerups)
 
@@ -2462,7 +2428,7 @@ def trigger_reset_effect(player, grid, powerups, dropped_abilities):
 
     random.shuffle(far_cells)
 
-    # 4. Iniciar una animación de caída por cada habilidad/poder
+    # Iniciar una animación de caída por cada habilidad/poder
     player_start_pos = (
         player.x + player.sprite_size // 2,
         player.y + player.sprite_draw_offset_y + TOP_OFFSET + player.sprite_size // 2
@@ -2482,7 +2448,6 @@ def trigger_reset_effect(player, grid, powerups, dropped_abilities):
 # ------------------------------------------------------------------------------------
 # Función generate_grid_and_powerups
 # ------------------------------------------------------------------------------------
-# REEMPLAZA TU FUNCIÓN 'check_pickup' con esta versión:
 def check_pickup(players, powerups, lapidas):
     powerups_to_remove = []
 
@@ -2529,11 +2494,9 @@ def check_pickup(players, powerups, lapidas):
 
                     COGER_HABILIDAD_SOUND.play()
 
-                    # --- INICIO DE LA MODIFICACIÓN PARA VELOCIDAD ---
                     if p.type == "speed":
                         # Si el jugador está bajo una maldición de velocidad...
                         if player.active_curse in ("hyper_speed", "slow_speed"):
-                            # ...acumulamos la mejora para cuando la maldición termine.
                             player.pending_speed_boosts += 1.0
                             player.display_speed += 1  # Actualizamos el HUD para que el jugador vea que la recogió.
                         else:
@@ -2541,7 +2504,6 @@ def check_pickup(players, powerups, lapidas):
                             player.base_speed += 1.0
                             player.speed = player.base_speed
                             player.display_speed += 1
-                    # --- FIN DE LA MODIFICACIÓN PARA VELOCIDAD ---
 
                     elif p.type == "more_bomb":
                         player.bomb_limit += 1
@@ -2591,6 +2553,13 @@ def check_pickup(players, powerups, lapidas):
 def generate_grid_and_powerups():
     grid = [[0 for _ in range(GRID_COLS)] for _ in range(GRID_ROWS)]
     powerups = []
+    num_jugadores = len(gestor_jugadores.todos())
+    probabilidad_por_jugadores = {
+        2: 0.45,  # 45% de probabilidad para 2 jugadores
+        3: 0.55,  # 55% de probabilidad para 3 jugadores
+        4: 0.65  # 65% de probabilidad para 4 jugadores
+    }
+    prob_total_habilidad = probabilidad_por_jugadores.get(num_jugadores, 0.50)
     for x in range(GRID_COLS):
         grid[0][x] = 3
         grid[GRID_ROWS - 1][x] = 3
@@ -2609,22 +2578,21 @@ def generate_grid_and_powerups():
             if grid[y][x] == 0:
                 if random.random() < 0.7:
                     grid[y][x] = 1
-                    r = random.random()
-                    if r < 0.1:
-                        powerups.append(PowerUp(x, y, "speed"))
-                    elif r < 0.3:
-                        powerups.append(PowerUp(x, y, "major_explosion"))
-                    elif r < 0.4:
-                        powerups.append(PowerUp(x, y, "more_bomb"))
-                    elif r < 0.45:
-                        if config.current_ultimas_index.get("Maldiciones", 0) == 0:
-                            powerups.append(PowerUp(x, y, "calavera"))
-                    elif r < 0.45:
-                        powerups.append(PowerUp(x, y, "reset"))
-                    elif r < 0.5:
-                        # Dividimos aleatoriamente entre "push_bomb", "golpear_bombas" y "escudo"
-                        power_choice = random.choice(["push_bomb", "golpear_bombas", "escudo"])
-                        powerups.append(PowerUp(x, y, power_choice))
+                    if random.random() < prob_total_habilidad:
+                        r_tipo = random.random()
+
+                        if r_tipo < 0.40:  # 40% de ser "mayor_explosion"
+                            powerups.append(PowerUp(x, y, "major_explosion"))
+                        elif r_tipo < 0.65:  # 25% de ser "more_bomb"
+                            powerups.append(PowerUp(x, y, "more_bomb"))
+                        elif r_tipo < 0.85:  # 20%
+                            powerups.append(PowerUp(x, y, "speed"))
+                        elif r_tipo < 0.95:  # 10%
+                            if config.current_ultimas_index.get("Maldiciones", 0) == 0:
+                                powerups.append(PowerUp(x, y, "calavera"))
+                        else:  # 5%
+                            power_choice = random.choice(["push_bomb", "golpear_bombas", "escudo"])
+                            powerups.append(PowerUp(x, y, power_choice))
     if grid[1][1] != 2:
         grid[1][1] = 0
     if grid[1][2] != 2:
@@ -2748,7 +2716,7 @@ def obtener_posiciones_aleatorias(num_players):
 modo_posicion = config.current_position_index  # 0 = fija, 1 = aleatoria
 
 
-def generar_ruta_espiral():
+def generar_ruta_espiral(): # para los bloques final
     ruta = []
     min_x, max_x = 0, GRID_COLS - 1
     min_y, max_y = 0, GRID_ROWS - 1
@@ -2775,7 +2743,6 @@ def generar_ruta_espiral():
 
         # --- TRAMO 4: Izquierda por la fila inferior ---
         for x in range(max_x, min_x - 1, -1):
-            # CORRECCIÓN: Se usa (x, max_y) en lugar de (max_y, x)
             ruta.append((x, max_y))
         max_y -= 1
         if min_y > max_y: break
@@ -2785,7 +2752,6 @@ def generar_ruta_espiral():
 
 # funcion para animacion mensajes antes de iniciar partida
 def draw_animated_text(screen, image, start_time, duration=2.0, max_opacity=0.8):
-    """ Dibuja una imagen con una animación de fade-in y fade-out. Devuelve True si la animación ha terminado. """
     if not image:
         return time.time() - start_time > duration
 
@@ -2794,7 +2760,7 @@ def draw_animated_text(screen, image, start_time, duration=2.0, max_opacity=0.8)
         return True  # La animación ha terminado
 
     fade_in_time = 0.25
-    fade_out_time = 0.50  # Hacemos que se vaya un poco más rápido
+    fade_out_time = 0.50
 
     alpha = 255 * max_opacity
 
@@ -2815,7 +2781,7 @@ def draw_animated_text(screen, image, start_time, duration=2.0, max_opacity=0.8)
 def check_curse_transmission(players, cooldown_set):
     """Comprueba colisiones entre jugadores y transmite maldiciones."""
 
-    # 1. Gestionar colisiones y transmisiones
+    # Gestionar colisiones y transmisiones
     # Usamos itertools.combinations para obtener cada par de jugadores una sola vez
     for player1, player2 in combinations(players, 2):
         # Ignorar si alguno de los jugadores está eliminado, es fantasma o invulnerable
@@ -2855,16 +2821,15 @@ def check_curse_transmission(players, cooldown_set):
             cooldown_set.add(pair_key)
 
         else:
-            # 2. Si los jugadores no se tocan, y estaban en cooldown, quitar el cooldown
+            # Si los jugadores no se tocan, y estaban en cooldown, quitar el cooldown
             if pair_key in cooldown_set:
                 cooldown_set.remove(pair_key)
 
 # ------------------------------------------------------------------------------------
 # Bucle principal
 # ------------------------------------------------------------------------------------
-# REEMPLAZA TODA TU FUNCIÓN iniciar_partida CON ESTA:
 def iniciar_partida(screen):
-    # (El código de carga de imágenes y música se mantiene igual...)
+# Cargar datos partida
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     MUSIC_PATH = os.path.join(ASSETS_DIR, "Sonidos_juego", "musica_fondo", "juego.mp3")
     pygame.mixer.music.load(MUSIC_PATH)
@@ -2910,6 +2875,10 @@ def iniciar_partida(screen):
         GANADOR_SET_SOUND = pygame.mixer.Sound(os.path.join(ASSETS_DIR, "Sonidos_juego", "Partida", "ganador set.mp3"))
         GANADOR_PARTIDA_SOUND = pygame.mixer.Sound(
             os.path.join(ASSETS_DIR, "Sonidos_juego", "Partida", "ganador partida.mp3"))
+
+        SET_FINALIZADO_IMG = pygame.image.load(os.path.join(ASSETS_DIR, "Textos", "set_finalizado.png")).convert_alpha()
+        EMPATE_IMG = pygame.image.load(os.path.join(ASSETS_DIR, "Textos", "empate.png")).convert_alpha()
+
     except pygame.error as e:
         print(f"ADVERTENCIA: No se pudieron cargar las imágenes o sonidos de victoria: {e}")
         GANADOR_SET_IMG = None
@@ -2917,6 +2886,8 @@ def iniciar_partida(screen):
         JUGADOR_VICTORIA_IMGS = []
         GANADOR_SET_SOUND = None
         GANADOR_PARTIDA_SOUND = None
+        SET_FINALIZADO_IMG = None
+        EMPATE_IMG = None
 
     global players
     players = []
@@ -2943,7 +2914,7 @@ def iniciar_partida(screen):
             portrait_image = pygame.transform.scale(portrait_full_size, (110, 110))
         except pygame.error as e:
             print(f"ADVERTENCIA: No se pudo cargar el retrato para {nombre_personaje}: {e}")
-            portrait_image = pygame.Surface((80, 80));
+            portrait_image = pygame.Surface((80, 80))
             portrait_image.fill((50, 50, 50))
         nuevo_jugador = Player(tile_x, tile_y, color, controls)
         nuevo_jugador.animaciones = animaciones
@@ -3041,10 +3012,10 @@ def iniciar_partida(screen):
                 pause_instance_id = "teclado"
                 if estado_set == "jugando":
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                        should_pause = True;
+                        should_pause = True
                         pause_instance_id = "teclado"
                     elif event.type == pygame.JOYBUTTONDOWN and event.button in (7, 9):
-                        should_pause = True;
+                        should_pause = True
                         pause_instance_id = event.instance_id
                 if should_pause:
                     pygame.mixer.pause()
@@ -3066,8 +3037,8 @@ def iniciar_partida(screen):
                         if p.is_invulnerable: p.invulnerable_until += pause_duration_sec
                         if p.is_set_winner: p.set_winner_start_time += pause_duration_sec
                         if p.flashing: p.flash_timer += pause_duration_sec
-                        p.last_step_sound += pause_duration_sec;
-                        p.last_anim_update += pause_duration_sec;
+                        p.last_step_sound += pause_duration_sec
+                        p.last_anim_update += pause_duration_sec
                         p.last_ghost_sound_time += pause_duration_sec
                         if p.is_ghost: p.last_ghost_anim_update += pause_duration_ms
                     for b in bombs:
@@ -3095,13 +3066,13 @@ def iniciar_partida(screen):
                                     dx, dy = (0, -1) if player.current_direction == "up" else (
                                     0, 1) if player.current_direction == "down" else (
                                     -1, 0) if player.current_direction == "left" else (1, 0)
-                                    bomba_golpeada = False;
+                                    bomba_golpeada = False
                                     player_tile_x, player_tile_y = player.get_center_tile()
                                     for b in bombs:
                                         if b.tile_x == player_tile_x and b.tile_y == player_tile_y and not b.hit_bouncing and not b.sliding: b.hit_by_player(
                                             dx, dy, grid, bombs, powerups, players); bomba_golpeada = True; break
                                     if not bomba_golpeada:
-                                        front_tile_x = player_tile_x + dx;
+                                        front_tile_x = player_tile_x + dx
                                         front_tile_y = player_tile_y + dy
                                         for b in bombs:
                                             if b.tile_x == front_tile_x and b.tile_y == front_tile_y and not b.hit_bouncing and not b.sliding: b.hit_by_player(
@@ -3116,13 +3087,13 @@ def iniciar_partida(screen):
                                     dx, dy = (0, -1) if player.current_direction == "up" else (
                                     0, 1) if player.current_direction == "down" else (
                                     -1, 0) if player.current_direction == "left" else (1, 0)
-                                    bomba_golpeada = False;
+                                    bomba_golpeada = False
                                     player_tile_x, player_tile_y = player.get_center_tile()
                                     for b in bombs:
                                         if b.tile_x == player_tile_x and b.tile_y == player_tile_y and not b.hit_bouncing and not b.sliding: b.hit_by_player(
                                             dx, dy, grid, bombs, powerups, players); bomba_golpeada = True; break
                                     if not bomba_golpeada:
-                                        front_tile_x = player_tile_x + dx;
+                                        front_tile_x = player_tile_x + dx
                                         front_tile_y = player_tile_y + dy
                                         for b in bombs:
                                             if b.tile_x == front_tile_x and b.tile_y == front_tile_y and not b.hit_bouncing and not b.sliding: b.hit_by_player(
@@ -3209,11 +3180,11 @@ def iniciar_partida(screen):
                         if player.is_ghost or player.is_invulnerable or player.escudo_active or player.is_eliminated: continue
                         player_hitbox = player.get_hitbox()
                         if player_hitbox.width * player_hitbox.height == 0: continue
-                        total_overlap_area = 0;
+                        total_overlap_area = 0
                         killer = None
-                        min_tile_x = player_hitbox.left // TILE_SIZE;
+                        min_tile_x = player_hitbox.left // TILE_SIZE
                         max_tile_x = (player_hitbox.right - 1) // TILE_SIZE
-                        min_tile_y = player_hitbox.top // TILE_SIZE;
+                        min_tile_y = player_hitbox.top // TILE_SIZE
                         max_tile_y = (player_hitbox.bottom - 1) // TILE_SIZE
                         for tx in range(min_tile_x, max_tile_x + 1):
                             for ty in range(min_tile_y, max_tile_y + 1):
@@ -3228,36 +3199,36 @@ def iniciar_partida(screen):
                             {'player': player, 'killer': killer})
                     if muertes_en_frame:
                         jugadores_vivos_antes = [p for p in players if not p.is_ghost and not p.is_eliminated]
-                        num_vivos_antes = len(jugadores_vivos_antes);
+                        num_vivos_antes = len(jugadores_vivos_antes)
                         num_muertes = len(muertes_en_frame)
                         killer_fantasma = muertes_en_frame[0]['killer']
                         if (
                                 num_vivos_antes == 2 and num_muertes == 2 and killer_fantasma and killer_fantasma.is_ghost and
                                 muertes_en_frame[1]['killer'] == killer_fantasma):
-                            MUERTE_SOUND.play();
-                            killer_fantasma.resurrect();
-                            set_winner = killer_fantasma;
-                            set_winner.sets_won += 1;
-                            set_winner.is_set_winner = True;
+                            MUERTE_SOUND.play()
+                            killer_fantasma.resurrect()
+                            set_winner = killer_fantasma
+                            set_winner.sets_won += 1
+                            set_winner.is_set_winner = True
                             set_winner.set_winner_start_time = time.time()
                             for muerte in muertes_en_frame: muerte['player'].eliminate()
                             set_end_sequence_start_time = time.time()
                         elif num_vivos_antes == num_muertes and num_muertes > 1:
                             muerte_por_fantasma = any(m['killer'] and m['killer'].is_ghost for m in muertes_en_frame)
                             if not muerte_por_fantasma:
-                                print("¡EMPATE! La ronda no cuenta.");
+                                print("¡EMPATE! La ronda no cuenta.")
                                 MUERTE_SOUND.play()
                                 for muerte in muertes_en_frame:
                                     if usar_fantasmas and not hurry_up_mode_activated:
                                         muerte['player'].become_ghost()
                                     else:
                                         muerte['player'].eliminate()
-                                set_winner = None;
+                                set_winner = None
                                 set_end_sequence_start_time = time.time()
                         else:
                             for muerte in muertes_en_frame:
-                                player_muerto = muerte['player'];
-                                killer = muerte['killer'];
+                                player_muerto = muerte['player']
+                                killer = muerte['killer']
                                 MUERTE_SOUND.play()
                                 if killer and killer.is_ghost:
                                     killer.resurrect()
@@ -3278,10 +3249,10 @@ def iniciar_partida(screen):
                         tx, ty = ruta_espiral[proximo_bloque_idx]
                         if grid[ty][tx] != 4: final_blocks.append(BloqueFinal(tx, ty));
                         if BLOQUE_FINAL_SOUND: BLOQUE_FINAL_SOUND.play()
-                        proximo_bloque_idx += 1;
+                        proximo_bloque_idx += 1
                         temporizador_caida_bloque = 0
                     elif temporizador_caida_bloque >= tiempo_por_bloque:
-                        temporizador_caida_bloque -= tiempo_por_bloque;
+                        temporizador_caida_bloque -= tiempo_por_bloque
                         tx, ty = ruta_espiral[proximo_bloque_idx]
                         if grid[ty][tx] != 4: final_blocks.append(BloqueFinal(tx, ty));
                         if BLOQUE_FINAL_SOUND: BLOQUE_FINAL_SOUND.play()
@@ -3312,9 +3283,9 @@ def iniciar_partida(screen):
                     if len(alive_players) <= 1:
                         set_end_sequence_start_time = time.time()
                         if len(alive_players) == 1:
-                            set_winner = alive_players[0];
-                            set_winner.sets_won += 1;
-                            set_winner.is_set_winner = True;
+                            set_winner = alive_players[0]
+                            set_winner.sets_won += 1
+                            set_winner.is_set_winner = True
                             set_winner.set_winner_start_time = time.time()
                             if GANADOR_SET_SOUND: GANADOR_SET_SOUND.play()
                     elif remaining_time <= 0:
@@ -3322,19 +3293,19 @@ def iniciar_partida(screen):
                         if len(alive_players) > 1:
                             print("¡TIEMPO AGOTADO! EMPATE. La ronda no cuenta."); set_winner = None
                         elif len(alive_players) == 1:
-                            set_winner = alive_players[0];
-                            set_winner.sets_won += 1;
-                            set_winner.is_set_winner = True;
+                            set_winner = alive_players[0]
+                            set_winner.sets_won += 1
+                            set_winner.is_set_winner = True
                             set_winner.set_winner_start_time = time.time()
                             if GANADOR_SET_SOUND: GANADOR_SET_SOUND.play()
 
-            # --- DIBUJADO (SECCIÓN CORREGIDA) ---
+            # --- DIBUJADO ---
             background_gif.update()
             background_gif.draw(screen)
             game_surface = pygame.Surface((GRID_WIDTH, HEIGHT), pygame.SRCALPHA)
             draw_grid(game_surface, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG)
 
-            # 1. Dibujar todos los objetos del mapa si la partida está en juego
+            # Dibujar todos los objetos del mapa si la partida está en juego
             if estado_set == "jugando":
                 for bloque in final_blocks: bloque.draw_marker(game_surface)
                 for lapida in lapidas: lapida.draw(game_surface)
@@ -3349,7 +3320,7 @@ def iniciar_partida(screen):
                         explosion.draw(game_surface)
                 for bloque in final_blocks: bloque.draw(game_surface)
 
-            # 2. Dibujar jugadores VIVOS por encima de los objetos
+            # Dibujar jugadores VIVOS por encima de los objetos
             drawable_players = [set_winner] if set_end_sequence_start_time and set_winner else players
             sorted_players = sorted([p for p in drawable_players if not p.is_ghost], key=lambda p: p.y)
             for p in sorted_players:
@@ -3364,10 +3335,10 @@ def iniciar_partida(screen):
             screen.blit(game_surface, (SCOREBOARD_AREA_WIDTH, 0))
             draw_scoreboards(screen, players, scoreboard_images, set_positions, WIDTH, HEIGHT)
 
-            # 5. Dibujar textos de animación ("PREPARADOS", "GANADOR", etc.)
+            # Dibujar textos de animación ("PREPARADOS", "GANADOR", etc.)
             if estado_set == "preparados":
                 if draw_animated_text(screen, PREPARADOS_IMG, tiempo_anim_texto, duration=1.5):
-                    estado_set = "adelante";
+                    estado_set = "adelante"
                     tiempo_anim_texto = time.time()
                     if ADELANTE_SOUND: ADELANTE_SOUND.play()
 
@@ -3378,46 +3349,73 @@ def iniciar_partida(screen):
 
             elif estado_set == "jugando":
                 if date_prisa_anim_start_time and DATE_PRISA_IMG:
-                    anim_duration = 3.0;
+                    anim_duration = 3.0
                     elapsed = time.time() - date_prisa_anim_start_time
                     if elapsed < anim_duration:
-                        new_width = DATE_PRISA_IMG.get_width() // 2;
+                        new_width = DATE_PRISA_IMG.get_width() // 2
                         new_height = DATE_PRISA_IMG.get_height() // 2
                         scaled_img = pygame.transform.scale(DATE_PRISA_IMG, (new_width, new_height))
-                        fade_in_time = 0.25;
-                        fade_out_time = 0.25;
+                        fade_in_time = 0.25
+                        fade_out_time = 0.25
                         alpha = 255 * 0.8
                         if elapsed < fade_in_time:
                             alpha *= (elapsed / fade_in_time)
                         elif elapsed > anim_duration - fade_out_time:
                             alpha *= (anim_duration - elapsed) / fade_out_time
-                        temp_img = scaled_img.copy();
+                        temp_img = scaled_img.copy()
                         temp_img.set_alpha(int(max(0, alpha)))
-                        img_rect = temp_img.get_rect(center=(WIDTH / 2, HEIGHT / 2));
+                        img_rect = temp_img.get_rect(center=(WIDTH / 2, HEIGHT / 2))
                         screen.blit(temp_img, img_rect)
                     else:
                         date_prisa_anim_start_time = None
 
-            if set_end_sequence_start_time and set_winner:
-                anim_duration = 3.0;
+            if set_end_sequence_start_time:
+                anim_duration = 3.0
                 elapsed = time.time() - set_end_sequence_start_time
-                if elapsed < anim_duration and GANADOR_SET_IMG and JUGADOR_VICTORIA_IMGS:
-                    fade_in_time = 0.25;
-                    fade_out_time = 0.50;
+
+                # Solo animar durante la duración establecida
+                if elapsed < anim_duration:
+                    # Calcular el efecto de fade-in y fade-out
+                    fade_in_time = 0.25
+                    fade_out_time = 0.50
                     alpha = 255
+
                     if elapsed < fade_in_time:
                         alpha *= (elapsed / fade_in_time)
                     elif elapsed > anim_duration - fade_out_time:
                         alpha *= (anim_duration - elapsed) / fade_out_time
-                    img_ganador_set = GANADOR_SET_IMG.copy();
-                    img_ganador_set.set_alpha(int(max(0, alpha)))
-                    rect_ganador = img_ganador_set.get_rect(center=(WIDTH / 2, HEIGHT / 2 - 40));
-                    screen.blit(img_ganador_set, rect_ganador)
-                    if 0 <= set_winner.player_index < len(JUGADOR_VICTORIA_IMGS):
-                        img_jugador = JUGADOR_VICTORIA_IMGS[set_winner.player_index].copy();
-                        img_jugador.set_alpha(int(max(0, alpha)))
-                        rect_jugador = img_jugador.get_rect(center=(WIDTH / 2, HEIGHT / 2 + 40));
-                        screen.blit(img_jugador, rect_jugador)
+
+                    alpha = int(max(0, alpha))
+
+                    # Hay un ganador para el set
+                    if set_winner and GANADOR_SET_IMG and JUGADOR_VICTORIA_IMGS:
+                        # Dibujar "ganador_set.png"
+                        img_ganador_set = GANADOR_SET_IMG.copy()
+                        img_ganador_set.set_alpha(alpha)
+                        rect_ganador = img_ganador_set.get_rect(center=(WIDTH / 2, HEIGHT / 2 - 40))
+                        screen.blit(img_ganador_set, rect_ganador)
+
+                        # Dibujar "jX.png" debajo
+                        if 0 <= set_winner.player_index < len(JUGADOR_VICTORIA_IMGS):
+                            img_jugador = JUGADOR_VICTORIA_IMGS[set_winner.player_index].copy()
+                            img_jugador.set_alpha(alpha)
+                            rect_jugador = img_jugador.get_rect(center=(WIDTH / 2, HEIGHT / 2 + 40))
+                            screen.blit(img_jugador, rect_jugador)
+
+                    # El set termina en empate (no hay ganador)
+                    elif not set_winner and SET_FINALIZADO_IMG and EMPATE_IMG:
+
+                        # Dibujar "set_finalizado.png"
+                        img_set_fin = SET_FINALIZADO_IMG.copy()
+                        img_set_fin.set_alpha(alpha)
+                        rect_fin = img_set_fin.get_rect(center=(WIDTH / 2, HEIGHT / 2 - 40))
+                        screen.blit(img_set_fin, rect_fin)
+
+                        # Dibujar "empate.png" debajo
+                        img_empate = EMPATE_IMG.copy()
+                        img_empate.set_alpha(alpha)
+                        rect_empate = img_empate.get_rect(center=(WIDTH / 2, HEIGHT / 2 + 40))
+                        screen.blit(img_empate, rect_empate)
 
             pygame.display.flip()
             if estado_set == "jugando" and set_end_sequence_start_time and (
@@ -3430,8 +3428,6 @@ def iniciar_partida(screen):
             match_winner = set_winner
             match_running = False
 
-        if not set_winner and len([p for p in players if not p.is_eliminated and not p.is_ghost]) == 0:
-            match_running = False
 
     FANTASMA_SOUND.stop()
 
@@ -3441,11 +3437,11 @@ def iniciar_partida(screen):
             confeti_path = os.path.join(ASSETS_DIR, "Mapas", "confeti.gif")
             confeti_gif = AnimatedBackground(confeti_path, (WIDTH, HEIGHT))
         except (FileNotFoundError, pygame.error) as e:
-            print(f"ADVERTENCIA: No se pudo cargar confeti.gif: {e}");
+            print(f"ADVERTENCIA: No se pudo cargar confeti.gif: {e}")
             confeti_gif = None
         victory_start_time = time.time()
         while time.time() - victory_start_time < 5.0:
-            background_gif.update();
+            background_gif.update()
             background_gif.draw(screen)
             game_surface.fill((0, 0, 0, 0))
             draw_grid(game_surface, grid, SUELO1, SUELO2, STONE, BRICK, LIMIT_IMG)
@@ -3461,7 +3457,7 @@ def iniciar_partida(screen):
                         center=(WIDTH / 2, HEIGHT / 2 + 40))
                     screen.blit(JUGADOR_VICTORIA_IMGS[match_winner.player_index], rect_jugador_final)
             if confeti_gif:
-                confeti_gif.update();
+                confeti_gif.update()
                 confeti_gif.draw(screen)
             pygame.display.flip()
             clock.tick(60)
@@ -3470,7 +3466,7 @@ def iniciar_partida(screen):
     reiniciar_estado()
     from PantallaConfigPartida import pantalla2_main
     from PantallaPrincipal import BackgroundAnimation
-    MENU_WIDTH = 800;
+    MENU_WIDTH = 800
     MENU_HEIGHT = 600
     screen = pygame.display.set_mode((MENU_WIDTH, MENU_HEIGHT))
     bg_anim = BackgroundAnimation(screen.get_width(), screen.get_height())

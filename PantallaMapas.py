@@ -39,7 +39,7 @@ def pantalla_mapas(screen, bg_anim):
     marco_rect = marco.get_rect(midright=(screen.get_width(), screen.get_height() // 2))
 
     # ACLARACIÓN VISUAL
-    # Cargar imágenes (esto al inicio del archivo o en __init__)
+    # Cargar imágenes
     imagen_boton_b = pygame.image.load("Media/Menu/Botones/boton_B.png").convert_alpha()
     imagen_tecla_escape = pygame.image.load("Media/Menu/Botones/escape.png").convert_alpha()
     imagen_boton_options = pygame.image.load("Media/Menu/Botones/options.png").convert_alpha()
@@ -215,11 +215,9 @@ def pantalla_mapas(screen, bg_anim):
         bg_anim.draw(screen)
         screen.blit(marco, marco_rect)
 
-                # Dibujar mapas, hover y selección fija
+        # Dibujar mapas, hover y selección fija
         for idx, (mini, big, rect, name_surf) in enumerate(mapas):
             screen.blit(mini, rect)
-            # Solo mostrar preview en hover cuando no hay selección,
-            # o mostrar siempre el mapa seleccionado
             if (selected_index == -1 and rect.collidepoint(mouse_pos)) or idx == selected_index:
                 # dibujar contorno celeste
                 hover_rect = rect.inflate(border_thickness, border_thickness)
@@ -239,8 +237,7 @@ def pantalla_mapas(screen, bg_anim):
             else:
                 screen.blit(img, rc)
 
-        # Lógica de imagen simplificada
-        # Ahora la imagen depende del último tipo de input, no de un parámetro fijo
+        # ayuda visual botones
         if last_input_type == "mando":
             imagen = imagen_boton_b
         else:
