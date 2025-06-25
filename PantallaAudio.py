@@ -422,9 +422,8 @@ def manejar_eventos(sliders, rect_atras, screen, bg_anim, volver_callback):
                 last_input_method = "gamepad"
                 if event.button == 0:  # A
                     if selected_element_index == 0:
-                        pass  # No hace falta confirmar el slider
+                        pass
                     elif selected_element_index == 1:
-                        # No hace nada al pulsar A en PANTALLA MODO
                         pass
                     elif selected_element_index == 2:
                         from AprendeControles import pantalla_controles

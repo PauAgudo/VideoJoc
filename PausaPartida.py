@@ -129,12 +129,12 @@ def dibujar_ui(screen, bg_anim, fondo_gris, rect_fondo_gris, sliders,
     slider_bg_rect = pygame.Rect(
         rect_fondo_gris.centerx - 265,
         casilla_reanudar_rect.bottom + 40,
-        ancho_slider + 250, 40  # tamaño ajustable
+        ancho_slider + 250, 40
     )
 
     slider.rect.width = ancho_slider
     slider.rect.height = alto_slider
-    slider.rect.center = (slider_bg_rect.centerx + 65, slider_bg_rect.centery)  # 30px a la derecha DENTRO de la casilla
+    slider.rect.center = (slider_bg_rect.centerx + 65, slider_bg_rect.centery)
 
     # Casilla modo pantalla
     casilla_modo_rect = pygame.Rect(slider_bg_rect.left, slider_bg_rect.bottom + 40, slider_bg_rect.width, 40)
@@ -483,7 +483,6 @@ def menu_pausa(screen, bg_anim, fondo_pausa):
     flecha_izquierda_img = pygame.image.load("Media/Menu/Pantalla_configuracion_partida/izquierda.png").convert_alpha()
     flecha_derecha_img = pygame.image.load("Media/Menu/Pantalla_configuracion_partida/derecha.png").convert_alpha()
 
-    # Si bg_anim es None o no tiene métodos update/draw, sustituir por un dummy
     if not hasattr(bg_anim, 'update') or not hasattr(bg_anim, 'draw'):
         class DummyBG:
             def update(self): pass

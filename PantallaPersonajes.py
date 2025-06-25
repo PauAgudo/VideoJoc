@@ -6,9 +6,7 @@ pygame.init()
 
 if not pygame.mixer.get_init():
     pygame.mixer.init()
-# Añadir justo tras los imports
 import os
-from Config import personajes
 from pygame import mixer
 
 # Inicializar sonidos de selección
@@ -34,7 +32,7 @@ for s in SONIDOS_PERSONAJE.values():
 # Diccionario temporal para guardar estado de mandos desconectados
 temporizador_listos = {}  # Diccionario para guardar si un jugador está listo
 estado_mandos_desconectados = {}
-recien_unidos = set()  # ← Añade esto fuera del bucle principal
+recien_unidos = set()
 
 mensaje_error = ""
 mensaje_timer = 0
@@ -202,7 +200,7 @@ def pantalla_personajes(screen, bg_anim):
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit();
+                pygame.quit()
                 sys.exit()
 
             # --------- DETECCIÓN DE TIPO DE INPUT ------------
@@ -267,7 +265,6 @@ def pantalla_personajes(screen, bg_anim):
                         temporizador_listos[id_jugador] = False
                     # Regla 2: Si NO está "LISTO"...
                     else:
-                        # ...y es el Jugador 1, vuelve a la pantalla de mapas.
                         if gestor_jugadores.get(0) == jugador_teclado:
                             from PantallaMapas import pantalla_mapas
                             gestor_jugadores.reset()
@@ -276,21 +273,19 @@ def pantalla_personajes(screen, bg_anim):
                             recien_unidos.clear()
                             pantalla_mapas(screen, bg_anim)
                             return
-                        # ...y es otro jugador, se elimina de la partida.
                         else:
                             if id_jugador in temporizador_listos:
                                 del temporizador_listos[id_jugador]
-                            # Asumo que tu gestor tiene una función para eliminar el teclado.
                             gestor_jugadores.eliminar_teclado()
 
-                # 1. Si el teclado no participa, se une con cualquier tecla y se detiene.
+                # Si el teclado no participa, se une con cualquier tecla y se detiene.
                 if gestor_jugadores.get_teclado() is None:
                     # La primera pulsación de cualquier tecla (excepto ESC) solo une al jugador.
                     gestor_jugadores.unir_teclado()
                     # 'continue' salta al siguiente evento, ignorando el código de abajo en esta pulsación.
                     continue
 
-                # 2. Si el teclado YA participa, se procesan las acciones.
+                # Si el teclado YA participa, se procesan las acciones.
                 jugador = gestor_jugadores.get_teclado()
                 if jugador:
                     if event.key == pygame.K_RETURN:
@@ -324,17 +319,16 @@ def pantalla_personajes(screen, bg_anim):
                         elif event.key == pygame.K_RIGHT:
                             jugador["indice"] = (jugador.get("indice", 0) + 1) % len(personajes_disponibles)
 
-            # Dentro del while running → justo en el manejo del evento
             if event.type == pygame.JOYBUTTONDOWN:
                 instance_id = event.instance_id
                 jugador = gestor_jugadores.get_jugador_por_joy(instance_id)
 
-                # 1. Si el mando no participa, se une con cualquier botón y se detiene.
+                # Si el mando no participa, se une con cualquier botón y se detiene.
                 if jugador is None:
                     gestor_jugadores.unir_mando(event.joy)
                     continue
 
-                # 2. Si el mando YA participa, se procesan las acciones.
+                # Si el mando YA participa, se procesan las acciones.
                 if event.button == 0:  # Botón A
                     if temporizador_listos.get(instance_id, False):
                         jugador1 = gestor_jugadores.get(0)
@@ -369,7 +363,6 @@ def pantalla_personajes(screen, bg_anim):
                         temporizador_listos[instance_id] = False
                     # Regla 2: Si NO está "LISTO"...
                     else:
-                        # ...y es el Jugador 1, vuelve a la pantalla de mapas.
                         if gestor_jugadores.get(0) == jugador:
                             from PantallaMapas import pantalla_mapas
                             gestor_jugadores.reset()
@@ -378,7 +371,6 @@ def pantalla_personajes(screen, bg_anim):
                             recien_unidos.clear()
                             pantalla_mapas(screen, bg_anim)
                             return
-                        # ...y es otro jugador, se elimina de la partida.
                         else:
                             if instance_id in temporizador_listos:
                                 del temporizador_listos[instance_id]
@@ -484,8 +476,7 @@ def pantalla_personajes(screen, bg_anim):
             else:
                 screen.blit(img, rect)
 
-        # Lógica de imagen simplificada
-        # Ahora la imagen depende del último tipo de input, no de un parámetro fijo
+        # logica ayuda visual botones
         if last_input_type == "mando":
             imagen = imagen_boton_b
         else:
@@ -538,7 +529,7 @@ def pantalla_personajes(screen, bg_anim):
             resaltado = pygame.Surface((aviso_rect.width, aviso_rect.height // 2), pygame.SRCALPHA)
             resaltado.fill((180, 255, 180, 120))  # Verde fosforito con alfa (transparente)
 
-            # Dibujar resaltado ANTES del texto → debajo
+            # Dibujar resaltado ANTES del texto
             screen.blit(resaltado, (aviso_rect.left, aviso_rect.top + aviso_rect.height // 2 - 4))
 
             # Dibujar texto encima

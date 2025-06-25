@@ -2,7 +2,7 @@ import pygame
 import sys
 
 from PantallaMapas import pantalla_mapas
-from PantallaAudio import pantalla_audio, GRIS_CLARO
+from PantallaAudio import pantalla_audio
 from Config import config
 
 BLANCO = (255, 255, 255)
@@ -35,7 +35,7 @@ class ConfiguracionPartida:
         audio_rect = audio.get_rect(topleft=(25, 25))
 
         # ACLARACIÓN VISUAL
-        # Cargar imágenes (esto al inicio del archivo o en __init__)
+        # Cargar imágenes
         imagen_boton_b = pygame.image.load("Media/Menu/Botones/boton_B.png").convert_alpha()
         imagen_tecla_escape = pygame.image.load("Media/Menu/Botones/escape.png").convert_alpha()
         imagen_boton_options = pygame.image.load("Media/Menu/Botones/options.png").convert_alpha()
@@ -395,8 +395,7 @@ class ConfiguracionPartida:
                 else:
                     screen.blit(img, rc)
 
-            # Lógica de imagen simplificada
-            # Ahora la imagen depende del último tipo de input, no de un parámetro fijo
+            # ayuda visual botones
             if last_input_type == "mando":
                 imagen = imagen_boton_b
             else:

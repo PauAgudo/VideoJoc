@@ -31,7 +31,6 @@ def pantalla_controles(screen, fondo_pausa):
     img_izq = pygame.image.load("Media/Menu/Controles/negroizquierda.png").convert_alpha()
     img_der = pygame.image.load("Media/Menu/Controles/negroderecha.png").convert_alpha()
 
-    # --- AÑADIDO: Carga de las 4 imágenes de control específicas ---
     try:
         ruta_base_controles = "Media/Menu/Controles/"
         img_teclado_menu = pygame.image.load(ruta_base_controles + "tecladomenus.png").convert_alpha()
@@ -40,7 +39,6 @@ def pantalla_controles(screen, fondo_pausa):
         img_mando_combate = pygame.image.load(ruta_base_controles + "mandocombate.png").convert_alpha()
     except pygame.error as e:
         print(f"Error al cargar una o más imágenes de controles: {e}")
-        # Creamos superficies vacías para que el juego no se rompa
         img_teclado_menu, img_teclado_combate, img_mando_menu, img_mando_combate = [pygame.Surface((1, 1)) for _ in
                                                                                     range(4)]
 
@@ -57,7 +55,6 @@ def pantalla_controles(screen, fondo_pausa):
     opciones_fila1 = ["Configuración de teclado", "Configuración de mando"]
     indice_fila1 = 0
 
-    # --- AÑADIDO: Opciones y estado para la segunda fila ---
     opciones_fila2 = ["Controles Menú", "Controles Combate"]
     indice_fila2 = 0
 
@@ -111,7 +108,6 @@ def pantalla_controles(screen, fondo_pausa):
                     running = False
                 elif event.key == pygame.K_UP or event.key == pygame.K_DOWN:
                     fila_activa = 1 - fila_activa
-                # --- MODIFICADO: Ahora cambia la opción de la fila que esté activa ---
                 elif event.key == pygame.K_LEFT:
                     if fila_activa == 0:
                         indice_fila1 = (indice_fila1 - 1) % len(opciones_fila1)
@@ -213,7 +209,6 @@ def pantalla_controles(screen, fondo_pausa):
         texto_opcion_rect_f1 = texto_opcion_fila1.get_rect(center=(centro_x_f1, flecha1_izq_rect.centery))
         screen.blit(texto_opcion_fila1, texto_opcion_rect_f1)
 
-        # --- AÑADIDO: Dibujar texto de la segunda fila ---
         texto_opcion_fila2 = font_opciones.render(opciones_fila2[indice_fila2], True, (255, 255, 255))
         centro_x_f2 = flecha2_izq_rect.right + (flecha2_der_rect.left - flecha2_izq_rect.right) // 2
         texto_opcion_rect_f2 = texto_opcion_fila2.get_rect(center=(centro_x_f2, flecha2_izq_rect.centery))
@@ -239,7 +234,6 @@ def pantalla_controles(screen, fondo_pausa):
                              (rect_seleccion_x, rect_seleccion_y, rect_seleccion_w, rect_seleccion_h), 3,
                              border_radius=8)
 
-        # --- MODIFICADO: Lógica para seleccionar y mostrar la imagen central ---
         imagen_a_mostrar = None
         # Si la opción es "Teclado"
         if indice_fila1 == 0:

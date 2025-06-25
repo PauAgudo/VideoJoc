@@ -1,11 +1,9 @@
 import pygame
 import sys
-# Importamos directamente las instancias globales de Config.py y ConfiguraciónMandos.py
 from Config import config, personajes, audio
 from ConfiguraciónMandos import gestor_jugadores
 from PantallaPersonajes import reiniciar_estado_personajes
 
-# Este módulo centraliza la limpieza del estado del juego para un reinicio completo
 def reiniciar_estado():
     print("[ESTADO] Reiniciando estado de la partida...")
 

@@ -1,6 +1,5 @@
 import pygame
 import sys
-# --- 1. IMPORTAMOS LA CLASE DEL OTRO FICHERO ---
 from PantallaPrincipal import BackgroundAnimation
 
 
@@ -9,8 +8,6 @@ def pantalla_controles(screen):
     font = pygame.font.SysFont(None, 40)
     font_opciones = pygame.font.SysFont(None, 28)
 
-    # --- 2. CREAMOS UNA INSTANCIA DEL FONDO ANIMADO ---
-    # Le pasamos el ancho y alto de la pantalla actual
     bg_anim = BackgroundAnimation(screen.get_width(), screen.get_height())
 
     texto = font.render("Aprende los controles", True, (255, 255, 255))
@@ -180,7 +177,7 @@ def pantalla_controles(screen):
                     joystick_timer = 0
 
         bg_anim.update()
-        bg_anim.draw(screen)  # Esto reemplaza a screen.fill((0,0,0))
+        bg_anim.draw(screen)
 
 
         if fondo_controles_img:
