@@ -314,10 +314,10 @@ def manejar_eventos(sliders, screen, bg_anim):
                         pantalla_controles(screen, fondo_pausa)
                         screen.blit(fondo_pausa, (0, 0))  # Restaurar el fondo
                     elif i == 4:
-                        from GuiaJuego import pantalla_guia
+                        from GuiaJuego import abrir_guia_pdf
                         guardar_volumenes(sliders)
                         fondo_pausa = screen.copy()  # Guardar el fondo antes de cambiar de pantalla
-                        pantalla_guia(screen)
+                        abrir_guia_pdf()
                         screen.blit(fondo_pausa, (0, 0))  # Restaurar el fondo
                     elif i == 5:
                         guardar_volumenes(sliders)
@@ -354,10 +354,10 @@ def manejar_eventos(sliders, screen, bg_anim):
                     pantalla_controles(screen, fondo_pausa)
                     screen.blit(fondo_pausa, (0, 0))  # Restaurar el fondo
                 elif selected_element_index == 4:
-                    from GuiaJuego import pantalla_guia
+                    from GuiaJuego import abrir_guia_pdf
                     guardar_volumenes(sliders)
                     fondo_pausa = screen.copy()  # Guardar el fondo antes de cambiar de pantalla
-                    pantalla_guia(screen)
+                    abrir_guia_pdf()
                     screen.blit(fondo_pausa, (0, 0))  # Restaurar el fondo
                 elif selected_element_index == 5:
                     guardar_volumenes(sliders)
@@ -376,10 +376,10 @@ def manejar_eventos(sliders, screen, bg_anim):
                     pantalla_controles(screen, fondo_pausa)
                     screen.blit(fondo_pausa, (0, 0))  # Restaurar el fondo
                 elif selected_element_index == 4:
-                    from GuiaJuego import pantalla_guia
+                    from GuiaJuego import abrir_guia_pdf
                     guardar_volumenes(sliders)
                     fondo_pausa = screen.copy()  # Guardar el fondo antes de cambiar de pantalla
-                    pantalla_guia(screen)
+                    abrir_guia_pdf()
                     screen.blit(fondo_pausa, (0, 0))  # Restaurar el fondo
                 elif selected_element_index == 5:
                     guardar_volumenes(sliders)
@@ -547,7 +547,7 @@ def confirmar_salida(screen, bg_anim, fondo_anterior):
         pygame.draw.rect(screen, (50, 50, 50), ventana_rect, border_radius=12)
         pygame.draw.rect(screen, BLANCO, ventana_rect, width=3, border_radius=12)
 
-        texto = font.render("¿Desea salir del juego?", True, BLANCO)
+        texto = font.render("¿Desea salir de la partida?", True, BLANCO)
         texto_rect = texto.get_rect(center=(ventana_rect.centerx, ventana_rect.top + 50))
         screen.blit(texto, texto_rect)
 

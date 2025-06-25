@@ -1,37 +1,38 @@
-import pygame
+import os
 import sys
+import subprocess
 
-def pantalla_guia(screen):
-    """
-    Muestra la pantalla de guía del juego y vuelve al menú de pausa al salir.
-    """
-    clock = pygame.time.Clock()
-    font = pygame.font.SysFont(None, 40)
 
-    texto = font.render("Guía del juego", True, (255, 255, 255))
-    texto_rect = texto.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
+def abrir_guia_pdf():
+    try:
+        # Obtenemos el directorio donde está 'GuiaJuego.py'
+        #
+        directorio_script = os.path.dirname(os.path.abspath(__file__))
+        print(f"DEBUG: Directorio del script: {directorio_script}")
 
-    running = True
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+        nombre_carpeta_media = 'Media'
+        nombre_pdf = 'Guia del juego.pdf'
 
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    running = False
+        ruta_absoluta_pdf = os.path.join(directorio_script, nombre_carpeta_media, nombre_pdf)
 
-            elif event.type == pygame.JOYBUTTONDOWN:
-                if event.button == 1:  # Botón B del mando
-                    running = False
+        # Normalizamos la ruta para que sea limpia
+        ruta_absoluta_pdf = os.path.normpath(ruta_absoluta_pdf)
 
-        # PINTAR FONDO GUARDADO (de la partida pausada)
-        screen.fill((0, 0, 0))
-        # PINTAR TEXTO
-        screen.blit(texto, texto_rect)
+        print(f"RUTA FINAL que se intentará abrir: {ruta_absoluta_pdf}")
 
-        pygame.display.flip()
-        clock.tick(60)
+        if os.path.exists(ruta_absoluta_pdf):
+            print("¡ÉXITO! Archivo encontrado. Enviando orden DIRECTA para abrir...")
 
-    return
+            if sys.platform == "win32":
+                os.startfile(ruta_absoluta_pdf) # En windows
+
+            elif sys.platform == "darwin":
+                subprocess.run(["open", ruta_absoluta_pdf]) # En MacOS
+            else:
+                subprocess.run(["xdg-open", ruta_absoluta_pdf]) # En Linux
+        else:
+            print(f"--- ERROR: No se encontró el archivo en: {ruta_absoluta_pdf}")
+            print("Revisa la ruta que aparece arriba y tu estructura de carpetas.")
+
+    except Exception as e:
+        print(f"Error inesperado al intentar abrir el PDF: {e}")
