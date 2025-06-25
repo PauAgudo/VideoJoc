@@ -1055,43 +1055,79 @@ class Player:
             self.escudo_cooldown_end_time = time.time() + self.escudo_cooldown_duration
 
     def move_in_small_steps(self, dx, dy, grid, bombs):
+
+        # Lógica de movimiento principal, dividida en parte entera y fraccional de la velocidad
         steps_int = int(self.speed)
         frac = self.speed - steps_int
+
+        # Bucle para la parte entera de la velocidad (movimiento de 1 píxel cada vez)
         for _ in range(steps_int):
             old_x, old_y = self.x, self.y
             self.x += dx
             self.y += dy
+
+            # Comprobar si la nueva posición colisiona con algo
             if self.check_collision(grid, bombs):
-                self.x, self.y = old_x, old_y
+                # Hay una colisión. Verifiquemos si es una bomba que podemos empujar.
+                player_rect = self.get_hitbox()
+                colliding_bomb = None
+                for b in bombs:
+                    bomb_rect = pygame.Rect(b.pos_x, b.pos_y, TILE_SIZE, TILE_SIZE)
+                    if player_rect.colliderect(bomb_rect) and self not in b.passable_players:
+                        colliding_bomb = b
+                        break
 
-                if self.push_bomb_available:
-                    cx = old_x + self.sprite_size // 2
-                    cy = old_y + self.sprite_size // 2
-                    tile_x = int(cx // TILE_SIZE)
-                    tile_y = int(cy // TILE_SIZE)
-                    dir_x, dir_y = dx, dy
-                    if abs(dir_x) > abs(dir_y):
-                        dir_y = 0
-                        dir_x = 1 if dir_x > 0 else -1
+                push_started = False
+                if self.push_bomb_available and colliding_bomb and not colliding_bomb.sliding:
+                    # Normalizamos la dirección del empuje para asegurar que sea correcta
+                    push_dx, push_dy = dx, dy
+                    if abs(push_dx) > abs(push_dy):
+                        push_dy = 0
+                        push_dx = 1 if push_dx > 0 else -1
                     else:
-                        dir_x = 0
-                        dir_y = 1 if dir_y > 0 else -1
-                    next_tile_x = tile_x + dir_x
-                    next_tile_y = tile_y + dir_y
+                        push_dx = 0
+                        push_dy = 1 if push_dy > 0 else -1
 
-                    bomb_target = next(
-                        (b for b in bombs if b.tile_x == next_tile_x and b.tile_y == next_tile_y and not b.exploded),
-                        None)
-                    if bomb_target:
-                        if not bomb_target.sliding:
-                            bomb_target.try_start_push(dir_x, dir_y, grid, bombs, players, powerups)
+                    # Intentamos iniciar el empuje
+                    if colliding_bomb.try_start_push(push_dx, push_dy, grid, bombs, players, powerups):
+                        push_started = True
 
+                # Si no se pudo iniciar un empuje (porque era un muro o una bomba bloqueada),
+                # entonces revertimos el movimiento del jugador.
+                if not push_started:
+                    self.x, self.y = old_x, old_y
+
+        # Lógica para la parte fraccional de la velocidad
         if frac > 0:
             old_x, old_y = self.x, self.y
             self.x += dx * frac
             self.y += dy * frac
+
+            # Replicamos la misma lógica de colisión para el movimiento fraccional
             if self.check_collision(grid, bombs):
-                self.x, self.y = old_x, old_y
+                player_rect = self.get_hitbox()
+                colliding_bomb = None
+                for b in bombs:
+                    bomb_rect = pygame.Rect(b.pos_x, b.pos_y, TILE_SIZE, TILE_SIZE)
+                    if player_rect.colliderect(bomb_rect) and self not in b.passable_players:
+                        colliding_bomb = b
+                        break
+
+                push_started = False
+                if self.push_bomb_available and colliding_bomb and not colliding_bomb.sliding:
+                    push_dx, push_dy = dx, dy
+                    if abs(push_dx) > abs(push_dy):
+                        push_dy = 0
+                        push_dx = 1 if push_dx > 0 else -1
+                    else:
+                        push_dx = 0
+                        push_dy = 1 if push_dy > 0 else -1
+
+                    if colliding_bomb.try_start_push(push_dx, push_dy, grid, bombs, players, powerups):
+                        push_started = True
+
+                if not push_started:
+                    self.x, self.y = old_x, old_y
 
     def move(self, direction, grid, bombs, powerups, lapidas):
         """
@@ -2053,7 +2089,7 @@ class Bomb:
 
     def try_start_push(self, dx, dy, grid, bombs, players, powerups):
         if self.sliding:
-            return
+            return False
         path = []
         cx, cy = self.tile_x, self.tile_y
         while True:
@@ -2088,10 +2124,12 @@ class Bomb:
             self.push_path = [(self.tile_x, self.tile_y)] + path
             self.sliding = True
             self.push_index = 0
-            self.push_speed = 10 * TILE_SIZE  # píxeles por segundo
+            self.push_speed = PUSH_SPEED * TILE_SIZE  # píxeles por segundo
             self.push_timer = 0
             self.push_duration = TILE_SIZE / self.push_speed
             self.set_tile_pos(*self.push_path[0])
+            return True
+        return False
 
     def update_push_slide(self):
         if not self.sliding or not self.push_path:
@@ -2555,8 +2593,8 @@ def generate_grid_and_powerups():
     powerups = []
     num_jugadores = len(gestor_jugadores.todos())
     probabilidad_por_jugadores = {
-        2: 0.40,  # 40% de probabilidad para 2 jugadores
-        3: 0.50,  # 50% de probabilidad para 3 jugadores
+        2: 0.20,  # 20% de probabilidad para 2 jugadores
+        3: 0.40,  # 40% de probabilidad para 3 jugadores
         4: 0.60  # 60% de probabilidad para 4 jugadores
     }
     prob_total_habilidad = probabilidad_por_jugadores.get(num_jugadores, 0.30)
@@ -2583,14 +2621,18 @@ def generate_grid_and_powerups():
 
                         if r_tipo < 0.40:  # 40% de ser "mayor_explosion"
                             powerups.append(PowerUp(x, y, "major_explosion"))
-                        elif r_tipo < 0.75:  # 25% de ser "more_bomb"
+
+                        elif r_tipo < 0.65:  # 25% de ser "more_bomb" (Acumulado: 40% + 25% = 65%)
                             powerups.append(PowerUp(x, y, "more_bomb"))
-                        elif r_tipo < 0.80:  # 20%
+
+                        elif r_tipo < 0.85:  # 20% de ser "speed" (Acumulado: 65% + 20% = 85%)
                             powerups.append(PowerUp(x, y, "speed"))
-                        elif r_tipo < 0.90:  # 10%
+
+                        elif r_tipo < 0.95:  # 10% de ser "calavera" (Acumulado: 85% + 10% = 95%)
                             if config.current_ultimas_index.get("Maldiciones", 0) == 0:
                                 powerups.append(PowerUp(x, y, "calavera"))
-                        else:  # 5%
+
+                        else:  # 5% restante para los otros power-ups
                             power_choice = random.choice(["push_bomb", "golpear_bombas", "escudo"])
                             powerups.append(PowerUp(x, y, power_choice))
     if grid[1][1] != 2:
