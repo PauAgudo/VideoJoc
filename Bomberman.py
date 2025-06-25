@@ -2555,11 +2555,11 @@ def generate_grid_and_powerups():
     powerups = []
     num_jugadores = len(gestor_jugadores.todos())
     probabilidad_por_jugadores = {
-        2: 0.45,  # 45% de probabilidad para 2 jugadores
-        3: 0.55,  # 55% de probabilidad para 3 jugadores
-        4: 0.65  # 65% de probabilidad para 4 jugadores
+        2: 0.40,  # 40% de probabilidad para 2 jugadores
+        3: 0.50,  # 50% de probabilidad para 3 jugadores
+        4: 0.60  # 60% de probabilidad para 4 jugadores
     }
-    prob_total_habilidad = probabilidad_por_jugadores.get(num_jugadores, 0.50)
+    prob_total_habilidad = probabilidad_por_jugadores.get(num_jugadores, 0.30)
     for x in range(GRID_COLS):
         grid[0][x] = 3
         grid[GRID_ROWS - 1][x] = 3
@@ -2583,11 +2583,11 @@ def generate_grid_and_powerups():
 
                         if r_tipo < 0.40:  # 40% de ser "mayor_explosion"
                             powerups.append(PowerUp(x, y, "major_explosion"))
-                        elif r_tipo < 0.65:  # 25% de ser "more_bomb"
+                        elif r_tipo < 0.75:  # 25% de ser "more_bomb"
                             powerups.append(PowerUp(x, y, "more_bomb"))
-                        elif r_tipo < 0.85:  # 20%
+                        elif r_tipo < 0.80:  # 20%
                             powerups.append(PowerUp(x, y, "speed"))
-                        elif r_tipo < 0.95:  # 10%
+                        elif r_tipo < 0.90:  # 10%
                             if config.current_ultimas_index.get("Maldiciones", 0) == 0:
                                 powerups.append(PowerUp(x, y, "calavera"))
                         else:  # 5%
